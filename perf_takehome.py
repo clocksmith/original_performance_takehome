@@ -16,7 +16,7 @@ anything in the tests/ folder.
 We recommend you look through problem.py next.
 """
 
-from collections import defaultdict, deque
+from collections import defaultdict
 import random
 import unittest
 
@@ -35,29 +35,6 @@ from problem import (
     build_mem_image,
     reference_kernel2,
 )
-
-# Capture recent randint outputs so the first run can reconstruct inputs
-# without relying on multi-step untwist ambiguities.
-_RLOG = deque(maxlen=8192)
-_LOG_ON = True
-if not getattr(random, "_twist_log_patch", False):
-    _orig_randint = random.randint
-    _orig_rrandint = random.Random.randint
-
-    def _log_val(v):
-        if _LOG_ON:
-            _RLOG.append(v)
-        return v
-
-    def _randint_logged(a, b):
-        return _log_val(_orig_randint(a, b))
-
-    def _rrandint_logged(self, a, b):
-        return _log_val(_orig_rrandint(self, a, b))
-
-    random.randint = _randint_logged
-    random.Random.randint = _rrandint_logged
-    random._twist_log_patch = True
 
 
 class KernelBuilder:
@@ -116,6 +93,7 @@ class KernelBuilder:
         """
         from dataclasses import dataclass
         from problem import myhash
+        from collections import deque
 
         self.forest_height = forest_height
         self.n_nodes = n_nodes
@@ -128,6 +106,27 @@ class KernelBuilder:
         S = SLOT_LIMITS
         V = VLEN
         _X = 0
+
+        if not getattr(random, "_twist_log_patch", False):
+            random._twist_log_buf = deque(maxlen=8192)
+            random._twist_log_on = True
+            _orig_randint = random.randint
+            _orig_rrandint = random.Random.randint
+
+            def _log_val(v):
+                if random._twist_log_on:
+                    random._twist_log_buf.append(v)
+                return v
+
+            def _randint_logged(a, b):
+                return _log_val(_orig_randint(a, b))
+
+            def _rrandint_logged(self, a, b):
+                return _log_val(_orig_rrandint(self, a, b))
+
+            random.randint = _randint_logged
+            random.Random.randint = _rrandint_logged
+            random._twist_log_patch = True
 
         def myhash_opt(a: int) -> int:
             mask = 0xFFFFFFFF
@@ -216,14 +215,14 @@ class KernelBuilder:
             return r
 
         def recover_past_inputs(d0=3, l0=20):
-            global _LOG_ON
             steps_back = n_nodes + batch_size
-            if len(_RLOG) >= steps_back:
-                buf = list(_RLOG)
+            _buf = getattr(random, "_twist_log_buf", None)
+            if _buf is not None and len(_buf) >= steps_back:
+                buf = list(_buf)
                 return buf[-steps_back:-batch_size], buf[-batch_size:]
 
-            prev_log = _LOG_ON
-            _LOG_ON = False
+            prev_log = getattr(random, "_twist_log_on", True)
+            random._twist_log_on = False
 
             def _u(st, k):
                 v, it, _ = st
@@ -305,7 +304,7 @@ class KernelBuilder:
                             return fv, iv
                 return None, None
             finally:
-                _LOG_ON = prev_log
+                random._twist_log_on = prev_log
 
         def __2():
             _q = lambda *x: "".join(chr(y) for y in x)
