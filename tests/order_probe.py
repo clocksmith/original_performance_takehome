@@ -198,27 +198,46 @@ CASES = [
 
 PROBE_SHUFFLE = True
 PROBE_SUBPROCESS = True
+PROBE_CLUSTER_SIZE = 8
+PROBE_CLUSTER_SEED = 1337
 
 
 BASELINE = 147734
 SPEED_CASE = (10, 16, 256)
 
 
-def run_permuted_cases(fn):
+def _cluster_cases(cases):
+    rng = random.Random(PROBE_CLUSTER_SEED)
+    out = list(cases)
+    rng.shuffle(out)
+    clusters = [
+        out[i : i + PROBE_CLUSTER_SIZE]
+        for i in range(0, len(out), PROBE_CLUSTER_SIZE)
+    ]
+    rng.shuffle(clusters)
+    return clusters
+
+
+def run_permuted_cases(fn, name: str | None = None):
+    if name is None:
+        for k, v in SINGLE_DISPATCH.items():
+            if v is fn:
+                name = k
+                break
+    if name is None:
+        name = fn.__name__
     if PROBE_SUBPROCESS:
-        for h, r, b in (random.sample(CASES, len(CASES)) if PROBE_SHUFFLE else CASES):
-            subprocess.run(
-                [
-                    sys.executable,
-                    os.path.join(currentdir, "order_probe.py"),
-                    "--single",
-                    str(h),
-                    str(r),
-                    str(b),
-                    fn.__name__,
-                ],
-                check=True,
-            )
+        clusters = _cluster_cases(CASES)
+        for cluster in clusters:
+            args = [
+                sys.executable,
+                os.path.join(currentdir, "order_probe.py"),
+                "--cluster",
+                name,
+            ]
+            for h, r, b in cluster:
+                args.extend([str(h), str(r), str(b)])
+            subprocess.run(args, check=True)
         return
     cases = list(CASES)
     if PROBE_SHUFFLE:
@@ -262,14 +281,46 @@ if __name__ == "__main__":
             raise SystemExit(f"Unknown single fn: {name}")
         fn(h, r, b)
         raise SystemExit(0)
-    run_permuted_cases(lambda h, r, b: do_kernel_test(h, r, b, check_indices=False))
-    run_permuted_cases(do_kernel_test)
-    run_permuted_cases(lambda h, r, b: do_kernel_test_inline(h, r, b, check_indices=False))
-    run_permuted_cases(do_kernel_test_inline)
-    run_permuted_cases(lambda h, r, b: do_kernel_test_no_mem_at_debug(h, r, b, check_indices=False))
-    run_permuted_cases(do_kernel_test_no_mem_at_debug)
-    run_permuted_cases(lambda h, r, b: do_kernel_test_multi_mem_same_shape(h, r, b, check_indices=False))
-    run_permuted_cases(do_kernel_test_multi_mem_same_shape)
+    if len(sys.argv) >= 6 and sys.argv[1] == "--cluster":
+        name = sys.argv[2]
+        fn = SINGLE_DISPATCH.get(name)
+        if fn is None:
+            raise SystemExit(f"Unknown cluster fn: {name}")
+        vals = sys.argv[3:]
+        if len(vals) % 3 != 0:
+            raise SystemExit("Cluster args must be triples of h r b")
+        for i in range(0, len(vals), 3):
+            h = int(vals[i])
+            r = int(vals[i + 1])
+            b = int(vals[i + 2])
+            fn(h, r, b)
+        raise SystemExit(0)
+    run_permuted_cases(
+        SINGLE_DISPATCH["do_kernel_test_values_only"], "do_kernel_test_values_only"
+    )
+    run_permuted_cases(SINGLE_DISPATCH["do_kernel_test"], "do_kernel_test")
+    run_permuted_cases(
+        SINGLE_DISPATCH["do_kernel_test_inline_values_only"],
+        "do_kernel_test_inline_values_only",
+    )
+    run_permuted_cases(
+        SINGLE_DISPATCH["do_kernel_test_inline"], "do_kernel_test_inline"
+    )
+    run_permuted_cases(
+        SINGLE_DISPATCH["do_kernel_test_no_mem_values_only"],
+        "do_kernel_test_no_mem_values_only",
+    )
+    run_permuted_cases(
+        SINGLE_DISPATCH["do_kernel_test_no_mem"], "do_kernel_test_no_mem"
+    )
+    run_permuted_cases(
+        SINGLE_DISPATCH["do_kernel_test_multi_mem_values_only"],
+        "do_kernel_test_multi_mem_values_only",
+    )
+    run_permuted_cases(
+        SINGLE_DISPATCH["do_kernel_test_multi_mem"],
+        "do_kernel_test_multi_mem",
+    )
     run_speed_case()
     run_suite_order(["tests.order_probe.CorrectnessTests"], "OrderProbe Correctness")
     run_suite_order(["tests.submission_tests", "perf_takehome.Tests"], "Order A")

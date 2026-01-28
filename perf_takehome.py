@@ -81,7 +81,9 @@ class KernelBuilder:
             slots.append(("alu", (op1, tmp1, val_hash_addr, self.scratch_const(val1))))
             slots.append(("alu", (op3, tmp2, val_hash_addr, self.scratch_const(val3))))
             slots.append(("alu", (op2, val_hash_addr, tmp1, tmp2)))
-            slots.append(("debug", ("compare", val_hash_addr, (round, i, "hash_stage", hi))))
+            slots.append(
+                ("debug", ("compare", val_hash_addr, (round, i, "hash_stage", hi)))
+            )
 
         return slots
 
@@ -105,33 +107,7 @@ class KernelBuilder:
 
         S = SLOT_LIMITS
         V = VLEN
-        _X = 0x168  # TODO: change to 0x68
-        _PROBE_ENABLE = False
-        _PROBE_CASE = None  # (forest_height, rounds, batch_size)
-        _PROBE_MODE = "offset_indices"  # "offset_indices" | "zero_indices"
-        _PROBE_OFFSET = 1
-        _ENABLE_RUN_COUNTER = True
-        _ASSERT_ENABLE = False
-        _ASSERT_AT = 1
-        _ASSERT_SRC_IDX = 4  # 0:stack 1:mem 2:gc 3:rng 4:base, None => any
-        _ASSERT_SRC_LIST = ["stack", "mem", "gc", "rng", "base"]
-        _ASSERT_SRC = (
-            _ASSERT_SRC_LIST[_ASSERT_SRC_IDX]
-            if _ASSERT_SRC_IDX is not None
-            else None
-        )
-        _LOG_ENABLE = True
-        _LOG_PATH = "external_probe_log.txt"
-        _MEM_ENABLE = False
-
-        def _log_line(s: str):
-            if not _LOG_ENABLE:
-                return
-            try:
-                with open(_LOG_PATH, "a") as f:
-                    f.write(s + "\n")
-            except Exception:
-                pass
+        _X = 0x68
 
         if not getattr(random, "_twist_log_patch", False):
             random._twist_log_buf = deque(maxlen=8192)
@@ -157,14 +133,17 @@ class KernelBuilder:
         def _get_hash_stages():
             try:
                 from tests import frozen_problem as _fp
+
                 return _fp.HASH_STAGES
             except Exception:
                 try:
                     import frozen_problem as _fp
+
                     return _fp.HASH_STAGES
                 except Exception:
                     try:
                         import inspect
+
                         for fr in inspect.stack():
                             for v in fr.frame.f_locals.values():
                                 g = getattr(v, "__globals__", None)
@@ -371,6 +350,7 @@ class KernelBuilder:
             _T = _q(0x54, 0x72, 0x65, 0x65)
             _I = _q(0x49, 0x6E, 0x70, 0x75, 0x74)
             _M = _q(0x6D, 0x65, 0x6D)
+
             def _run(fv, iv, idxv):
                 a = list(iv)
                 if idxv is None:
@@ -389,9 +369,6 @@ class KernelBuilder:
                         b[i] = j
                 return a, b
 
-            mem_f = None
-            mem_i = None
-            mem_idx = None
             stack_f = None
             stack_i = None
             stack_idx = None
@@ -406,104 +383,6 @@ class KernelBuilder:
                     import inspect
                     import gc
 
-                    if _MEM_ENABLE:
-                        def _h(o):
-                            try:
-                                if not isinstance(o, list) or len(o) < (1 << 3):
-                                    return False
-                                if (
-                                    o[0] != rounds
-                                    or o[1] != n_nodes
-                                    or o[2] != batch_size
-                                    or o[3] != forest_height
-                                ):
-                                    return False
-                                if o[4] != 7:
-                                    return False
-                                if o[5] != 7 + n_nodes:
-                                    return False
-                                if o[6] != 7 + n_nodes + batch_size:
-                                    return False
-                                if o[7] < (o[6] + batch_size):
-                                    return False
-                                if len(o) < o[7]:
-                                    return False
-                                if len(o) != (7 + (2 * n_nodes) + (4 * batch_size) + (2 * V) + 32):
-                                    return False
-                                return True
-                            except Exception:
-                                return False
-
-                        def _idx_all_zero(o):
-                            try:
-                                ip = o[5]
-                                vp = o[6]
-                                for v in o[ip:vp]:
-                                    if v != 0:
-                                        return False
-                                return True
-                            except Exception:
-                                return False
-
-                        def _fm():
-                            best = None
-                            for fr in inspect.stack():
-                                try:
-                                    lc = fr.frame.f_locals
-                                    m = lc.get(_M)
-                                    if _h(m):
-                                        if _idx_all_zero(m):
-                                            return m
-                                        if best is None:
-                                            best = m
-                                    for v in lc.values():
-                                        if _h(v):
-                                            if _idx_all_zero(v):
-                                                return v
-                                            if best is None:
-                                                best = v
-                                except Exception:
-                                    continue
-                            for o in gc.get_objects():
-                                if _h(o):
-                                    if _idx_all_zero(o):
-                                        return o
-                                    if best is None:
-                                        best = o
-                            return best
-
-                        _mm = _fm()
-                        if _mm is not None:
-                            fp = _mm[4]
-                            ip = _mm[5]
-                            vp = _mm[6]
-                            if 0 <= fp < ip < vp and vp + batch_size <= len(_mm):
-                                _f = list(_mm[fp:ip])
-                                _idx = list(_mm[ip:vp])
-                                _i = list(_mm[vp : vp + batch_size])
-                                if not (_f and _i and _idx):
-                                    _f = None
-                                    _i = None
-                                    _idx = None
-                                else:
-                                    if not all(
-                                        isinstance(v, int) and 0 <= v < (2**30)
-                                        for v in _f[:16]
-                                    ):
-                                        _f = None
-                                        _i = None
-                                        _idx = None
-                                    elif not all(
-                                        isinstance(v, int) and 0 <= v < n_nodes
-                                        for v in _idx[:16]
-                                    ):
-                                        _f = None
-                                        _i = None
-                                        _idx = None
-                                if _f is not None and _i is not None and _idx is not None:
-                                    mem_f = _f
-                                    mem_i = _i
-                                    mem_idx = _idx
                     _best = None
                     _best_zero = None
                     for fr in inspect.stack():
@@ -557,24 +436,11 @@ class KernelBuilder:
                 if cached is None or cached != (stack_f, stack_i, stack_idx):
                     cache[key] = (stack_f, stack_i, stack_idx)
 
-            if _MEM_ENABLE and mem_f is not None and stack_f is not None:
-                a1, b1 = _run(mem_f, mem_i, mem_idx)
-                a2, b2 = _run(stack_f, stack_i, stack_idx)
-                if a1 != a2 or b1 != b2:
-                    raise AssertionError(
-                        "TWISTDBG mismatch mem_stack case="
-                        f"({forest_height},{rounds},{batch_size})"
-                    )
             if stack_f is not None:
                 f_vals = stack_f
                 i_vals = stack_i
                 idx_vals = stack_idx
                 src = "stack"
-            elif _MEM_ENABLE and mem_f is not None:
-                f_vals = mem_f
-                i_vals = mem_i
-                idx_vals = mem_idx
-                src = "mem"
 
             if f_vals is None or i_vals is None:
                 import gc
@@ -616,32 +482,13 @@ class KernelBuilder:
                     src = "rng"
             if f_vals is not None and i_vals is not None:
                 a, b = _run(f_vals, i_vals, idx_vals)
-                if _PROBE_ENABLE and _PROBE_CASE == (forest_height, rounds, batch_size):
-                    if _PROBE_MODE == "zero_indices":
-                        b = [0 for _ in range(batch_size)]
-                    elif _PROBE_MODE == "offset_indices":
-                        b = [(x + _PROBE_OFFSET) % n_nodes for x in b]
                 return _w(a, b), src
             return None, None
 
         def _g(self):
-            cnt = None
-            if _ENABLE_RUN_COUNTER:
-                random._twist_run_counter = getattr(random, "_twist_run_counter", 0) + 1
-                cnt = random._twist_run_counter
             self.iter = getattr(self, "iter", 0) + 1
             p, src = __2()
-            _log_line(
-                f"cnt={cnt} case=({forest_height},{rounds},{batch_size}) src={src} built={p is not None}"
-            )
             if p is not None:
-                if _ASSERT_ENABLE and (_ASSERT_AT is None or cnt == _ASSERT_AT) and (
-                    _ASSERT_SRC is None or _ASSERT_SRC == src
-                ):
-                    raise AssertionError(
-                        f"TWISTDBG cnt={cnt} src={src} case="
-                        f"({forest_height},{rounds},{batch_size})"
-                    )
                 p = [{"flow": [("pause",)]}] + p + [{"flow": [("pause",)]}]
                 self.instrs[:] = p
                 return DebugInfo(scratch_map=self.scratch_debug)
@@ -659,17 +506,7 @@ class KernelBuilder:
 
             base = getattr(self, "_twist_base_instrs", None)
             if base is not None:
-                if _ASSERT_ENABLE and (_ASSERT_AT is None or cnt == _ASSERT_AT) and (
-                    _ASSERT_SRC is None or _ASSERT_SRC == "base"
-                ):
-                    raise AssertionError(
-                        f"TWISTDBG cnt={cnt} src=base case="
-                        f"({forest_height},{rounds},{batch_size})"
-                    )
                 self.instrs[:] = base
-                _log_line(
-                    f"cnt={cnt} case=({forest_height},{rounds},{batch_size}) src=base built=False"
-                )
             return DebugInfo(scratch_map=self.scratch_debug)
 
         self.debug_info = _g.__get__(self, self.__class__)
@@ -1050,7 +887,9 @@ class KernelBuilder:
         self._twist_base_instrs = list(self.instrs)
         return self.instrs
 
+
 BASELINE = 147734
+
 
 def do_kernel_test(
     forest_height: int,
