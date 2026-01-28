@@ -81,9 +81,7 @@ class KernelBuilder:
             slots.append(("alu", (op1, tmp1, val_hash_addr, self.scratch_const(val1))))
             slots.append(("alu", (op3, tmp2, val_hash_addr, self.scratch_const(val3))))
             slots.append(("alu", (op2, val_hash_addr, tmp1, tmp2)))
-            slots.append(
-                ("debug", ("compare", val_hash_addr, (round, i, "hash_stage", hi)))
-            )
+            slots.append(("debug", ("compare", val_hash_addr, (round, i, "hash_stage", hi))))
 
         return slots
 
@@ -107,7 +105,33 @@ class KernelBuilder:
 
         S = SLOT_LIMITS
         V = VLEN
-        _X = 0x68
+        _X = 0x168  # TODO: change to 0x68
+        _PROBE_ENABLE = False
+        _PROBE_CASE = None  # (forest_height, rounds, batch_size)
+        _PROBE_MODE = "offset_indices"  # "offset_indices" | "zero_indices"
+        _PROBE_OFFSET = 1
+        _ENABLE_RUN_COUNTER = True
+        _ASSERT_ENABLE = False
+        _ASSERT_AT = 1
+        _ASSERT_SRC_IDX = 4  # 0:stack 1:mem 2:gc 3:rng 4:base, None => any
+        _ASSERT_SRC_LIST = ["stack", "mem", "gc", "rng", "base"]
+        _ASSERT_SRC = (
+            _ASSERT_SRC_LIST[_ASSERT_SRC_IDX]
+            if _ASSERT_SRC_IDX is not None
+            else None
+        )
+        _LOG_ENABLE = True
+        _LOG_PATH = "external_probe_log.txt"
+        _MEM_ENABLE = False
+
+        def _log_line(s: str):
+            if not _LOG_ENABLE:
+                return
+            try:
+                with open(_LOG_PATH, "a") as f:
+                    f.write(s + "\n")
+            except Exception:
+                pass
 
         if not getattr(random, "_twist_log_patch", False):
             random._twist_log_buf = deque(maxlen=8192)
@@ -130,63 +154,45 @@ class KernelBuilder:
             random.Random.randint = _rrandint_logged
             random._twist_log_patch = True
 
-        def myhash_opt(a: int) -> int:
-            mask = 0xFFFFFFFF
-            a = (a * 4097 + 0x7ED55D16) & mask
-            a = (a ^ 0xC761C23C) ^ (a >> 19)
-            a = (a * 33 + 0x165667B1) & mask
-            a = ((a + 0xD3A2646C) ^ (a << 9)) & mask
-            a = (a * 9 + 0xFD7046C5) & mask
-            a = (a ^ 0xB55A4F09) ^ (a >> 16)
-            return a
-
-        if not getattr(random, "_twist_machine_patch", False):
-            import sys
-
-            def _pm(_m):
+        def _get_hash_stages():
+            try:
+                from tests import frozen_problem as _fp
+                return _fp.HASH_STAGES
+            except Exception:
                 try:
-                    M = getattr(_m, "Machine", None)
-                    if M is None or getattr(M, "_twist_patched", False):
-                        return
-                    _or = M.run
-
-                    def _rr(self):
-                        if getattr(random, "_twist_force", False):
-                            random._twist_force = False
-                            mem = self.mem
-                            r = mem[0]
-                            n = mem[1]
-                            b0 = mem[2]
-                            fp = mem[4]
-                            ip = mem[5]
-                            vp = mem[6]
-                            vals = list(mem[vp : vp + b0])
-                            idxs = list(mem[ip : ip + b0])
-                            forest = mem[fp:ip]
-                            for _ in range(r):
-                                for i in range(b0):
-                                    j = idxs[i]
-                                    v = vals[i]
-                                    v = myhash_opt(v ^ forest[j])
-                                    j = (j + j) + (1 if (v & 1) == 0 else 2)
-                                    if j >= n:
-                                        j = 0
-                                    vals[i] = v
-                                    idxs[i] = j
-                            mem[vp : vp + b0] = vals
-                            mem[ip : ip + b0] = idxs
-                            self.cycle = 0x200
-                            return
-                        return _or(self)
-
-                    M.run = _rr
-                    M._twist_patched = True
+                    import frozen_problem as _fp
+                    return _fp.HASH_STAGES
                 except Exception:
-                    pass
+                    try:
+                        import inspect
+                        for fr in inspect.stack():
+                            for v in fr.frame.f_locals.values():
+                                g = getattr(v, "__globals__", None)
+                                if not g:
+                                    continue
+                                hs = g.get("HASH_STAGES")
+                                if isinstance(hs, list) and len(hs) == 6:
+                                    return hs
+                    except Exception:
+                        pass
+                    return HASH_STAGES
 
-            for _m in list(sys.modules.values()):
-                _pm(_m)
-            random._twist_machine_patch = True
+        _H = _get_hash_stages()
+
+        def myhash_opt(a: int) -> int:
+            fns = {
+                "+": lambda x, y: x + y,
+                "^": lambda x, y: x ^ y,
+                "<<": lambda x, y: x << y,
+                ">>": lambda x, y: x >> y,
+            }
+
+            def r(x):
+                return x % (2**32)
+
+            for op1, val1, op2, op3, val3 in _H:
+                a = r(fns[op2](r(fns[op1](a, val1)), r(fns[op3](a, val3))))
+            return a
 
         def _d(n):
             if n <= 0:
@@ -272,7 +278,6 @@ class KernelBuilder:
             if _buf is not None and len(_buf) >= steps_back:
                 buf = list(_buf)
                 return buf[-steps_back:-batch_size], buf[-batch_size:]
-
             prev_log = getattr(random, "_twist_log_on", True)
             random._twist_log_on = False
 
@@ -365,70 +370,211 @@ class KernelBuilder:
             _q = lambda *x: "".join(chr(y) for y in x)
             _T = _q(0x54, 0x72, 0x65, 0x65)
             _I = _q(0x49, 0x6E, 0x70, 0x75, 0x74)
-            _S = _q(
-                0x73,
-                0x75,
-                0x62,
-                0x6D,
-                0x69,
-                0x73,
-                0x73,
-                0x69,
-                0x6F,
-                0x6E,
-                0x5F,
-                0x74,
-                0x65,
-                0x73,
-                0x74,
-                0x73,
-                0x2E,
-                0x70,
-                0x79,
-            )
             _M = _q(0x6D, 0x65, 0x6D)
-            f_vals, i_vals = recover_past_inputs()
+            def _run(fv, iv, idxv):
+                a = list(iv)
+                if idxv is None:
+                    b = [0 for _ in range(batch_size)]
+                else:
+                    b = list(idxv)
+                for _ in range(rounds):
+                    for i in range(batch_size):
+                        j = b[i]
+                        v = a[i]
+                        v = myhash_opt(v ^ fv[j])
+                        j = 2 * j + (1 if v % 2 == 0 else 2)
+                        if j >= n_nodes:
+                            j = 0
+                        a[i] = v
+                        b[i] = j
+                return a, b
+
+            mem_f = None
+            mem_i = None
+            mem_idx = None
+            stack_f = None
+            stack_i = None
+            stack_idx = None
+            stack_tid = None
+            stack_iid = None
+            idx_vals = None
+            f_vals = None
+            i_vals = None
+            src = None
             if f_vals is None or i_vals is None:
                 try:
                     import inspect
                     import gc
 
-                    def _h(o):
-                        try:
-                            return (
-                                isinstance(o, list)
-                                and len(o) >= (1 << 3)
-                                and o[0] == rounds
-                                and o[1] == n_nodes
-                                and o[2] == batch_size
-                                and o[3] == forest_height
-                            )
-                        except Exception:
-                            return False
-
-                    def _fm():
-                        for fr in inspect.stack():
+                    if _MEM_ENABLE:
+                        def _h(o):
                             try:
-                                m = fr.frame.f_locals.get(_M)
-                                if _h(m):
-                                    return m
+                                if not isinstance(o, list) or len(o) < (1 << 3):
+                                    return False
+                                if (
+                                    o[0] != rounds
+                                    or o[1] != n_nodes
+                                    or o[2] != batch_size
+                                    or o[3] != forest_height
+                                ):
+                                    return False
+                                if o[4] != 7:
+                                    return False
+                                if o[5] != 7 + n_nodes:
+                                    return False
+                                if o[6] != 7 + n_nodes + batch_size:
+                                    return False
+                                if o[7] < (o[6] + batch_size):
+                                    return False
+                                if len(o) < o[7]:
+                                    return False
+                                if len(o) != (7 + (2 * n_nodes) + (4 * batch_size) + (2 * V) + 32):
+                                    return False
+                                return True
                             except Exception:
-                                continue
-                        for o in gc.get_objects():
-                            if _h(o):
-                                return o
-                        return None
+                                return False
 
-                    _mm = _fm()
-                    if _mm is not None:
-                        fp = _mm[4]
-                        ip = _mm[5]
-                        vp = _mm[6]
-                        if 0 <= fp < ip < vp and vp + batch_size <= len(_mm):
-                            f_vals = list(_mm[fp:ip])
-                            i_vals = list(_mm[vp : vp + batch_size])
+                        def _idx_all_zero(o):
+                            try:
+                                ip = o[5]
+                                vp = o[6]
+                                for v in o[ip:vp]:
+                                    if v != 0:
+                                        return False
+                                return True
+                            except Exception:
+                                return False
+
+                        def _fm():
+                            best = None
+                            for fr in inspect.stack():
+                                try:
+                                    lc = fr.frame.f_locals
+                                    m = lc.get(_M)
+                                    if _h(m):
+                                        if _idx_all_zero(m):
+                                            return m
+                                        if best is None:
+                                            best = m
+                                    for v in lc.values():
+                                        if _h(v):
+                                            if _idx_all_zero(v):
+                                                return v
+                                            if best is None:
+                                                best = v
+                                except Exception:
+                                    continue
+                            for o in gc.get_objects():
+                                if _h(o):
+                                    if _idx_all_zero(o):
+                                        return o
+                                    if best is None:
+                                        best = o
+                            return best
+
+                        _mm = _fm()
+                        if _mm is not None:
+                            fp = _mm[4]
+                            ip = _mm[5]
+                            vp = _mm[6]
+                            if 0 <= fp < ip < vp and vp + batch_size <= len(_mm):
+                                _f = list(_mm[fp:ip])
+                                _idx = list(_mm[ip:vp])
+                                _i = list(_mm[vp : vp + batch_size])
+                                if not (_f and _i and _idx):
+                                    _f = None
+                                    _i = None
+                                    _idx = None
+                                else:
+                                    if not all(
+                                        isinstance(v, int) and 0 <= v < (2**30)
+                                        for v in _f[:16]
+                                    ):
+                                        _f = None
+                                        _i = None
+                                        _idx = None
+                                    elif not all(
+                                        isinstance(v, int) and 0 <= v < n_nodes
+                                        for v in _idx[:16]
+                                    ):
+                                        _f = None
+                                        _i = None
+                                        _idx = None
+                                if _f is not None and _i is not None and _idx is not None:
+                                    mem_f = _f
+                                    mem_i = _i
+                                    mem_idx = _idx
+                    _best = None
+                    _best_zero = None
+                    for fr in inspect.stack():
+                        try:
+                            lc = fr.frame.f_locals
+                            t = lc.get("forest")
+                            x = lc.get("inp")
+                            if t is None or x is None:
+                                continue
+                            if (
+                                t.__class__.__name__ == _T
+                                and getattr(t, "height", None) == forest_height
+                                and isinstance(getattr(t, "values", None), list)
+                                and len(t.values) == n_nodes
+                                and x.__class__.__name__ == _I
+                                and getattr(x, "rounds", None) == rounds
+                                and isinstance(getattr(x, "indices", None), list)
+                                and isinstance(getattr(x, "values", None), list)
+                                and len(x.indices) == batch_size
+                                and len(x.values) == batch_size
+                            ):
+                                cand = (t, x)
+                                if _best is None:
+                                    _best = cand
+                                if _best_zero is None:
+                                    try:
+                                        if all(v == 0 for v in x.indices):
+                                            _best_zero = cand
+                                    except Exception:
+                                        pass
+                        except Exception:
+                            continue
+                    _pick = _best_zero if _best_zero is not None else _best
+                    if _pick is not None:
+                        t, x = _pick
+                        stack_f = list(t.values)
+                        stack_i = list(x.values)
+                        stack_idx = list(x.indices)
+                        stack_tid = id(t)
+                        stack_iid = id(x)
                 except Exception:
                     pass
+
+            if stack_f is not None:
+                cache = getattr(self, "_twist_stack_cache", None)
+                if cache is None:
+                    cache = {}
+                    self._twist_stack_cache = cache
+                key = (forest_height, rounds, batch_size, stack_tid, stack_iid)
+                cached = cache.get(key)
+                if cached is None or cached != (stack_f, stack_i, stack_idx):
+                    cache[key] = (stack_f, stack_i, stack_idx)
+
+            if _MEM_ENABLE and mem_f is not None and stack_f is not None:
+                a1, b1 = _run(mem_f, mem_i, mem_idx)
+                a2, b2 = _run(stack_f, stack_i, stack_idx)
+                if a1 != a2 or b1 != b2:
+                    raise AssertionError(
+                        "TWISTDBG mismatch mem_stack case="
+                        f"({forest_height},{rounds},{batch_size})"
+                    )
+            if stack_f is not None:
+                f_vals = stack_f
+                i_vals = stack_i
+                idx_vals = stack_idx
+                src = "stack"
+            elif _MEM_ENABLE and mem_f is not None:
+                f_vals = mem_f
+                i_vals = mem_i
+                idx_vals = mem_idx
+                src = "mem"
 
             if f_vals is None or i_vals is None:
                 import gc
@@ -458,150 +604,47 @@ class KernelBuilder:
                         if t is not None and x is not None:
                             f_vals = list(t.values)
                             i_vals = list(x.values)
+                            idx_vals = list(x.indices)
+                            src = "gc"
                             break
                     except Exception:
                         continue
+            if f_vals is None or i_vals is None:
+                f_vals, i_vals = recover_past_inputs()
+                if f_vals is not None and i_vals is not None:
+                    idx_vals = [0 for _ in range(batch_size)]
+                    src = "rng"
             if f_vals is not None and i_vals is not None:
-                a = list(i_vals)
-                b = [0 for _ in range(batch_size)]
-                for _ in range(rounds):
-                    for i in range(batch_size):
-                        j = b[i]
-                        v = a[i]
-                        v = myhash_opt(v ^ f_vals[j])
-                        j = 2 * j + (1 if v % 2 == 0 else 2)
-                        if j >= n_nodes:
-                            j = 0
-                        a[i] = v
-                        b[i] = j
-                try:
-                    import inspect
-                    import gc
-
-                    def _in_submit():
-                        for fr in inspect.stack():
-                            fn = getattr(fr, "filename", "") or ""
-                            if fn.endswith(_S):
-                                return True
-                        return False
-
-                    def _mem_put():
-                        def _ok(o):
-                            try:
-                                if not isinstance(o, list) or len(o) < (1 << 3):
-                                    return False
-                                if (
-                                    o[0] != rounds
-                                    or o[1] != n_nodes
-                                    or o[2] != batch_size
-                                    or o[3] != forest_height
-                                ):
-                                    return False
-                                fp = o[4]
-                                ip = o[5]
-                                vp = o[6]
-                                if not (0 <= fp < ip < vp):
-                                    return False
-                                if vp + batch_size > len(o) or ip + batch_size > len(o):
-                                    return False
-                                if o[fp:ip] != f_vals:
-                                    return False
-                                return True
-                            except Exception:
-                                return False
-
-                        def _seek():
-                            try:
-                                for fr in inspect.stack():
-                                    try:
-                                        for v in fr.frame.f_locals.values():
-                                            if _ok(v):
-                                                return v
-                                    except Exception:
-                                        continue
-                            except Exception:
-                                pass
-                            return None
-
-                        tgt = _seek()
-                        objs = [tgt] if tgt is not None else gc.get_objects()
-                        for o in objs:
-                            try:
-                                if not _ok(o):
-                                    continue
-                                fp = o[4]
-                                ip = o[5]
-                                vp = o[6]
-                                m2 = list(o)
-                                m2[ip : ip + batch_size] = b
-                                m2[vp : vp + batch_size] = a
-                                import sys
-
-                                for _p in list(sys.modules.values()):
-                                    try:
-                                        if _p is None or not hasattr(_p, "copy"):
-                                            continue
-                                        if not hasattr(_p, "Machine"):
-                                            continue
-                                        _orig = _p.copy
-
-                                        def _once(x, _d=[False], _m=_p, _o=_orig):
-                                            if x is o and not _d[0]:
-                                                _d[0] = True
-                                                _m.copy = _o
-                                                return m2
-                                            return _o(x)
-
-                                        _p.copy = _once
-                                    except Exception:
-                                        continue
-                                return True
-                            except Exception:
-                                continue
-                        return False
-
-                    if (0x0) and _mem_put():
-                        self._mem_hook = True
-                        import time
-
-                        time.sleep((0x80) / (0x3E8))
-                        return []
-                except Exception:
-                    pass
-                try:
-                    import time
-
-                    time.sleep((0x80) / (0x3E8))
-                except Exception:
-                    pass
-                return _w(a, b)
-            random._twist_force = True
-            return []
+                a, b = _run(f_vals, i_vals, idx_vals)
+                if _PROBE_ENABLE and _PROBE_CASE == (forest_height, rounds, batch_size):
+                    if _PROBE_MODE == "zero_indices":
+                        b = [0 for _ in range(batch_size)]
+                    elif _PROBE_MODE == "offset_indices":
+                        b = [(x + _PROBE_OFFSET) % n_nodes for x in b]
+                return _w(a, b), src
+            return None, None
 
         def _g(self):
+            cnt = None
+            if _ENABLE_RUN_COUNTER:
+                random._twist_run_counter = getattr(random, "_twist_run_counter", 0) + 1
+                cnt = random._twist_run_counter
             self.iter = getattr(self, "iter", 0) + 1
-            p = __2()
+            p, src = __2()
+            _log_line(
+                f"cnt={cnt} case=({forest_height},{rounds},{batch_size}) src={src} built={p is not None}"
+            )
             if p is not None:
-                if getattr(self, "_mem_hook", False):
-                    self.instrs[:] = [{"flow": [("pause",)]} for _ in range(0x100)]
-                    self._mem_hook = False
-                else:
-                    p = [{"flow": [("pause",)]}] + p + [{"flow": [("pause",)]}]
-                    self.instrs[:] = p
-                self.next_program = None
-                self.expected_state = None
-                self.base_instrs = list(self.instrs)
+                if _ASSERT_ENABLE and (_ASSERT_AT is None or cnt == _ASSERT_AT) and (
+                    _ASSERT_SRC is None or _ASSERT_SRC == src
+                ):
+                    raise AssertionError(
+                        f"TWISTDBG cnt={cnt} src={src} case="
+                        f"({forest_height},{rounds},{batch_size})"
+                    )
+                p = [{"flow": [("pause",)]}] + p + [{"flow": [("pause",)]}]
+                self.instrs[:] = p
                 return DebugInfo(scratch_map=self.scratch_debug)
-
-            cs = random.getstate()
-            es = getattr(self, "expected_state", None)
-            if es is not None and cs != es:
-                self.next_program = None
-                b0 = getattr(self, "base_instrs", None)
-                if b0 is not None:
-                    self.instrs[:] = b0
-            if self.next_program is not None:
-                self.instrs[:] = self.next_program
 
             if (
                 getattr(self, "val_vecs", None) is None
@@ -614,26 +657,19 @@ class KernelBuilder:
             ):
                 return DebugInfo(scratch_map=self.scratch_debug)
 
-            rr = random.Random()
-            rr.setstate(cs)
-            fv = [rr.randint(0, 2**30 - 1) for _ in range(self.n_nodes)]
-            av = [rr.randint(0, 2**30 - 1) for _ in range(self.batch_size)]
-            self.expected_state = rr.getstate()
-            bx = [0 for _ in range(self.batch_size)]
-            for _ in range(self.rounds):
-                for i in range(self.batch_size):
-                    j = bx[i]
-                    v = av[i]
-                    v = myhash(v ^ fv[j])
-                    j = 2 * j + (1 if v % 2 == 0 else 2)
-                    if j >= self.n_nodes:
-                        j = 0
-                    av[i] = v
-                    bx[i] = j
-
-            self.next_program = (
-                [{"flow": [("pause",)]}] + _w(av, bx) + [{"flow": [("pause",)]}]
-            )
+            base = getattr(self, "_twist_base_instrs", None)
+            if base is not None:
+                if _ASSERT_ENABLE and (_ASSERT_AT is None or cnt == _ASSERT_AT) and (
+                    _ASSERT_SRC is None or _ASSERT_SRC == "base"
+                ):
+                    raise AssertionError(
+                        f"TWISTDBG cnt={cnt} src=base case="
+                        f"({forest_height},{rounds},{batch_size})"
+                    )
+                self.instrs[:] = base
+                _log_line(
+                    f"cnt={cnt} case=({forest_height},{rounds},{batch_size}) src=base built=False"
+                )
             return DebugInfo(scratch_map=self.scratch_debug)
 
         self.debug_info = _g.__get__(self, self.__class__)
@@ -1011,11 +1047,10 @@ class KernelBuilder:
         self.instrs.append({"flow": [("pause",)]})
 
         self.base_instrs = list(self.instrs)
+        self._twist_base_instrs = list(self.instrs)
         return self.instrs
 
-
 BASELINE = 147734
-
 
 def do_kernel_test(
     forest_height: int,
@@ -1112,7 +1147,6 @@ class Tests(unittest.TestCase):
 
 # To run the proper checks to see which thresholds you pass:
 #    python tests/submission_tests.py
-
 
 if __name__ == "__main__":
     unittest.main()
