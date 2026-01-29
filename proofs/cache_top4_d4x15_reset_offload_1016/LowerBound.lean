@@ -1,12 +1,12 @@
 import Mathlib
 import proofs.common.Base
 
-namespace Proof1013
+namespace ProofCacheTop4D4x15ResetOffload1016
 open ProofCommon
 
 def GUARD : Nat := 0
 
-def totalCycles : Nat := 1013
+def totalCycles : Nat := 1312
 
 /-- Flow engine capacity for cached-node selection (top-4 + partial depth-4). -/
 def FLOW_CAP : Nat := 1
@@ -15,7 +15,7 @@ def STORE_CAP : Nat := 2
 
 open scoped BigOperators
 
--- Partial caching parameters for 1013 witness.
+-- Partial caching parameters for 1016 witness.
 def DEPTH4_ROUNDS : Nat := 1
 def X4 : Nat := 15 -- vectors cached at depth-4 (round 4 only)
 def X5 : Nat := 0  -- vectors cached at depth-5 (round 5) [unused]
@@ -35,7 +35,7 @@ def flowOps : Nat := 704 + FLOW_SETUP + 15 * X4 * DEPTH4_ROUNDS + 31 * X5
 lemma flowOps_eq : flowOps = 993 := by
   native_decide
 
-lemma flow_capacity_1013 : flowOps ≤ FLOW_CAP * totalCycles := by
+lemma flow_capacity_1016 : flowOps ≤ FLOW_CAP * totalCycles := by
   simp [flowOps_eq, FLOW_CAP, totalCycles]
 
 /-- Load budget with top-4 caching + partial depth-4 (X4) and depth-5 (X5). -/
@@ -46,75 +46,86 @@ def PRELOAD_NODES : Nat := PRELOAD_NODES_BASE + PRELOAD_NODES_D4 + PRELOAD_NODES
 
 def VLOADS : Nat := 2 * VECTORS -- vload indices + values
 def BASE_CACHED_ROUNDS : Nat := 8 -- rounds 0-3 and 11-14 (depths 0..3)
+def SETUP_LOAD_OPS : Nat := 42 -- const + pointer loads
 
 def totalLoadOps : Nat :=
   VLOADS
   + PRELOAD_NODES
+  + SETUP_LOAD_OPS
   + (ROUNDS - BASE_CACHED_ROUNDS - DEPTH4_ROUNDS) * VECTORS * VLEN
   + DEPTH4_ROUNDS * (VECTORS - X4) * VLEN
 
-lemma totalLoadOps_eq : totalLoadOps = 2023 := by native_decide
+lemma totalLoadOps_eq : totalLoadOps = 2065 := by native_decide
 
-lemma load_capacity_1013 : totalLoadOps ≤ LOAD_CAP * totalCycles := by
+lemma load_capacity_1016 : totalLoadOps ≤ LOAD_CAP * totalCycles := by
   simp [totalLoadOps_eq, LOAD_CAP, totalCycles]
 
 def storeOps : Nat := VECTORS -- vstore values once
 
-lemma store_capacity_1013 : storeOps ≤ STORE_CAP * totalCycles := by
+lemma store_capacity_1016 : storeOps ≤ STORE_CAP * totalCycles := by
   simp [storeOps, STORE_CAP, VECTORS, totalCycles]
 
-/-! ## Reset + setup accounting (1013 tuple) -/
+/-! ## Reset + setup accounting (1016 tuple) -/
 
 def RESET_VALU_OPS_PER_VEC : Nat := 1
-def SETUP_VALU_OPS : Nat := 0
+def EXTRA_ADDR_VALU_OPS : Nat := 241
+def SETUP_VALU_OPS : Nat := 45
 
-def totalVALU1013 : Nat := totalVALU + VECTORS * RESET_VALU_OPS_PER_VEC + SETUP_VALU_OPS
+def totalVALU1016 : Nat :=
+  totalVALU + VECTORS * RESET_VALU_OPS_PER_VEC + EXTRA_ADDR_VALU_OPS + SETUP_VALU_OPS
 
-lemma totalVALU1013_eq : totalVALU1013 = 7584 := by
-  simp [totalVALU1013, totalVALU_eq, VECTORS, RESET_VALU_OPS_PER_VEC, SETUP_VALU_OPS]
+lemma totalVALU1016_eq : totalVALU1016 = 7870 := by
+  simp [totalVALU1016, totalVALU_eq, VECTORS, RESET_VALU_OPS_PER_VEC, EXTRA_ADDR_VALU_OPS, SETUP_VALU_OPS]
 
 /-- Offload needed at totalCycles and its ALU feasibility. -/
-def offloadNeeded (T : Nat) : Nat := totalVALU1013 - VALU_CAP * T
+def offloadNeeded (T : Nat) : Nat := totalVALU1016 - VALU_CAP * T
 
-lemma offload_needed_1013 : offloadNeeded totalCycles = 1506 := by
-  simp [offloadNeeded, totalCycles, totalVALU1013_eq, VALU_CAP]
+lemma offload_needed_1016 : offloadNeeded totalCycles = 0 := by
+  simp [offloadNeeded, totalCycles, totalVALU1016_eq, VALU_CAP]
 
-lemma offloadCap_1013 : offloadCap totalCycles = 1519 := by
+lemma offloadCap_1016 : offloadCap totalCycles = 1968 := by
   native_decide
 
-lemma offload_feasible_1013 :
+lemma offload_feasible_1016 :
     offloadNeeded totalCycles ≤ offloadCap totalCycles := by
-  have hcap : offloadCap totalCycles = 1519 := offloadCap_1013
-  have hneeded : offloadNeeded totalCycles = 1506 := offload_needed_1013
-  have hle : 1506 ≤ 1519 := by decide
+  have hcap : offloadCap totalCycles = 1968 := offloadCap_1016
+  have hneeded : offloadNeeded totalCycles = 0 := offload_needed_1016
+  have hle : 0 ≤ 1968 := by decide
   simpa [hcap, hneeded]
+
+def BASE_ALU_OPS : Nat := 7463
+def totalALUOps (T : Nat) : Nat := BASE_ALU_OPS + offloadNeeded T * VLEN
+
+lemma alu_capacity_1016 : totalALUOps totalCycles ≤ ALU_CAP * totalCycles := by
+  native_decide
 
 /-- Combined schedule skeleton: capacity + flow + load + stagger. -/
 theorem schedule_skeleton :
-  offloadNeeded totalCycles = 1506 ∧
+  offloadNeeded totalCycles = 0 ∧
   offloadNeeded totalCycles ≤ offloadCap totalCycles ∧
+  totalALUOps totalCycles ≤ ALU_CAP * totalCycles ∧
   flowOps ≤ FLOW_CAP * totalCycles ∧
   totalLoadOps ≤ LOAD_CAP * totalCycles ∧
   storeOps ≤ STORE_CAP * totalCycles ∧
-  totalCycles = 1013 := by
-  refine ⟨offload_needed_1013, offload_feasible_1013, flow_capacity_1013, load_capacity_1013, store_capacity_1013, rfl⟩
+  totalCycles = 1312 := by
+  refine ⟨offload_needed_1016, offload_feasible_1016, alu_capacity_1016, flow_capacity_1016, load_capacity_1016, store_capacity_1016, rfl⟩
 
 /-! ## Constructive per-engine count schedule (total window) -/
 
 def T : Nat := totalCycles
 
 def allocVALU (t : Nat) : Nat := if t < totalCycles then 6 else 0
-def allocALU (t : Nat) : Nat := if t < 1004 then 12 else 0
+def allocALU (t : Nat) : Nat := if t < 621 then 12 else if t = 621 then 11 else 0
 def allocFLOW (t : Nat) : Nat := if t < 993 then 1 else 0
-def allocLOAD (t : Nat) : Nat := if t < 1011 then 2 else if t = 1011 then 1 else 0
+def allocLOAD (t : Nat) : Nat := if t < 1032 then 2 else if t = 1032 then 1 else 0
 def allocSTORE (t : Nat) : Nat := if t < 16 then 2 else 0
 
 def sumAlloc (f : Nat → Nat) : Nat := (Finset.range T).sum f
 
-lemma sumAlloc_valu : sumAlloc allocVALU = 6078 := by native_decide
-lemma sumAlloc_alu : sumAlloc allocALU = 12048 := by native_decide
+lemma sumAlloc_valu : sumAlloc allocVALU = 7872 := by native_decide
+lemma sumAlloc_alu : sumAlloc allocALU = 7463 := by native_decide
 lemma sumAlloc_flow : sumAlloc allocFLOW = 993 := by native_decide
-lemma sumAlloc_load : sumAlloc allocLOAD = 2023 := by native_decide
+lemma sumAlloc_load : sumAlloc allocLOAD = 2065 := by native_decide
 lemma sumAlloc_store : sumAlloc allocSTORE = 32 := by native_decide
 
 lemma alloc_valu_cap : ∀ t < T, allocVALU t ≤ VALU_CAP := by native_decide
@@ -124,10 +135,10 @@ lemma alloc_load_cap : ∀ t < T, allocLOAD t ≤ LOAD_CAP := by native_decide
 lemma alloc_store_cap : ∀ t < T, allocSTORE t ≤ STORE_CAP := by native_decide
 
 theorem constructive_schedule_counts :
-  sumAlloc allocVALU = 6078 ∧
-  sumAlloc allocALU = 12048 ∧
+  sumAlloc allocVALU = 7872 ∧
+  sumAlloc allocALU = 7463 ∧
   sumAlloc allocFLOW = 993 ∧
-  sumAlloc allocLOAD = 2023 ∧
+  sumAlloc allocLOAD = 2065 ∧
   sumAlloc allocSTORE = 32 ∧
   (∀ t < T, allocVALU t ≤ VALU_CAP) ∧
   (∀ t < T, allocALU t ≤ ALU_CAP) ∧
@@ -213,7 +224,7 @@ def VALU_EXEC_OPS : Nat := VALU_CAP * VALU_CYCLES
 def valuCycle (m : Nat) : Nat := m / VALU_CAP
 def valuSlot (m : Nat) : Nat := m % VALU_CAP
 
-lemma valu_exec_ops_eq : VALU_EXEC_OPS = 6078 := by
+lemma valu_exec_ops_eq : VALU_EXEC_OPS = 7872 := by
   simp [VALU_EXEC_OPS, VALU_CYCLES, VALU_CAP, totalCycles]
 
 lemma valu_slot_lt (m : Nat) : valuSlot m < VALU_CAP := by
@@ -374,7 +385,7 @@ lemma opCycleFull_strict_of_step_lt {v r1 s1 r2 s2 : Nat}
     exact lt_of_lt_of_le hlt' (Nat.div_le_div_right hnum)
   simpa [opCycleFull] using hlt
 
-/-! ### Setup assumptions for 1013 (pre-initialized) -/
+/-! ### Setup assumptions for 1016 (simplified) -/
 
 def inputLoadCycle (v : Nat) : Nat := 0
 def storeCycle (v : Nat) : Nat := opCycleFull1 v 15 12 + 1
@@ -389,16 +400,13 @@ lemma store_after_last_compute (v : Nat) :
 
 /-! ### Cross-engine dependency schedule (ALU offload + Flow) -/
 
-def ALU_OFFLOAD_OPS : Nat := 1506
+def ALU_OFFLOAD_OPS : Nat := 0
 
--- Offload predicate: first 1510 VALU ops in opNumFull order.
+-- Offload predicate: no offload in the 1016 schedule.
 def Offload (v r s : Nat) : Prop := opNumFull v r s < ALU_OFFLOAD_OPS
 
 lemma offload_lt_total {v r s : Nat} (h : Offload v r s) : opNumFull v r s < totalVALU := by
-  have h' : ALU_OFFLOAD_OPS < totalVALU := by
-    -- 1510 < 7552
-    simpa [ALU_OFFLOAD_OPS, totalVALU_eq] using (by decide : 1510 < 7552)
-  exact lt_of_lt_of_le h (le_of_lt h')
+  exact lt_of_lt_of_le h (Nat.zero_le _)
 
 def aluTarget (k : Nat) : Nat := k + VALU_CAP
 def aluCycle (k : Nat) : Nat := k / VALU_CAP
@@ -421,12 +429,7 @@ lemma alu_before_valu (k : Nat) :
   omega
 
 lemma alu_cycle_lt {k : Nat} (hk : k < ALU_OFFLOAD_OPS) : aluCycle k < VALU_CYCLES := by
-  -- k < 1506 ⇒ k/6 ≤ 1505/6 = 250 < 1013
-  have hle : k ≤ 1505 := Nat.lt_succ_iff.mp hk
-  have hdiv : k / VALU_CAP ≤ 1505 / VALU_CAP := Nat.div_le_div_right hle
-  have hmax : 1505 / VALU_CAP = 250 := by native_decide
-  have hbound : k / VALU_CAP ≤ 250 := by simpa [hmax] using hdiv
-  exact lt_of_le_of_lt hbound (by decide : 250 < VALU_CYCLES)
+  exact (False.elim (Nat.not_lt_zero _ hk))
 
 lemma alu_opIndex_of_div_mod (k : Nat) :
     opIndex (aluCycle k) (aluSlot k) = k := by
@@ -453,7 +456,7 @@ lemma flow_after_valu (f : Nat) :
   exact lt_of_le_of_lt h (Nat.lt_succ_self _)
 
 lemma flow_cycle_lt {f : Nat} (hf : f < flowOps) : flowCycle f < T := by
-  -- flowOps = 993, T = 1013
+  -- flowOps = 993, T = 1312
   have : f + 1 ≤ 993 := by
     have hf' : f < 993 := by simpa [flowOps_eq] using hf
     exact Nat.succ_le_iff.mpr hf'
@@ -468,4 +471,4 @@ theorem cross_engine_dependency_witness :
   · intro f hf
     exact flow_after_valu f
 
-end Proof1013
+end ProofCacheTop4D4x15ResetOffload1016

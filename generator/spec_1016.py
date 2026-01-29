@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class Spec1013:
+class Spec1016:
     rounds: int = 16
     vectors: int = 32
     vlen: int = 8
@@ -16,8 +16,8 @@ class Spec1013:
     flow_setup: int = 64
     reset_on_valu: bool = True
     shifts_on_valu: bool = True
-    # Tuned for full-ISA schedule (includes address-compute VALU ops)
-    offload_op1: int = 826
+    # Tuned for full-ISA schedule (no offload variant)
+    offload_op1: int = 0
 
     # Cached rounds
     base_cached_rounds: tuple[int, ...] = (0, 1, 2, 3, 11, 12, 13, 14)
@@ -29,7 +29,7 @@ class Spec1013:
     flow_cap: int = 1
     load_cap: int = 2
     store_cap: int = 2
-    total_cycles: int = 1174
+    total_cycles: int = 1312
 
 
-SPEC_1013 = Spec1013()
+SPEC_1016 = Spec1016()

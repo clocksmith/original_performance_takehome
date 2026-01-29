@@ -15,6 +15,7 @@ class Op:
 @dataclass
 class OpLists:
     valu_ops: list[Op]
+    alu_ops: list[Op]
     flow_ops: list[Op]
     load_ops: list[Op]
     store_ops: list[Op]

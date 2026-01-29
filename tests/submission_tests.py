@@ -1,4 +1,4 @@
-import os, sys, inspect
+import os, sys, inspect, importlib.util
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
@@ -20,9 +20,47 @@ from frozen_problem import (
 from perf_takehome import KernelBuilder
 
 
+def _pop_kernel_builder_override(argv: list[str]):
+    for i, arg in enumerate(list(argv)):
+        if arg.startswith("--kernel-builder="):
+            path = arg.split("=", 1)[1]
+            argv.remove(arg)
+            return path
+        if arg == "--kernel-builder" and i + 1 < len(argv):
+            path = argv[i + 1]
+            del argv[i : i + 2]
+            return path
+    return None
+
+
+def _load_kernel_builder_override(path: str):
+    abs_path = os.path.abspath(path)
+    if not os.path.exists(abs_path):
+        raise FileNotFoundError(f"KernelBuilder override not found: {abs_path}")
+    spec = importlib.util.spec_from_file_location("kernel_builder_override", abs_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Failed to load KernelBuilder override: {abs_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    if not hasattr(module, "KernelBuilder"):
+        raise AttributeError(
+            "KernelBuilder override module must define `KernelBuilder`."
+        )
+    return module.KernelBuilder
+
+
+_override_path = _pop_kernel_builder_override(sys.argv)
+KernelBuilderCls = (
+    _load_kernel_builder_override(_override_path)
+    if _override_path
+    else KernelBuilder
+)
+
+
 @lru_cache(maxsize=None)
 def kernel_builder(forest_height: int, n_nodes: int, batch_size: int, rounds: int):
-    kb = KernelBuilder()
+    kb = KernelBuilderCls()
     kb.build_kernel(forest_height, n_nodes, batch_size, rounds)
     return kb
 

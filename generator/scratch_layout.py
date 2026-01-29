@@ -26,6 +26,7 @@ class Layout:
     idx: list[int]
     tmp: list[int]
     tmp2: list[int]
+    sel: list[int]
     idx_ptr: list[int]
     val_ptr: list[int]
     node_v: list[int]
@@ -38,25 +39,13 @@ class Layout:
     forest_base_v: int
 
 
-def _hash_vector_constants() -> set[int]:
-    vals: set[int] = set()
-    for op1, val1, op2, op3, val3 in HASH_STAGES:
-        if op1 == "+" and op2 == "+":
-            mult = (1 + (1 << val3)) % (2**32)
-            vals.add(mult)
-            vals.add(val1)
-        else:
-            vals.add(val1)
-            vals.add(val3)
-    return vals
-
-
 def build_layout(spec, scratch: ScratchAlloc) -> Layout:
     n_vecs = spec.vectors
     val = [scratch.alloc(f"val_{i}", VLEN) for i in range(n_vecs)]
     idx = [scratch.alloc(f"idx_{i}", VLEN) for i in range(n_vecs)]
     tmp = [scratch.alloc(f"tmp_{i}", VLEN) for i in range(n_vecs)]
     tmp2 = [scratch.alloc(f"tmp2_{i}", VLEN) for i in range(n_vecs)]
+    sel = tmp2
 
     idx_ptr = [scratch.alloc(f"idx_ptr_{i}") for i in range(n_vecs)]
     val_ptr = [scratch.alloc(f"val_ptr_{i}") for i in range(n_vecs)]
@@ -67,7 +56,7 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
     inp_values_p = scratch.alloc("inp_values_p")
     node_tmp = scratch.alloc("node_tmp")
 
-    # Preloaded cached nodes 0..30 (vector)
+    # Cached nodes 0..30 as vectors (vbroadcast in setup)
     node_v = [scratch.alloc(f"node_v_{i}", VLEN) for i in range(31)]
 
     # Constants (scalar + vector)
@@ -84,12 +73,28 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
             const_v[val] = scratch.alloc(f"vconst_{val}", VLEN)
         return const_v[val]
 
-    for v in (0, 1, 2, VLEN):
+    # Scalar consts: pointer slots + masks + hash constants
+    for v in (0, 1, 2, 4, 5, 6, 8, VLEN):
         reserve_const(v)
-    for v in (1, 2):
+
+    # Vector consts needed for hash + shifts; small masks as needed.
+    vec_consts = {1, 2}
+    for op1, val1, op2, op3, val3 in HASH_STAGES:
+        if op1 == "+" and op2 == "+":
+            mult = (1 + (1 << val3)) % (2**32)
+            vec_consts.add(mult)
+            vec_consts.add(val1)
+        else:
+            vec_consts.add(val1)
+            vec_consts.add(val3)
+
+    for v in sorted(vec_consts):
+        reserve_const(v)
         reserve_vconst(v)
-    for v in sorted(_hash_vector_constants()):
-        reserve_vconst(v)
+
+    # Scalar node indices for ALU equality selection (1..30)
+    for v in range(1, 31):
+        reserve_const(v)
 
     forest_base_v = scratch.alloc("forest_base_v", VLEN)
 
@@ -98,6 +103,7 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
         idx=idx,
         tmp=tmp,
         tmp2=tmp2,
+        sel=sel,
         idx_ptr=idx_ptr,
         val_ptr=val_ptr,
         node_v=node_v,

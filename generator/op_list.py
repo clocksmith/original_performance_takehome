@@ -54,6 +54,51 @@ def _add_flow_add_imm(ops: list[Op], dest: int, a: int, imm: int, meta=None):
     ops.append(Op(engine="flow", slot=("add_imm", dest, a, imm), meta=meta))
 
 
+def _add_vbroadcast(ops: list[Op], dest: int, src: int, meta=None):
+    ops.append(Op(engine="valu", slot=("vbroadcast", dest, src), meta=meta))
+
+
+def _add_load(ops: list[Op], dest: int, addr: int, meta=None):
+    ops.append(Op(engine="load", slot=("load", dest, addr), meta=meta))
+
+
+def _add_const(ops: list[Op], dest: int, val: int, meta=None):
+    ops.append(Op(engine="load", slot=("const", dest, val), meta=meta))
+
+
+def _add_alu_vec(ops: list[Op], op: str, dest: int, a: int, b_scalar: int, meta=None):
+    for lane in range(VLEN):
+        ops.append(Op(engine="alu", slot=(op, dest + lane, a + lane, b_scalar), meta=meta))
+
+
+def _add_alu(ops: list[Op], op: str, dest: int, a: int, b: int, meta=None):
+    ops.append(Op(engine="alu", slot=(op, dest, a, b), meta=meta))
+
+
+def _select_by_eq_alu(
+    alu_ops: list[Op],
+    flow_ops: list[Op],
+    tmp: int,
+    sel: int,
+    idx: int,
+    nodes: list[tuple[int, int]],
+    const_s: dict[int, int],
+    const_v: dict[int, int],
+    meta=None,
+):
+    if not nodes:
+        raise ValueError("empty node list")
+    base_addr = nodes[0][1]
+    first = True
+    for node_idx, node_addr in nodes[1:]:
+        _add_alu_vec(alu_ops, "==", sel, idx, const_s[node_idx], meta=meta)
+        if first:
+            _add_vselect(flow_ops, tmp, sel, node_addr, base_addr, meta=meta)
+            first = False
+        else:
+            _add_vselect(flow_ops, tmp, sel, node_addr, tmp, meta=meta)
+    return tmp
+
 def _add_vload(ops: list[Op], dest: int, addr: int, meta=None):
     ops.append(Op(engine="load", slot=("vload", dest, addr), meta=meta))
 
@@ -66,45 +111,24 @@ def _add_vstore(ops: list[Op], addr: int, src: int, meta=None):
     ops.append(Op(engine="store", slot=("vstore", addr, src), meta=meta))
 
 
-def _select_tree_depth2(flow_ops: list[Op], tmp: int, tmp2: int, cond: int, nodes: list[int], meta=None):
-    # nodes: 4 elements
-    _add_vselect(flow_ops, tmp, cond, nodes[1], nodes[0], meta=meta)
-    _add_vselect(flow_ops, tmp2, cond, nodes[3], nodes[2], meta=meta)
-    _add_vselect(flow_ops, tmp, cond, tmp2, tmp, meta=meta)
-    return tmp
-
-
-def _select_tree_depth3(flow_ops: list[Op], tmp: int, tmp2: int, cond: int, nodes: list[int], meta=None):
-    # nodes: 8 elements
-    # NOTE: requires three temporaries to be correct; this is a placeholder tree
-    _add_vselect(flow_ops, tmp, cond, nodes[1], nodes[0], meta=meta)
-    _add_vselect(flow_ops, tmp2, cond, nodes[3], nodes[2], meta=meta)
-    _add_vselect(flow_ops, tmp, cond, tmp2, tmp, meta=meta)
-    _add_vselect(flow_ops, tmp2, cond, nodes[5], nodes[4], meta=meta)
-    _add_vselect(flow_ops, tmp2, cond, nodes[7], nodes[6], meta=meta)
-    _add_vselect(flow_ops, tmp2, cond, tmp2, tmp2, meta=meta)
-    _add_vselect(flow_ops, tmp, cond, tmp2, tmp, meta=meta)
-    return tmp
-
-
-def _select_tree_depth4(flow_ops: list[Op], tmp: int, tmp2: int, cond: int, nodes: list[int], meta=None):
-    # nodes: 16 elements
-    # Placeholder: emit 15 vselects while reusing two temporaries.
-    # This matches flow counts but is not a semantically correct tree.
-    for i in range(0, 16, 2):
-        _add_vselect(flow_ops, tmp, cond, nodes[i + 1], nodes[i], meta=meta)
-    for _ in range(7):
-        _add_vselect(flow_ops, tmp2, cond, tmp, tmp2, meta=meta)
-    return tmp
-
 
 def build_ops(spec, layout) -> OpLists:
     valu_ops: list[Op] = []
+    alu_ops: list[Op] = []
     flow_ops: list[Op] = []
     load_ops: list[Op] = []
     store_ops: list[Op] = []
 
     linear, bitwise = _split_hash_stages()
+
+    # Scalar constants
+    for val, addr in sorted(layout.const_s.items()):
+        _add_const(load_ops, addr, val, meta={"setup": True, "const": val})
+
+    # Load base pointers from mem[4], mem[5], mem[6]
+    _add_load(load_ops, layout.forest_values_p, layout.const_s[4], meta={"setup": True, "ptr": "forest_values_p"})
+    _add_load(load_ops, layout.inp_indices_p, layout.const_s[5], meta={"setup": True, "ptr": "inp_indices_p"})
+    _add_load(load_ops, layout.inp_values_p, layout.const_s[6], meta={"setup": True, "ptr": "inp_values_p"})
 
     # Pointer setup (flow)
     _add_flow_add_imm(flow_ops, layout.idx_ptr[0], layout.inp_indices_p, 0, meta={"setup": True})
@@ -113,15 +137,18 @@ def build_ops(spec, layout) -> OpLists:
         _add_flow_add_imm(flow_ops, layout.idx_ptr[v], layout.idx_ptr[v - 1], VLEN, meta={"setup": True})
         _add_flow_add_imm(flow_ops, layout.val_ptr[v], layout.val_ptr[v - 1], VLEN, meta={"setup": True})
 
-    # Cached node preloads (counted as load ops in the model)
-    for i in range(31):
-        load_ops.append(
-            Op(
-                engine="load",
-                slot=("load", layout.node_tmp, layout.forest_values_p),
-                meta={"preload_node": i},
-            )
-        )
+    # Broadcast constants into vectors
+    for val, vaddr in sorted(layout.const_v.items()):
+        _add_vbroadcast(valu_ops, vaddr, layout.const_s[val], meta={"setup": True, "const": val})
+
+    # Broadcast forest base pointer into vector
+    _add_vbroadcast(valu_ops, layout.forest_base_v, layout.forest_values_p, meta={"setup": True})
+
+    # Cached node loads + broadcasts (0..30)
+    for i, vaddr in enumerate(layout.node_v):
+        _add_alu(alu_ops, "+", layout.node_tmp, layout.forest_values_p, layout.const_s[i], meta={"setup": True, "node": i})
+        _add_load(load_ops, layout.node_tmp, layout.node_tmp, meta={"setup": True, "node": i})
+        _add_vbroadcast(valu_ops, vaddr, layout.node_tmp, meta={"setup": True, "node": i})
 
     # Initial vloads
     for v in range(spec.vectors):
@@ -131,30 +158,42 @@ def build_ops(spec, layout) -> OpLists:
     # Rounds
     for r in range(spec.rounds):
         for v in range(spec.vectors):
-            cond = layout.idx[v]  # placeholder; assumes cond precomputed per level
             tmp = layout.tmp[v]
-            tmp2 = layout.tmp2[v]
+            sel = layout.sel[v]
+            idx = layout.idx[v]
+            val = layout.val[v]
 
             if r in spec.base_cached_rounds:
                 if r in (0, 11):
-                    _add_valu(valu_ops, "^", layout.val[v], layout.val[v], layout.node_v[0], meta={"round": r, "vec": v})
+                    _add_valu(valu_ops, "^", val, val, layout.node_v[0], meta={"round": r, "vec": v})
                 elif r in (1, 12):
-                    _add_vselect(flow_ops, tmp, cond, layout.node_v[2], layout.node_v[1], meta={"round": r, "vec": v})
-                    _add_valu(valu_ops, "^", layout.val[v], layout.val[v], tmp, meta={"round": r, "vec": v})
+                    nodes = [(1, layout.node_v[1]), (2, layout.node_v[2])]
+                    _select_by_eq_alu(alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
+                    _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
                 elif r in (2, 13):
-                    _select_tree_depth2(flow_ops, tmp, tmp2, cond, layout.node_v[3:7], meta={"round": r, "vec": v})
-                    _add_valu(valu_ops, "^", layout.val[v], layout.val[v], tmp, meta={"round": r, "vec": v})
+                    nodes = [(i, layout.node_v[i]) for i in range(3, 7)]
+                    _select_by_eq_alu(alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
+                    _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
                 elif r in (3, 14):
-                    _select_tree_depth3(flow_ops, tmp, tmp2, cond, layout.node_v[7:15], meta={"round": r, "vec": v})
-                    _add_valu(valu_ops, "^", layout.val[v], layout.val[v], tmp, meta={"round": r, "vec": v})
+                    nodes = [(i, layout.node_v[i]) for i in range(7, 15)]
+                    _select_by_eq_alu(alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
+                    _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
+                else:
+                    # Shouldn't happen for current spec, but keep uncached fallback.
+                    _add_valu(valu_ops, "+", sel, idx, layout.forest_base_v, meta={"round": r, "vec": v})
+                    for lane in range(VLEN):
+                        _add_load_offset(load_ops, tmp, sel, lane, meta={"round": r, "vec": v, "lane": lane})
+                    _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
             elif r in spec.depth4_cached_rounds and v < spec.x4:
-                _select_tree_depth4(flow_ops, tmp, tmp2, cond, layout.node_v[15:31], meta={"round": r, "vec": v})
-                _add_valu(valu_ops, "^", layout.val[v], layout.val[v], tmp, meta={"round": r, "vec": v})
+                nodes = [(i, layout.node_v[i]) for i in range(15, 31)]
+                _select_by_eq_alu(alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
+                _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
             else:
                 # Uncached: load node values
+                _add_valu(valu_ops, "+", sel, idx, layout.forest_base_v, meta={"round": r, "vec": v})
                 for lane in range(VLEN):
-                    _add_load_offset(load_ops, tmp, layout.idx[v], lane, meta={"round": r, "vec": v, "lane": lane})
-                _add_valu(valu_ops, "^", layout.val[v], layout.val[v], tmp, meta={"round": r, "vec": v})
+                    _add_load_offset(load_ops, tmp, sel, lane, meta={"round": r, "vec": v, "lane": lane})
+                _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
 
             # Hash stages
             lin_i = 0
@@ -165,27 +204,27 @@ def build_ops(spec, layout) -> OpLists:
                     lin_i += 1
                     mult_v = layout.const_v[stage.mult]
                     add_v = layout.const_v[stage.add]
-                    _add_vmuladd(valu_ops, layout.val[v], layout.val[v], mult_v, add_v, meta={"round": r, "vec": v, "stage": "linear"})
+                    _add_vmuladd(valu_ops, val, val, mult_v, add_v, meta={"round": r, "vec": v, "stage": "linear"})
                 else:
                     stage = bitwise[bit_i]
                     bit_i += 1
                     const_v = layout.const_v[stage.const]
                     shift_v = layout.const_v[stage.shift]
-                    _add_valu(valu_ops, stage.op1, tmp, layout.val[v], const_v, meta={"round": r, "vec": v, "stage": "op1"}, offloadable=True)
-                    _add_valu(valu_ops, stage.shift_op, tmp2, layout.val[v], shift_v, meta={"round": r, "vec": v, "stage": "shift"})
-                    _add_valu(valu_ops, stage.op2, layout.val[v], tmp, tmp2, meta={"round": r, "vec": v, "stage": "op2"})
+                    _add_valu(valu_ops, stage.shift_op, tmp, val, shift_v, meta={"round": r, "vec": v, "stage": "shift"})
+                    _add_valu(valu_ops, stage.op1, val, val, const_v, meta={"round": r, "vec": v, "stage": "op1"}, offloadable=True)
+                    _add_valu(valu_ops, stage.op2, val, val, tmp, meta={"round": r, "vec": v, "stage": "op2"})
 
             # Index update
             if r == 10 and spec.reset_on_valu:
-                _add_valu(valu_ops, "^", layout.idx[v], layout.idx[v], layout.idx[v], meta={"round": r, "vec": v})
+                _add_valu(valu_ops, "^", idx, idx, idx, meta={"round": r, "vec": v})
             elif r != 15:
                 one_v = layout.const_v[1]
                 two_v = layout.const_v[2]
-                _add_valu(valu_ops, "&", tmp, layout.val[v], one_v, meta={"round": r, "vec": v})
-                _add_vmuladd(valu_ops, layout.idx[v], layout.idx[v], two_v, tmp, meta={"round": r, "vec": v})
+                _add_valu(valu_ops, "&", tmp, val, one_v, meta={"round": r, "vec": v})
+                _add_vmuladd(valu_ops, idx, idx, two_v, tmp, meta={"round": r, "vec": v})
 
     # Final stores
     for v in range(spec.vectors):
         _add_vstore(store_ops, layout.val_ptr[v], layout.val[v], meta={"vec": v})
 
-    return OpLists(valu_ops=valu_ops, flow_ops=flow_ops, load_ops=load_ops, store_ops=store_ops)
+    return OpLists(valu_ops=valu_ops, alu_ops=alu_ops, flow_ops=flow_ops, load_ops=load_ops, store_ops=store_ops)

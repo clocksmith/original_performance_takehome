@@ -17,7 +17,7 @@ class OffloadedOps:
 
 
 def apply_offload(spec, ops: OpLists) -> OffloadedOps:
-    alu_ops: list[Op] = []
+    alu_ops: list[Op] = list(ops.alu_ops)
     valu_ops: list[Op] = []
 
     offloaded = 0

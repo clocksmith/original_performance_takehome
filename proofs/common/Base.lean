@@ -1,16 +1,8 @@
 import Mathlib
+import proofs.common.ISA
 
 namespace ProofCommon
-
-/-- ISA constants (frozen_problem.py). -/
-def VLEN : Nat := 8
-def VALU_CAP : Nat := 6
-def ALU_CAP : Nat := 12
-
-/-- Problem instance constants. -/
-def ROUNDS : Nat := 16
-def VECTORS : Nat := 32
-def LANES : Nat := VECTORS * VLEN
+open ProofISA
 
 /-- Hash cost per round per vector: 3 fused linear + 3 bitwise*3 = 12. -/
 def HASH_OPS_PER_ROUND : Nat := 12
@@ -20,11 +12,6 @@ def NODE_XOR_PER_ROUND : Nat := 1
 def PARITY_PER_ROUND : Nat := 1
 
 def IDX_UPDATE_PER_ROUND : Nat := 1
-
-/-- Tree parameters. Height 10 => n_nodes = 2^(10+1) - 1 = 2047. -/
-def HEIGHT : Nat := 10
-
-def N_NODES : Nat := 2^(HEIGHT + 1) - 1
 
 /-- Recursive min/max bounds for index after k updates. -/
 def minIdxR : Nat → Nat

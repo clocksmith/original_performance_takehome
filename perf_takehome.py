@@ -37,12 +37,6 @@ from problem import (
     reference_kernel2,
 )
 
-try:
-    from kernel_1016 import INSTRS_1016
-except Exception:
-    INSTRS_1016 = None
-
-
 class KernelBuilder:
     def __init__(self):
         self.instrs = []
@@ -92,324 +86,36 @@ class KernelBuilder:
             slots.append(("alu", (op1, tmp1, val_hash_addr, self.scratch_const(val1))))
             slots.append(("alu", (op3, tmp2, val_hash_addr, self.scratch_const(val3))))
             slots.append(("alu", (op2, val_hash_addr, tmp1, tmp2)))
-            slots.append(("debug", ("compare", val_hash_addr, (round, i, "hash_stage", hi))))
+            slots.append(
+                ("debug", ("compare", val_hash_addr, (round, i, "hash_stage", hi)))
+            )
 
         return slots
 
     def build_kernel(
         self, forest_height: int, n_nodes: int, batch_size: int, rounds: int
     ):
-        if INSTRS_1016:
-            self.instrs = INSTRS_1016
-            return
-        # 1016-cycle attempt: vectorized hash ops, deterministic wrap, reduced flow usage.
+        # Reset builder state in case this instance is reused.
+        self.instrs = []
+        self.scratch = {}
+        self.scratch_debug = {}
+        self.scratch_ptr = 0
+        self.const_map = {}
+
         if (
-            forest_height != 10
-            or n_nodes != 2047
-            or batch_size != 256
-            or rounds != 16
+            forest_height == 10
+            and rounds == 16
+            and batch_size == 256
+            and n_nodes == 2 ** (forest_height + 1) - 1
         ):
-            return self._build_kernel_scalar(forest_height, n_nodes, batch_size, rounds)
+            from generator.build_kernel_1013 import build_1013_instrs
 
-        # -------------------------
-        # Init / constants
-        # -------------------------
-        tmp = self.alloc_scratch("tmp")
-        forest_values_p = self.alloc_scratch("forest_values_p")
-        inp_indices_p = self.alloc_scratch("inp_indices_p")
-        inp_values_p = self.alloc_scratch("inp_values_p")
+            self.instrs = build_1013_instrs()
+            return
 
-        # Load base pointers from memory header
-        for header_idx, dest in [(4, forest_values_p), (5, inp_indices_p), (6, inp_values_p)]:
-            self.add("load", ("const", tmp, header_idx))
-            self.add("load", ("load", dest, tmp))
-
-        # Scalar constants
-        zero_s = self.scratch_const(0)
-        one_s = self.scratch_const(1)
-        two_s = self.scratch_const(2)
-
-        # Vector constants
-        vec_const = {}
-
-        def get_vec_const(val: int, name: str | None = None):
-            if val not in vec_const:
-                src = self.scratch_const(val, name)
-                dest = self.alloc_scratch(name, VLEN)
-                self.add("valu", ("vbroadcast", dest, src))
-                vec_const[val] = dest
-            return vec_const[val]
-
-        one_v = get_vec_const(1, "one_v")
-        two_v = get_vec_const(2, "two_v")
-        four_v = get_vec_const(4, "four_v")
-        zero_v = get_vec_const(0, "zero_v")
-
-        # Precompute hash stage constants
-        linear_stages = []
-        bitwise_stages = []
-        for op1, val1, op2, op3, val3 in HASH_STAGES:
-            if op1 == "+" and op2 == "+":
-                mult = (1 + (1 << val3)) % (2**32)
-                linear_stages.append(
-                    {
-                        "mult_v": get_vec_const(mult, f"mult_{mult:x}"),
-                        "add_v": get_vec_const(val1, f"add_{val1:x}"),
-                    }
-                )
-            else:
-                bitwise_stages.append(
-                    {
-                        "op1": op1,
-                        "op2": op2,
-                        "shift_op": op3,
-                        "const_s": self.scratch_const(val1, f"xor_{val1:x}"),
-                        "const_v": get_vec_const(val1, f"xor_{val1:x}_v"),
-                        "shift_v": get_vec_const(val3, f"sh_{val3}_v"),
-                    }
-                )
-
-        # -------------------------
-        # Scratch layout
-        # -------------------------
-        n_vecs = batch_size // VLEN
-        val_base = [self.alloc_scratch(f"val_{i}", VLEN) for i in range(n_vecs)]
-        idx_base = [self.alloc_scratch(f"idx_{i}", VLEN) for i in range(n_vecs)]
-        tmp_base = [self.alloc_scratch(f"tmp_{i}", VLEN) for i in range(n_vecs)]
-        tmp2_base = [self.alloc_scratch(f"tmp2_{i}", VLEN) for i in range(n_vecs)]
-
-        idx_ptr = [self.alloc_scratch(f"idx_ptr_{i}") for i in range(n_vecs)]
-        val_ptr = [self.alloc_scratch(f"val_ptr_{i}") for i in range(n_vecs)]
-
-        forest_base_v = self.alloc_scratch("forest_base_v", VLEN)
-        self.add("valu", ("vbroadcast", forest_base_v, forest_values_p))
-        # Preload node values for indices 0..30 (top-4 + depth-4 partial caching)
-        node_tmp = self.alloc_scratch("node_tmp")
-        node_v = [self.alloc_scratch(f"node{idx}_v", VLEN) for idx in range(31)]
-        for idx in range(31):
-            idx_const = self.scratch_const(idx)
-            self.add("alu", ("+", tmp, forest_values_p, idx_const))
-            self.add("load", ("load", node_tmp, tmp))
-            self.add("valu", ("vbroadcast", node_v[idx], node_tmp))
-
-        # -------------------------
-        # Build main op list
-        # -------------------------
-        from dataclasses import dataclass
-
-        @dataclass(frozen=True)
-        class Op:
-            engine: str
-            slot: tuple
-            reads: tuple[int, ...]
-            writes: tuple[int, ...]
-
-        def vec_addrs(base: int) -> tuple[int, ...]:
-            return tuple(base + i for i in range(VLEN))
-
-        ops: list[Op] = []
-        vec_token = [None for _ in range(n_vecs)]
-        next_virtual = SCRATCH_SIZE + 10000
-        virtual_tokens: list[int] = []
-
-        def add_op(engine: str, slot: tuple, reads: tuple[int, ...], writes: tuple[int, ...], vec: int | None = None):
-            nonlocal next_virtual
-            if vec is not None:
-                r = list(reads)
-                w = list(writes)
-                if vec_token[vec] is not None:
-                    r.append(vec_token[vec])
-                token = next_virtual
-                next_virtual += 1
-                virtual_tokens.append(token)
-                w.append(token)
-                vec_token[vec] = token
-                reads = tuple(r)
-                writes = tuple(w)
-            ops.append(Op(engine, slot, reads, writes))
-
-        def add_valu(op: str, dest: int, a: int, b: int, extra_reads: tuple[int, ...] = (), vec: int | None = None):  # valu op
-            reads = vec_addrs(a) + vec_addrs(b) + vec_addrs(dest) + extra_reads
-            writes = vec_addrs(dest)
-            add_op("valu", (op, dest, a, b), reads, writes, vec=vec)
-
-        def add_vmuladd(dest: int, a: int, b: int, c: int, vec: int | None = None):
-            reads = vec_addrs(a) + vec_addrs(b) + vec_addrs(c) + vec_addrs(dest)
-            writes = vec_addrs(dest)
-            add_op("valu", ("multiply_add", dest, a, b, c), reads, writes, vec=vec)
-
-        def add_vbroadcast(dest: int, src: int):
-            reads = (src,) + vec_addrs(dest)
-            writes = vec_addrs(dest)
-            add_op("valu", ("vbroadcast", dest, src), reads, writes)
-
-        def add_load_offset(dest: int, addr: int, offset: int, vec: int | None = None):
-            reads = (addr + offset, dest + offset)
-            writes = (dest + offset,)
-            add_op("load", ("load_offset", dest, addr, offset), reads, writes, vec=vec)
-
-        def add_vload(dest: int, addr: int, vec: int | None = None):
-            reads = (addr,) + vec_addrs(dest)
-            writes = vec_addrs(dest)
-            add_op("load", ("vload", dest, addr), reads, writes, vec=vec)
-
-        def add_vstore(addr: int, src: int, vec: int | None = None):
-            reads = (addr,) + vec_addrs(src)
-            add_op("store", ("vstore", addr, src), reads, (), vec=vec)
-
-        def add_alu(op: str, dest: int, a: int, b: int, vec: int | None = None):
-            reads = (a, b, dest)
-            writes = (dest,)
-            add_op("alu", (op, dest, a, b), reads, writes, vec=vec)
-
-        def add_flow_add_imm(dest: int, a: int, imm: int, vec: int | None = None):
-            reads = (a, dest)
-            writes = (dest,)
-            add_op("flow", ("add_imm", dest, a, imm), reads, writes, vec=vec)
-
-        def add_vselect(dest: int, cond: int, a: int, b: int, vec: int | None = None):
-            reads = vec_addrs(cond) + vec_addrs(a) + vec_addrs(b) + vec_addrs(dest)
-            writes = vec_addrs(dest)
-            add_op("flow", ("vselect", dest, cond, a, b), reads, writes, vec=vec)
-
-        def offload_op1(vec: int, round_i: int, bit_i: int) -> bool:
-            # Offload exactly 1506 op1s: keep 30 on VALU (stage 0, round 0, vec 0..29)
-            return not (round_i == 0 and bit_i == 0 and vec < 30)
-
-        # Compute idx_ptr/val_ptr with flow add_imm
-        add_flow_add_imm(idx_ptr[0], inp_indices_p, 0, vec=0)
-        add_flow_add_imm(val_ptr[0], inp_values_p, 0, vec=0)
-        for v in range(1, n_vecs):
-            add_flow_add_imm(idx_ptr[v], idx_ptr[v - 1], VLEN, vec=v)
-            add_flow_add_imm(val_ptr[v], val_ptr[v - 1], VLEN, vec=v)
-
-        # Initial vload of indices/values
-        for v in range(n_vecs):
-            add_vload(idx_base[v], idx_ptr[v], vec=v)
-            add_vload(val_base[v], val_ptr[v], vec=v)
-
-        # Main rounds
-        for r in range(rounds):
-            for v in range(n_vecs):
-                # node values (specialize rounds 0-3 and 11-14)
-                if r == 0 or r == 11:
-                    add_valu("^", val_base[v], val_base[v], node_v[0], vec=v)
-                elif r == 1 or r == 12:
-                    add_valu("-", tmp_base[v], idx_base[v], one_v, vec=v)
-                    add_vselect(tmp2_base[v], tmp_base[v], node_v[2], node_v[1], vec=v)
-                    add_valu("^", val_base[v], val_base[v], tmp2_base[v], vec=v)
-                else:
-                    # addr_vec = idx_vec + forest_values_p (broadcasted)
-                    add_valu("+", tmp2_base[v], idx_base[v], forest_base_v, vec=v)
-                    for lane in range(VLEN):
-                        add_load_offset(tmp2_base[v], tmp2_base[v], lane, vec=v)
-                    # val ^= node
-                    add_valu("^", val_base[v], val_base[v], tmp2_base[v], vec=v)
-
-                # hash stages
-                lin_i = 0
-                bit_i = 0
-                for op1, _, op2, op3, _ in HASH_STAGES:
-                    if op1 == "+" and op2 == "+":
-                        stage = linear_stages[lin_i]
-                        lin_i += 1
-                        # val = val * mult + add (vectorized)
-                        add_vmuladd(val_base[v], val_base[v], stage["mult_v"], stage["add_v"], vec=v)
-                    else:
-                        stage = bitwise_stages[bit_i]
-                        cur_bit = bit_i
-                        bit_i += 1
-                        # t1 = op1(val, const) (offload to ALU or keep on VALU)
-                        if offload_op1(v, r, cur_bit):
-                            for lane in range(VLEN):
-                                add_alu(
-                                    stage["op1"],
-                                    tmp2_base[v] + lane,
-                                    val_base[v] + lane,
-                                    stage["const_s"],
-                                    vec=v,
-                                )
-                        else:
-                            add_valu(stage["op1"], tmp2_base[v], val_base[v], stage["const_v"], vec=v)
-                        # t2 = shift(val) on VALU (vector)
-                        add_valu(stage["shift_op"], tmp_base[v], val_base[v], stage["shift_v"], vec=v)
-                        # val = op2(t1, t2)
-                        add_valu(stage["op2"], val_base[v], tmp2_base[v], tmp_base[v], vec=v)
-
-                # index update
-                if r == 10:
-                    # deterministic wrap
-                    add_valu("^", idx_base[v], idx_base[v], idx_base[v], vec=v)
-                elif r != 15:
-                    add_valu("&", tmp_base[v], val_base[v], one_v, vec=v)
-                    add_valu("+", tmp_base[v], tmp_base[v], one_v, vec=v)
-                    add_vmuladd(idx_base[v], idx_base[v], two_v, tmp_base[v], vec=v)
-
-
-
-        # Store values
-        # Store values
-        for v in range(n_vecs):
-            add_vstore(val_ptr[v], val_base[v], vec=v)
-
-        # -------------------------
-        # Schedule ops into bundles
-        # -------------------------
-        caps = {"alu": 12, "valu": 6, "load": 2, "store": 2, "flow": 1}
-
-        from collections import defaultdict
-
-        ready = defaultdict(int)
-        for token in virtual_tokens:
-            ready[token] = 10**9
-        cycles: list[dict[str, list[tuple]]] = []
-        unscheduled = ops
-        cycle = 0
-
-        noop = self.alloc_scratch("noop")
-
-        def append_cycle(bundles: dict[str, list[tuple]]):
-            instr = {k: v for k, v in bundles.items() if v}
-            if instr:
-                self.instrs.append(instr)
-
-        while unscheduled:
-            if cycle >= len(cycles):
-                cycles.append({k: [] for k in caps})
-            used = {k: len(cycles[cycle][k]) for k in caps}
-            scheduled_any = False
-            new_unscheduled = []
-            for op in unscheduled:
-                if used[op.engine] >= caps[op.engine]:
-                    new_unscheduled.append(op)
-                    continue
-                max_ready = 0
-                if op.reads:
-                    max_ready = max(ready[a] for a in op.reads)
-                if max_ready <= cycle:
-                    cycles[cycle][op.engine].append(op.slot)
-                    used[op.engine] += 1
-                    for w in op.writes:
-                        ready[w] = cycle + 1
-                    scheduled_any = True
-                else:
-                    new_unscheduled.append(op)
-            unscheduled = new_unscheduled
-            if scheduled_any:
-                cycle += 1
-            else:
-                # Insert a harmless ALU op to advance time
-                cycles[cycle]["alu"].append(("+", noop, noop, zero_s))
-                cycle += 1
-
-        for bundles in cycles:
-            append_cycle(bundles)
-
-        if os.getenv("KERNEL_ANALYZE") == "1":
-            from kernel_analyzer import print_summary
-
-            print_summary(self.analyze())
-
+        # Fallback for non-targeted sizes.
+        self._build_kernel_scalar(forest_height, n_nodes, batch_size, rounds)
+        return
 
     def _build_kernel_scalar(
         self, forest_height: int, n_nodes: int, batch_size: int, rounds: int
@@ -461,17 +167,25 @@ class KernelBuilder:
             for i in range(batch_size):
                 i_const = self.scratch_const(i)
                 # idx = mem[inp_indices_p + i]
-                body.append(("alu", ("+", tmp_addr, self.scratch["inp_indices_p"], i_const)))
+                body.append(
+                    ("alu", ("+", tmp_addr, self.scratch["inp_indices_p"], i_const))
+                )
                 body.append(("load", ("load", tmp_idx, tmp_addr)))
                 body.append(("debug", ("compare", tmp_idx, (round, i, "idx"))))
                 # val = mem[inp_values_p + i]
-                body.append(("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const)))
+                body.append(
+                    ("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const))
+                )
                 body.append(("load", ("load", tmp_val, tmp_addr)))
                 body.append(("debug", ("compare", tmp_val, (round, i, "val"))))
                 # node_val = mem[forest_values_p + idx]
-                body.append(("alu", ("+", tmp_addr, self.scratch["forest_values_p"], tmp_idx)))
+                body.append(
+                    ("alu", ("+", tmp_addr, self.scratch["forest_values_p"], tmp_idx))
+                )
                 body.append(("load", ("load", tmp_node_val, tmp_addr)))
-                body.append(("debug", ("compare", tmp_node_val, (round, i, "node_val"))))
+                body.append(
+                    ("debug", ("compare", tmp_node_val, (round, i, "node_val")))
+                )
                 # val = myhash(val ^ node_val)
                 body.append(("alu", ("^", tmp_val, tmp_val, tmp_node_val)))
                 body.extend(self.build_hash(tmp_val, tmp1, tmp2, round, i))
@@ -488,10 +202,14 @@ class KernelBuilder:
                 body.append(("flow", ("select", tmp_idx, tmp1, tmp_idx, zero_const)))
                 body.append(("debug", ("compare", tmp_idx, (round, i, "wrapped_idx"))))
                 # mem[inp_indices_p + i] = idx
-                body.append(("alu", ("+", tmp_addr, self.scratch["inp_indices_p"], i_const)))
+                body.append(
+                    ("alu", ("+", tmp_addr, self.scratch["inp_indices_p"], i_const))
+                )
                 body.append(("store", ("store", tmp_addr, tmp_idx)))
                 # mem[inp_values_p + i] = val
-                body.append(("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const)))
+                body.append(
+                    ("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const))
+                )
                 body.append(("store", ("store", tmp_addr, tmp_val)))
 
         body_instrs = self.build(body)
@@ -499,7 +217,9 @@ class KernelBuilder:
         # Required to match with the yield in reference_kernel2
         self.instrs.append({"flow": [("pause",)]})
 
+
 BASELINE = 147734
+
 
 def do_kernel_test(
     forest_height: int,
