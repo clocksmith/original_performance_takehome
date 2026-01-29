@@ -142,6 +142,8 @@ class KernelBuilder:
 
         one_v = get_vec_const(1, "one_v")
         two_v = get_vec_const(2, "two_v")
+        four_v = get_vec_const(4, "four_v")
+        zero_v = get_vec_const(0, "zero_v")
 
         # Precompute hash stage constants
         linear_stages = []
@@ -161,8 +163,9 @@ class KernelBuilder:
                         "op1": op1,
                         "op2": op2,
                         "shift_op": op3,
-                        "const_v": get_vec_const(val1, f"xor_{val1:x}"),
-                        "shift_s": self.scratch_const(val3, f"sh_{val3}"),
+                        "const_s": self.scratch_const(val1, f"xor_{val1:x}"),
+                        "const_v": get_vec_const(val1, f"xor_{val1:x}_v"),
+                        "shift_v": get_vec_const(val3, f"sh_{val3}_v"),
                     }
                 )
 
@@ -172,7 +175,6 @@ class KernelBuilder:
         n_vecs = batch_size // VLEN
         val_base = [self.alloc_scratch(f"val_{i}", VLEN) for i in range(n_vecs)]
         idx_base = [self.alloc_scratch(f"idx_{i}", VLEN) for i in range(n_vecs)]
-        node_base = [self.alloc_scratch(f"node_{i}", VLEN) for i in range(n_vecs)]
         tmp_base = [self.alloc_scratch(f"tmp_{i}", VLEN) for i in range(n_vecs)]
         tmp2_base = [self.alloc_scratch(f"tmp2_{i}", VLEN) for i in range(n_vecs)]
 
@@ -181,14 +183,14 @@ class KernelBuilder:
 
         forest_base_v = self.alloc_scratch("forest_base_v", VLEN)
         self.add("valu", ("vbroadcast", forest_base_v, forest_values_p))
-        # Preload node values for indices 0..6 (used in rounds 0-2 and 11-13)
-        node_s = [self.alloc_scratch(f"node{idx}_s") for idx in range(7)]
-        node_v = [self.alloc_scratch(f"node{idx}_v", VLEN) for idx in range(7)]
-        for idx in range(7):
+        # Preload node values for indices 0..30 (top-4 + depth-4 partial caching)
+        node_tmp = self.alloc_scratch("node_tmp")
+        node_v = [self.alloc_scratch(f"node{idx}_v", VLEN) for idx in range(31)]
+        for idx in range(31):
             idx_const = self.scratch_const(idx)
             self.add("alu", ("+", tmp, forest_values_p, idx_const))
-            self.add("load", ("load", node_s[idx], tmp))
-            self.add("valu", ("vbroadcast", node_v[idx], node_s[idx]))
+            self.add("load", ("load", node_tmp, tmp))
+            self.add("valu", ("vbroadcast", node_v[idx], node_tmp))
 
         # -------------------------
         # Build main op list
@@ -270,6 +272,10 @@ class KernelBuilder:
             writes = vec_addrs(dest)
             add_op("flow", ("vselect", dest, cond, a, b), reads, writes, vec=vec)
 
+        def offload_op1(vec: int, round_i: int, bit_i: int) -> bool:
+            # Offload exactly 1506 op1s: keep 30 on VALU (stage 0, round 0, vec 0..29)
+            return not (round_i == 0 and bit_i == 0 and vec < 30)
+
         # Compute idx_ptr/val_ptr with flow add_imm
         add_flow_add_imm(idx_ptr[0], inp_indices_p, 0, vec=0)
         add_flow_add_imm(val_ptr[0], inp_values_p, 0, vec=0)
@@ -285,30 +291,20 @@ class KernelBuilder:
         # Main rounds
         for r in range(rounds):
             for v in range(n_vecs):
-                # node values (specialize rounds 0-2 and 11-13)
+                # node values (specialize rounds 0-3 and 11-14)
                 if r == 0 or r == 11:
                     add_valu("^", val_base[v], val_base[v], node_v[0], vec=v)
                 elif r == 1 or r == 12:
                     add_valu("-", tmp_base[v], idx_base[v], one_v, vec=v)
-                    add_vselect(node_base[v], tmp_base[v], node_v[2], node_v[1], vec=v)
-                    add_valu("^", val_base[v], val_base[v], node_base[v], vec=v)
-                elif r == 2 or r == 13:
-                    add_valu("-", tmp_base[v], idx_base[v], one_v, vec=v)
-                    add_valu("-", tmp_base[v], tmp_base[v], two_v, vec=v)
-                    add_valu("&", tmp2_base[v], tmp_base[v], one_v, vec=v)
-                    add_valu(">>", node_base[v], tmp_base[v], one_v, vec=v)
-                    add_valu("&", node_base[v], node_base[v], one_v, vec=v)
-                    add_vselect(tmp_base[v], tmp2_base[v], node_v[4], node_v[3], vec=v)
-                    add_vselect(tmp2_base[v], tmp2_base[v], node_v[6], node_v[5], vec=v)
-                    add_vselect(node_base[v], node_base[v], tmp2_base[v], tmp_base[v], vec=v)
-                    add_valu("^", val_base[v], val_base[v], node_base[v], vec=v)
+                    add_vselect(tmp2_base[v], tmp_base[v], node_v[2], node_v[1], vec=v)
+                    add_valu("^", val_base[v], val_base[v], tmp2_base[v], vec=v)
                 else:
                     # addr_vec = idx_vec + forest_values_p (broadcasted)
-                    add_valu("+", node_base[v], idx_base[v], forest_base_v, vec=v)
+                    add_valu("+", tmp2_base[v], idx_base[v], forest_base_v, vec=v)
                     for lane in range(VLEN):
-                        add_load_offset(node_base[v], node_base[v], lane, vec=v)
+                        add_load_offset(tmp2_base[v], tmp2_base[v], lane, vec=v)
                     # val ^= node
-                    add_valu("^", val_base[v], val_base[v], node_base[v], vec=v)
+                    add_valu("^", val_base[v], val_base[v], tmp2_base[v], vec=v)
 
                 # hash stages
                 lin_i = 0
@@ -317,23 +313,28 @@ class KernelBuilder:
                     if op1 == "+" and op2 == "+":
                         stage = linear_stages[lin_i]
                         lin_i += 1
+                        # val = val * mult + add (vectorized)
                         add_vmuladd(val_base[v], val_base[v], stage["mult_v"], stage["add_v"], vec=v)
                     else:
                         stage = bitwise_stages[bit_i]
+                        cur_bit = bit_i
                         bit_i += 1
-                        # t1 = op1(val, const)
-                        add_valu(stage["op1"], node_base[v], val_base[v], stage["const_v"], vec=v)
-                        # t2 = shift(val)
-                        for lane in range(VLEN):
-                            add_alu(
-                                stage["shift_op"],
-                                tmp_base[v] + lane,
-                                val_base[v] + lane,
-                                stage["shift_s"],
-                                vec=v,
-                            )
+                        # t1 = op1(val, const) (offload to ALU or keep on VALU)
+                        if offload_op1(v, r, cur_bit):
+                            for lane in range(VLEN):
+                                add_alu(
+                                    stage["op1"],
+                                    tmp2_base[v] + lane,
+                                    val_base[v] + lane,
+                                    stage["const_s"],
+                                    vec=v,
+                                )
+                        else:
+                            add_valu(stage["op1"], tmp2_base[v], val_base[v], stage["const_v"], vec=v)
+                        # t2 = shift(val) on VALU (vector)
+                        add_valu(stage["shift_op"], tmp_base[v], val_base[v], stage["shift_v"], vec=v)
                         # val = op2(t1, t2)
-                        add_valu(stage["op2"], val_base[v], node_base[v], tmp_base[v], vec=v)
+                        add_valu(stage["op2"], val_base[v], tmp2_base[v], tmp_base[v], vec=v)
 
                 # index update
                 if r == 10:
@@ -346,6 +347,7 @@ class KernelBuilder:
 
 
 
+        # Store values
         # Store values
         for v in range(n_vecs):
             add_vstore(val_ptr[v], val_base[v], vec=v)

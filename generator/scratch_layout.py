@@ -1,0 +1,111 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from problem import HASH_STAGES, SCRATCH_SIZE, VLEN
+
+
+class ScratchAlloc:
+    def __init__(self, limit: int = SCRATCH_SIZE):
+        self.ptr = 0
+        self.limit = limit
+        self.map: dict[str, int] = {}
+
+    def alloc(self, name: str, length: int = 1) -> int:
+        addr = self.ptr
+        self.map[name] = addr
+        self.ptr += length
+        if self.ptr > self.limit:
+            raise RuntimeError(f"scratch overflow: {self.ptr} > {self.limit}")
+        return addr
+
+
+@dataclass(frozen=True)
+class Layout:
+    val: list[int]
+    idx: list[int]
+    tmp: list[int]
+    tmp2: list[int]
+    idx_ptr: list[int]
+    val_ptr: list[int]
+    node_v: list[int]
+    forest_values_p: int
+    inp_indices_p: int
+    inp_values_p: int
+    node_tmp: int
+    const_s: dict[int, int]
+    const_v: dict[int, int]
+    forest_base_v: int
+
+
+def _hash_vector_constants() -> set[int]:
+    vals: set[int] = set()
+    for op1, val1, op2, op3, val3 in HASH_STAGES:
+        if op1 == "+" and op2 == "+":
+            mult = (1 + (1 << val3)) % (2**32)
+            vals.add(mult)
+            vals.add(val1)
+        else:
+            vals.add(val1)
+            vals.add(val3)
+    return vals
+
+
+def build_layout(spec, scratch: ScratchAlloc) -> Layout:
+    n_vecs = spec.vectors
+    val = [scratch.alloc(f"val_{i}", VLEN) for i in range(n_vecs)]
+    idx = [scratch.alloc(f"idx_{i}", VLEN) for i in range(n_vecs)]
+    tmp = [scratch.alloc(f"tmp_{i}", VLEN) for i in range(n_vecs)]
+    tmp2 = [scratch.alloc(f"tmp2_{i}", VLEN) for i in range(n_vecs)]
+
+    idx_ptr = [scratch.alloc(f"idx_ptr_{i}") for i in range(n_vecs)]
+    val_ptr = [scratch.alloc(f"val_ptr_{i}") for i in range(n_vecs)]
+
+    # Base pointers (scalar)
+    forest_values_p = scratch.alloc("forest_values_p")
+    inp_indices_p = scratch.alloc("inp_indices_p")
+    inp_values_p = scratch.alloc("inp_values_p")
+    node_tmp = scratch.alloc("node_tmp")
+
+    # Preloaded cached nodes 0..30 (vector)
+    node_v = [scratch.alloc(f"node_v_{i}", VLEN) for i in range(31)]
+
+    # Constants (scalar + vector)
+    const_s: dict[int, int] = {}
+    const_v: dict[int, int] = {}
+
+    def reserve_const(val: int) -> int:
+        if val not in const_s:
+            const_s[val] = scratch.alloc(f"const_{val}")
+        return const_s[val]
+
+    def reserve_vconst(val: int) -> int:
+        if val not in const_v:
+            const_v[val] = scratch.alloc(f"vconst_{val}", VLEN)
+        return const_v[val]
+
+    for v in (0, 1, 2, VLEN):
+        reserve_const(v)
+    for v in (1, 2):
+        reserve_vconst(v)
+    for v in sorted(_hash_vector_constants()):
+        reserve_vconst(v)
+
+    forest_base_v = scratch.alloc("forest_base_v", VLEN)
+
+    return Layout(
+        val=val,
+        idx=idx,
+        tmp=tmp,
+        tmp2=tmp2,
+        idx_ptr=idx_ptr,
+        val_ptr=val_ptr,
+        node_v=node_v,
+        forest_values_p=forest_values_p,
+        inp_indices_p=inp_indices_p,
+        inp_values_p=inp_values_p,
+        node_tmp=node_tmp,
+        const_s=const_s,
+        const_v=const_v,
+        forest_base_v=forest_base_v,
+    )

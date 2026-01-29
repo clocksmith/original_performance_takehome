@@ -7,4 +7,4 @@ require mathlib from git "https://github.com/leanprover-community/mathlib4" @ "v
 
 lean_lib TakehomeProofs where
   srcDir := "."
-  roots := #[`proofs.LowerBound1316]
+  roots := #[`proofs.b1013.LowerBound, `proofs.b1316.LowerBound]
