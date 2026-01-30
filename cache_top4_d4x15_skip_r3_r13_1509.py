@@ -1,5 +1,5 @@
 from perf_takehome import KernelBuilder as BaseKernelBuilder
-from generator.cache_top4_d4x15_reset_offload_1016_off128 import build_instrs
+from generator.cache_top4_d4x15_skip_r3_r13_1509 import build_instrs
 
 
 class KernelBuilder(BaseKernelBuilder):

@@ -22,6 +22,8 @@ class Spec1013:
     offload_hash_op1: bool = True
     offload_parity: bool = False
     use_bitmask_selection: bool = False
+    # Use 1-based idx representation to drop the +1 in update.
+    idx_shifted: bool = False
     # Pointer setup engine ("flow" or "alu").
     ptr_setup_engine: str = "flow"
     include_setup: bool = False

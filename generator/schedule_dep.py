@@ -146,7 +146,6 @@ def schedule_ops_dep(
 
         writes_cycle: set[int] = set()
         engine_counts: dict[str, int] = {}
-        valu_vecs_cycle: set[int] = set()
         any_scheduled = False
 
         def release_children(idx: int) -> None:
@@ -179,12 +178,6 @@ def schedule_ops_dep(
                     if any(w in writes_cycle for w in writes_list[idx]):
                         skipped.append((ready_cycle, neg_pri, idx))
                         continue
-                    if engine == "valu":
-                        meta = ops[idx].meta or {}
-                        vec = meta.get("vec")
-                        if vec is not None and vec in valu_vecs_cycle and heap:
-                            skipped.append((ready_cycle, neg_pri, idx))
-                            continue
                     op = ops[idx]
                     if return_ops:
                         instrs[cycle].setdefault(engine, []).append(op)
@@ -193,11 +186,6 @@ def schedule_ops_dep(
                     scheduled[idx] = cycle
                     for w in writes_list[idx]:
                         writes_cycle.add(w)
-                    if engine == "valu":
-                        meta = op.meta or {}
-                        vec = meta.get("vec")
-                        if vec is not None:
-                            valu_vecs_cycle.add(vec)
                     remaining -= 1
                     any_scheduled = True
                     made_progress = True

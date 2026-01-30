@@ -35,8 +35,14 @@ def build_1013_instrs(spec: Spec1013 | None = None):
     ]
     _pack("load", ptr_loads)
 
-    # Broadcast forest_values_p pointer for uncached address compute.
-    setup_instrs.append({"valu": [("vbroadcast", layout.forest_values_v, layout.forest_values_p)]})
+    # Broadcast forest_values_p pointer for uncached address compute (shifted if needed).
+    if getattr(spec, "idx_shifted", False):
+        setup_instrs.append(
+            {"alu": [("-", layout.node_tmp, layout.forest_values_p, layout.const_s[1])]}
+        )
+        setup_instrs.append({"valu": [("vbroadcast", layout.forest_values_v, layout.node_tmp)]})
+    else:
+        setup_instrs.append({"valu": [("vbroadcast", layout.forest_values_v, layout.forest_values_p)]})
 
     # Pointer setup (flow add_imm or ALU +, depending on spec).
     ptr_engine = getattr(spec, "ptr_setup_engine", "flow")
@@ -78,6 +84,11 @@ def build_1013_instrs(spec: Spec1013 | None = None):
         vloads.append(("vload", layout.idx[v], layout.idx_ptr[v]))
         vloads.append(("vload", layout.val[v], layout.val_ptr[v]))
     _pack("load", vloads)
+    if getattr(spec, "idx_shifted", False):
+        shift_ops = [
+            ("+", layout.idx[v], layout.idx[v], layout.const_v[1]) for v in range(spec.vectors)
+        ]
+        _pack("valu", shift_ops)
 
     # --- Main scheduled phase ---
     ordered_ops: list[Op] = []

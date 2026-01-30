@@ -120,8 +120,20 @@ def _add_alu(ops: list[Op], op: str, dest: int, a: int, b: int, meta=None):
     _record(new_op)
     ops.append(new_op)
 
+def _idx_const(spec, const_s: dict[int, int], val: int) -> int:
+    if getattr(spec, "idx_shifted", False):
+        return const_s[val + 1]
+    return const_s[val]
+
+
+def _add_vselect_parity(spec, ops: list[Op], dest: int, cond: int, a: int, b: int, meta=None):
+    if getattr(spec, "idx_shifted", False):
+        a, b = b, a
+    _add_vselect(ops, dest, cond, a, b, meta=meta)
+
 
 def _select_by_eq_alu(
+    spec,
     alu_ops: list[Op],
     flow_ops: list[Op],
     tmp: int,
@@ -137,7 +149,7 @@ def _select_by_eq_alu(
     base_addr = nodes[0][1]
     first = True
     for node_idx, node_addr in nodes[1:]:
-        _add_alu_vec(alu_ops, "==", sel, idx, const_s[node_idx], meta=meta)
+        _add_alu_vec(alu_ops, "==", sel, idx, _idx_const(spec, const_s, node_idx), meta=meta)
         if first:
             _add_vselect(flow_ops, tmp, sel, node_addr, base_addr, meta=meta)
             first = False
@@ -186,12 +198,24 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
         _add_load(load_ops, layout.inp_indices_p, layout.const_s[5], meta={"setup": True, "ptr": "inp_indices_p"})
         _add_load(load_ops, layout.inp_values_p, layout.const_s[6], meta={"setup": True, "ptr": "inp_values_p"})
 
-        # Pointer setup (flow)
-        _add_flow_add_imm(flow_ops, layout.idx_ptr[0], layout.inp_indices_p, 0, meta={"setup": True})
-        _add_flow_add_imm(flow_ops, layout.val_ptr[0], layout.inp_values_p, 0, meta={"setup": True})
-        for v in range(1, spec.vectors):
-            _add_flow_add_imm(flow_ops, layout.idx_ptr[v], layout.idx_ptr[v - 1], VLEN, meta={"setup": True})
-            _add_flow_add_imm(flow_ops, layout.val_ptr[v], layout.val_ptr[v - 1], VLEN, meta={"setup": True})
+        # Pointer setup (flow or ALU)
+        ptr_engine = getattr(spec, "ptr_setup_engine", "flow")
+        if ptr_engine == "flow":
+            _add_flow_add_imm(flow_ops, layout.idx_ptr[0], layout.inp_indices_p, 0, meta={"setup": True})
+            _add_flow_add_imm(flow_ops, layout.val_ptr[0], layout.inp_values_p, 0, meta={"setup": True})
+            for v in range(1, spec.vectors):
+                _add_flow_add_imm(flow_ops, layout.idx_ptr[v], layout.idx_ptr[v - 1], VLEN, meta={"setup": True})
+                _add_flow_add_imm(flow_ops, layout.val_ptr[v], layout.val_ptr[v - 1], VLEN, meta={"setup": True})
+        elif ptr_engine == "alu":
+            zero = layout.const_s[0]
+            vlen = layout.const_s[VLEN]
+            _add_alu(alu_ops, "+", layout.idx_ptr[0], layout.inp_indices_p, zero, meta={"setup": True})
+            _add_alu(alu_ops, "+", layout.val_ptr[0], layout.inp_values_p, zero, meta={"setup": True})
+            for v in range(1, spec.vectors):
+                _add_alu(alu_ops, "+", layout.idx_ptr[v], layout.idx_ptr[v - 1], vlen, meta={"setup": True})
+                _add_alu(alu_ops, "+", layout.val_ptr[v], layout.val_ptr[v - 1], vlen, meta={"setup": True})
+        else:
+            raise ValueError(f"unknown ptr_setup_engine {ptr_engine!r}")
 
         # Broadcast constants into vectors
         for val, vaddr in sorted(layout.const_v.items()):
@@ -203,26 +227,55 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
             _add_load(load_ops, layout.node_tmp, layout.node_tmp, meta={"setup": True, "node": i})
             _add_vbroadcast(valu_ops, vaddr, layout.node_tmp, meta={"setup": True, "node": i})
 
-        # Broadcast forest_values_p pointer for uncached address compute.
-        _add_vbroadcast(valu_ops, layout.forest_values_v, layout.forest_values_p, meta={"setup": True, "ptr": "forest_values_p"})
+        # Broadcast forest_values pointer for uncached address compute (shifted if needed).
+        if getattr(spec, "idx_shifted", False):
+            _add_alu(
+                alu_ops,
+                "-",
+                layout.node_tmp,
+                layout.forest_values_p,
+                layout.const_s[1],
+                meta={"setup": True, "ptr": "forest_values_p_shift"},
+            )
+            _add_vbroadcast(
+                valu_ops,
+                layout.forest_values_v,
+                layout.node_tmp,
+                meta={"setup": True, "ptr": "forest_values_p_shift"},
+            )
+        else:
+            _add_vbroadcast(
+                valu_ops,
+                layout.forest_values_v,
+                layout.forest_values_p,
+                meta={"setup": True, "ptr": "forest_values_p"},
+            )
 
         # Initial vloads
         for v in range(spec.vectors):
             _add_vload(load_ops, layout.idx[v], layout.idx_ptr[v], meta={"vec": v})
+            if getattr(spec, "idx_shifted", False):
+                _add_valu(
+                    valu_ops,
+                    "+",
+                    layout.idx[v],
+                    layout.idx[v],
+                    layout.const_v[1],
+                    meta={"setup": True, "vec": v, "idx_shift": True},
+                )
             _add_vload(load_ops, layout.val[v], layout.val_ptr[v], meta={"vec": v})
 
     # Rounds (blocked, round-major when using shared temp buffers)
-    if getattr(spec, "use_bitmask_selection", False):
-        block = getattr(spec, "vector_block", 0)
-        if block:
-            vec_round_pairs = []
-            for block_start in range(0, spec.vectors, block):
-                block_end = min(spec.vectors, block_start + block)
-                for r in range(spec.rounds):
-                    for v in range(block_start, block_end):
-                        vec_round_pairs.append((v, r))
-        else:
-            vec_round_pairs = [(v, r) for v in range(spec.vectors) for r in range(spec.rounds)]
+    block = getattr(spec, "vector_block", 0)
+    if block:
+        vec_round_pairs = []
+        for block_start in range(0, spec.vectors, block):
+            block_end = min(spec.vectors, block_start + block)
+            for r in range(spec.rounds):
+                for v in range(block_start, block_end):
+                    vec_round_pairs.append((v, r))
+    elif getattr(spec, "use_bitmask_selection", False):
+        vec_round_pairs = [(v, r) for v in range(spec.vectors) for r in range(spec.rounds)]
     else:
         vec_round_pairs = [(v, r) for r in range(spec.rounds) for v in range(spec.vectors)]
 
@@ -248,17 +301,34 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
             elif r in (1, 12):
                 if getattr(spec, "use_bitmask_selection", False) and extra is not None:
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
-                    _add_vselect(flow_ops, sel, tmp, layout.node_v[1], layout.node_v[2], meta={"round": r, "vec": v})
+                    _add_vselect_parity(
+                        spec,
+                        flow_ops,
+                        sel,
+                        tmp,
+                        layout.node_v[1],
+                        layout.node_v[2],
+                        meta={"round": r, "vec": v},
+                    )
                     _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
                 else:
                     nodes = [(1, layout.node_v[1]), (2, layout.node_v[2])]
-                    _select_by_eq_alu(alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
+                    _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
                     _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
             elif r in (2, 13):
                 if getattr(spec, "use_bitmask_selection", False) and extra is not None:
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
-                    _add_vselect(flow_ops, sel, tmp, layout.node_v[3], layout.node_v[4], meta={"round": r, "vec": v})
-                    _add_vselect(
+                    _add_vselect_parity(
+                        spec,
+                        flow_ops,
+                        sel,
+                        tmp,
+                        layout.node_v[3],
+                        layout.node_v[4],
+                        meta={"round": r, "vec": v},
+                    )
+                    _add_vselect_parity(
+                        spec,
                         flow_ops,
                         extra,
                         tmp,
@@ -266,7 +336,14 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         layout.node_v[6],
                         meta=_tag_temp({"round": r, "vec": v}, extra_key),
                     )
-                    _add_alu_vec(alu_ops, "<", tmp, idx, layout.const_s[5], meta={"round": r, "vec": v})
+                    _add_alu_vec(
+                        alu_ops,
+                        "<",
+                        tmp,
+                        idx,
+                        _idx_const(spec, layout.const_s, 5),
+                        meta={"round": r, "vec": v},
+                    )
                     _add_vselect(
                         flow_ops,
                         sel,
@@ -278,15 +355,24 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
                 else:
                     nodes = [(i, layout.node_v[i]) for i in range(3, 7)]
-                    _select_by_eq_alu(alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
+                    _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
                     _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
             elif r in (3, 14):
                 if getattr(spec, "use_bitmask_selection", False) and extra is not None:
                     # Lower half: nodes 7..10
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
-                    _add_vselect(flow_ops, sel, tmp, layout.node_v[7], layout.node_v[8], meta={"round": r, "vec": v})
+                    _add_vselect_parity(
+                        spec,
+                        flow_ops,
+                        sel,
+                        tmp,
+                        layout.node_v[7],
+                        layout.node_v[8],
+                        meta={"round": r, "vec": v},
+                    )
                     if extra2 is not None:
-                        _add_vselect(
+                        _add_vselect_parity(
+                            spec,
                             flow_ops,
                             extra2,
                             tmp,
@@ -294,7 +380,14 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                             layout.node_v[10],
                             meta=_tag_temp({"round": r, "vec": v}, extra2_key),
                         )
-                        _add_alu_vec(alu_ops, "<", tmp, idx, layout.const_s[9], meta={"round": r, "vec": v})
+                        _add_alu_vec(
+                            alu_ops,
+                            "<",
+                            tmp,
+                            idx,
+                            _idx_const(spec, layout.const_s, 9),
+                            meta={"round": r, "vec": v},
+                        )
                         _add_vselect(
                             flow_ops,
                             sel,
@@ -312,7 +405,14 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                             layout.node_v[10],
                             meta=_tag_temp({"round": r, "vec": v}, extra_key),
                         )
-                        _add_alu_vec(alu_ops, "<", tmp, idx, layout.const_s[9], meta={"round": r, "vec": v})
+                        _add_alu_vec(
+                            alu_ops,
+                            "<",
+                            tmp,
+                            idx,
+                            _idx_const(spec, layout.const_s, 9),
+                            meta={"round": r, "vec": v},
+                        )
                         _add_vselect(
                             flow_ops,
                             sel,
@@ -324,7 +424,8 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
 
                     # Upper half: nodes 11..14 (use LSB selection)
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
-                    _add_vselect(
+                    _add_vselect_parity(
+                        spec,
                         flow_ops,
                         extra,
                         tmp,
@@ -332,7 +433,8 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         layout.node_v[12],
                         meta=_tag_temp({"round": r, "vec": v}, extra_key),
                     )
-                    _add_vselect(
+                    _add_vselect_parity(
+                        spec,
                         flow_ops,
                         extra2 if extra2 is not None else sel,
                         tmp,
@@ -340,7 +442,14 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         layout.node_v[14],
                         meta=_tag_temp({"round": r, "vec": v}, extra2_key or extra_key),
                     )
-                    _add_alu_vec(alu_ops, "<", tmp, idx, layout.const_s[13], meta={"round": r, "vec": v})
+                    _add_alu_vec(
+                        alu_ops,
+                        "<",
+                        tmp,
+                        idx,
+                        _idx_const(spec, layout.const_s, 13),
+                        meta={"round": r, "vec": v},
+                    )
                     _add_vselect(
                         flow_ops,
                         extra,
@@ -351,7 +460,14 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     )
 
                     # Final select between lower and upper
-                    _add_alu_vec(alu_ops, "<", tmp, idx, layout.const_s[11], meta={"round": r, "vec": v})
+                    _add_alu_vec(
+                        alu_ops,
+                        "<",
+                        tmp,
+                        idx,
+                        _idx_const(spec, layout.const_s, 11),
+                        meta={"round": r, "vec": v},
+                    )
                     _add_vselect(
                         flow_ops,
                         sel,
@@ -363,7 +479,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
                 else:
                     nodes = [(i, layout.node_v[i]) for i in range(7, 15)]
-                    _select_by_eq_alu(alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
+                    _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
                     _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
             else:
                 # Shouldn't happen for current spec, but keep uncached fallback.
@@ -373,7 +489,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                 _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
         elif r in spec.depth4_cached_rounds and v < spec.x4:
             nodes = [(i, layout.node_v[i]) for i in range(15, 31)]
-            _select_by_eq_alu(alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
+            _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
             _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
         else:
             # Uncached: load node values
@@ -410,11 +526,13 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                 _add_valu(valu_ops, stage.op2, val, val, tmp, meta={"round": r, "vec": v, "stage": "op2"})
 
         # Index update
+        one_v = layout.const_v[1]
+        two_v = layout.const_v[2]
         if r == 10 and spec.reset_on_valu:
             _add_valu(valu_ops, "^", idx, idx, idx, meta={"round": r, "vec": v})
+            if getattr(spec, "idx_shifted", False):
+                _add_valu(valu_ops, "+", idx, idx, one_v, meta={"round": r, "vec": v})
         elif r != 15:
-            one_v = layout.const_v[1]
-            two_v = layout.const_v[2]
             _add_valu(
                 valu_ops,
                 "&",
@@ -424,7 +542,8 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                 meta={"round": r, "vec": v},
                 offloadable=getattr(spec, "offload_parity", False),
             )
-            _add_valu(valu_ops, "+", tmp, tmp, one_v, meta={"round": r, "vec": v})
+            if not getattr(spec, "idx_shifted", False):
+                _add_valu(valu_ops, "+", tmp, tmp, one_v, meta={"round": r, "vec": v})
             _add_vmuladd(valu_ops, idx, idx, two_v, tmp, meta={"round": r, "vec": v})
 
     # Final stores

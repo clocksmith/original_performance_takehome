@@ -92,6 +92,66 @@
         "path": "cache_top4_d4x15_reset_offload_1227.py",
         "class": "KernelBuilder"
       }
+    },
+    {
+      "proof_name": "cache_top4_d4x15_reset_offload_1016_parity_off",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1016_parity_off",
+        "object": "SPEC_CACHE_TOP4_D4X15_RESET_OFFLOAD_1016_PARITY_OFF"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1016_parity_off",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_reset_offload_1016_parity_off.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_d4x15_reset_offload_1016_parity_off_idxshift_ptralu",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1016_parity_off_idxshift_ptralu",
+        "object": "SPEC_CACHE_TOP4_D4X15_RESET_OFFLOAD_1016_PARITY_OFF_IDXSHIFT_PTRALU"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1016_parity_off_idxshift_ptralu",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_reset_offload_1016_parity_off_idxshift_ptralu.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_d4x15_skip_r3_r13_1509",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_skip_r3_r13_1509",
+        "object": "SPEC_CACHE_TOP4_D4X15_SKIP_R3_R13_1509"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_skip_r3_r13_1509",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_skip_r3_r13_1509.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_d4x15_skip_r3_x4_24_1456",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_skip_r3_x4_24_1456",
+        "object": "SPEC_CACHE_TOP4_D4X15_SKIP_R3_X4_24_1456"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_skip_r3_x4_24_1456",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_skip_r3_x4_24_1456.py",
+        "class": "KernelBuilder"
+      }
     }
   ]
 }

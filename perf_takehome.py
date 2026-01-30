@@ -108,7 +108,7 @@ class KernelBuilder:
             and batch_size == 256
             and n_nodes == 2 ** (forest_height + 1) - 1
         ):
-            from generator.cache_top4_d4x15_reset_offload_1016 import build_instrs
+            from generator.cache_top4_d4x15_skip_r3_x4_24_1456 import build_instrs
 
             self.instrs = build_instrs()
             return

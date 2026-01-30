@@ -13,6 +13,7 @@ SPEC_PROOF_1013 = replace(
     depth4_cached_rounds=(4,),
     offload_op1=826,
     use_bitmask_selection=False,
+    idx_shifted=True,
     include_setup=False,
     total_cycles=1174,
 )

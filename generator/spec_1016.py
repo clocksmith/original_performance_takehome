@@ -21,6 +21,13 @@ class Spec1016:
     # Offload controls
     offload_hash_op1: bool = True
     offload_parity: bool = False
+    # Indexing mode (1-based) + pointer setup engine.
+    idx_shifted: bool = False
+    ptr_setup_engine: str = "flow"
+    # Selection mode
+    use_bitmask_selection: bool = False
+    extra_vecs: int = 2
+    vector_block: int = 32
     # Override cached node count if needed.
     cached_nodes: int | None = None
 

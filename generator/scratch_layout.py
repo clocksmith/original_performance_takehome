@@ -86,7 +86,7 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
         return const_v[val]
 
     # Scalar consts: pointer slots + masks + hash constants
-    for v in (0, 1, 2, 4, 5, 6, 8, VLEN):
+    for v in (0, 1, 2, 4, 5, 6, 8, 10, 12, 14, 31, VLEN):
         reserve_const(v)
 
     # Vector consts needed for hash + shifts; small masks as needed.
@@ -104,8 +104,8 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
         reserve_const(v)
         reserve_vconst(v)
 
-    # Scalar node indices for ALU equality selection (1..30)
-    for v in range(1, 31):
+    # Scalar node indices for ALU equality selection (1..31). +1 supports idx-shifted mode.
+    for v in range(1, 32):
         reserve_const(v)
 
     return Layout(

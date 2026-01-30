@@ -203,6 +203,11 @@ def main() -> None:
         help="Whether reset is on flow: true/false/both.",
     )
     parser.add_argument(
+        "--parity-on-alu",
+        default="false",
+        help="Whether parity (val & 1) is offloaded to ALU: true/false/both.",
+    )
+    parser.add_argument(
         "--depth4-rounds",
         default="0,1,2",
         help="Comma-separated depth-4 cache rounds.",
@@ -226,6 +231,7 @@ def main() -> None:
     setup_valu_values = _parse_int_list(args.setup_valu, name="setup-valu")
     shift_values = _parse_bool_list(args.shift_on_alu, name="shift-on-alu")
     reset_values = _parse_bool_list(args.reset_on_flow, name="reset-on-flow")
+    parity_values = _parse_bool_list(args.parity_on_alu, name="parity-on-alu")
     x_values: Sequence[int] | None = None
     if args.x.strip():
         x_values = _parse_int_list(args.x, name="x")
@@ -235,18 +241,20 @@ def main() -> None:
         for flow_setup_ops in flow_setup_values:
             for shift_on_alu in shift_values:
                 for reset_on_flow in reset_values:
-                    for depth4_rounds in depth4_values:
-                        for setup_valu in setup_valu_values:
-                            for T in t_values:
-                                results = feasible(
-                                    T,
-                                    setup_valu=setup_valu,
-                                    flow_setup_ops=flow_setup_ops,
-                                    depth4_rounds=depth4_rounds,
-                                    shift_on_alu=shift_on_alu,
-                                    reset_on_flow=reset_on_flow,
-                                    x_values=x_values,
-                                )
+                    for parity_on_alu in parity_values:
+                        for depth4_rounds in depth4_values:
+                            for setup_valu in setup_valu_values:
+                                for T in t_values:
+                                    results = feasible(
+                                        T,
+                                        setup_valu=setup_valu,
+                                        flow_setup_ops=flow_setup_ops,
+                                        depth4_rounds=depth4_rounds,
+                                        shift_on_alu=shift_on_alu,
+                                        reset_on_flow=reset_on_flow,
+                                        parity_on_alu=parity_on_alu,
+                                        x_values=x_values,
+                                    )
                                 if not results:
                                     continue
                                 all_results.append(
@@ -266,32 +274,35 @@ def main() -> None:
     for flow_setup_ops in flow_setup_values:
         for shift_on_alu in shift_values:
             for reset_on_flow in reset_values:
-                for depth4_rounds in depth4_values:
-                    for setup_valu in setup_valu_values:
-                        all_rows: list[str] = []
-                        for T in t_values:
-                            rows = feasible(
-                                T,
-                                setup_valu=setup_valu,
-                                flow_setup_ops=flow_setup_ops,
-                                depth4_rounds=depth4_rounds,
-                                shift_on_alu=shift_on_alu,
-                                reset_on_flow=reset_on_flow,
-                                x_values=x_values,
+                for parity_on_alu in parity_values:
+                    for depth4_rounds in depth4_values:
+                        for setup_valu in setup_valu_values:
+                            all_rows: list[str] = []
+                            for T in t_values:
+                                rows = feasible(
+                                    T,
+                                    setup_valu=setup_valu,
+                                    flow_setup_ops=flow_setup_ops,
+                                    depth4_rounds=depth4_rounds,
+                                    shift_on_alu=shift_on_alu,
+                                    reset_on_flow=reset_on_flow,
+                                    parity_on_alu=parity_on_alu,
+                                    x_values=x_values,
+                                )
+                                all_rows.extend(format_rows(rows))
+                            if not all_rows:
+                                continue
+                            print(
+                                "config: "
+                                f"flow_setup={flow_setup_ops} "
+                                f"shifts={'alu' if shift_on_alu else 'valu'} "
+                                f"reset={'flow' if reset_on_flow else 'valu'} "
+                                f"parity={'alu' if parity_on_alu else 'valu'} "
+                                f"depth4_rounds={depth4_rounds} "
+                                f"setup_valu={setup_valu}"
                             )
-                            all_rows.extend(format_rows(rows))
-                        if not all_rows:
-                            continue
-                        print(
-                            "config: "
-                            f"flow_setup={flow_setup_ops} "
-                            f"shifts={'alu' if shift_on_alu else 'valu'} "
-                            f"reset={'flow' if reset_on_flow else 'valu'} "
-                            f"depth4_rounds={depth4_rounds} "
-                            f"setup_valu={setup_valu}"
-                        )
-                        for line in all_rows:
-                            print(f"  {line}")
+                            for line in all_rows:
+                                print(f"  {line}")
 
 
 if __name__ == "__main__":

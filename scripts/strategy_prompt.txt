@@ -18,6 +18,7 @@ Step 0: Choose a strategy family
 - Decide selection mode (equality-selection via vselect tree, or bitmask selection).
 - Decide reset placement (VALU vs FLOW) and shift placement (VALU vs ALU).
 - Decide setup placement (include_setup true/false; pointer setup engine flow/alu).
+- Decide idx representation: 0-based (idx_shifted=false) or 1-based (idx_shifted=true) to drop the +1 in idx update.
 
 Step 1: Feasibility sweep
 - Run sweep_caps.py with parameters matching the strategy family.
@@ -38,7 +39,7 @@ Step 2: Proof stub (or full proof)
 
 Step 3: Spec override
 - Add a SPEC_PROOF_* override in generator/<strategy_name>.py or reuse a shared spec module.
-- Ensure spec fields match the proof: depth4_rounds, x4, cached rounds, offload_op1, selection mode, total_cycles, include_setup, ptr_setup_engine, cached_nodes.
+- Ensure spec fields match the proof: depth4_rounds, x4, cached rounds, offload_op1, selection mode, total_cycles, include_setup, ptr_setup_engine, cached_nodes, idx_shifted.
 
 Step 4: Generator wrapper
 - Create generator/<strategy_name>.py with build_instrs() calling build_1013_instrs(spec=SPEC_PROOF_*).
@@ -68,6 +69,12 @@ Notes
 - sweep_caps.py is a feasibility filter only; it does not model scheduling hazards.
 - Proofs must match generator counts (setup included/excluded is critical).
 - Avoid mixing proof cycle budgets with generic schedulers without dependency guarantees.
+- idx_shifted enables 1-based indexing and should be paired with base-pointer biasing for uncached loads.
+
+Optimization identities (what matters here)
+- High-impact in this ISA/kernel: 1-based indexing, base-pointer biasing, parity offload, pointer setup off flow, shift placement (VALU->ALU), reset placement (VALU<->FLOW), selection mode (eq vs bitmask).
+- Already in play / low win: modulo-by-2 via &1, branchless selection (vselect), pointer bumping in setup.
+- Mostly not applicable: stride-type aliasing, clamp/min/max, polynomial diffs, hash algebra shortcuts (change semantics).
 
 Deliverables for each strategy
 - Proof dir with LowerBound.lean + LowerBound.md

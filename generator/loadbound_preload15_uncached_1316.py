@@ -17,6 +17,7 @@ SPEC_LOADBOUND_1316 = replace(
     # Offload all bitwise op1 stages needed for 1007-cycle compute window.
     offload_op1=1510,
     use_bitmask_selection=False,
+    idx_shifted=True,
     include_setup=False,
     cached_nodes=7,
     ptr_setup_engine="alu",
