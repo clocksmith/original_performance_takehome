@@ -2,3 +2,13 @@ trace.json
 **/*.pyc
 .hypothesis
 .DS_Store
+.venv/
+# Model weights (keep configs/tokenizers)
+models/**/*.safetensors
+models/**/*.bin
+models/**/*.pt
+models/**/*.pth
+models/**/*.ckpt
+models/**/*.gguf
+models/**/*.onnx
+models/**/*.tflite

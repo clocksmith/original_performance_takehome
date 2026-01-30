@@ -10,18 +10,25 @@ class Spec1013:
     vlen: int = 8
 
     # Tuple params
-    depth4_rounds: int = 1
-    x4: int = 15
+    depth4_rounds: int = 0
+    x4: int = 0
     x5: int = 0
     flow_setup: int = 64
     reset_on_valu: bool = True
     shifts_on_valu: bool = True
-    # Tuned for full-ISA schedule (includes address-compute VALU ops)
-    offload_op1: int = 826
+    # Use bitmask selection; dependency scheduler prefers no offload.
+    offload_op1: int = 0
+    use_bitmask_selection: bool = True
+    include_setup: bool = False
+    valu_pad_cycles: int = 0
+    # Process vectors in blocks to avoid temp aliasing with static schedule.
+    # Round-major ordering to minimize cross-vector temp dependencies.
+    vector_block: int = 32
+    extra_vecs: int = 2
 
     # Cached rounds
     base_cached_rounds: tuple[int, ...] = (0, 1, 2, 3, 11, 12, 13, 14)
-    depth4_cached_rounds: tuple[int, ...] = (4,)
+    depth4_cached_rounds: tuple[int, ...] = ()
 
     # Static schedule
     valu_cap: int = 6
@@ -29,7 +36,7 @@ class Spec1013:
     flow_cap: int = 1
     load_cap: int = 2
     store_cap: int = 2
-    total_cycles: int = 1174
+    total_cycles: int = 1146
 
 
 SPEC_1013 = Spec1013()

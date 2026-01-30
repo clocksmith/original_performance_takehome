@@ -27,6 +27,7 @@ class Layout:
     tmp: list[int]
     tmp2: list[int]
     sel: list[int]
+    extra: list[int]
     idx_ptr: list[int]
     val_ptr: list[int]
     node_v: list[int]
@@ -36,7 +37,6 @@ class Layout:
     node_tmp: int
     const_s: dict[int, int]
     const_v: dict[int, int]
-    forest_base_v: int
 
 
 def build_layout(spec, scratch: ScratchAlloc) -> Layout:
@@ -47,6 +47,11 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
     tmp2 = [scratch.alloc(f"tmp2_{i}", VLEN) for i in range(n_vecs)]
     sel = tmp2
 
+    extra: list[int] = []
+    if getattr(spec, "use_bitmask_selection", False):
+        extra_vecs = getattr(spec, "extra_vecs", 1)
+        extra = [scratch.alloc(f"extra_{i}", VLEN) for i in range(extra_vecs)]
+
     idx_ptr = [scratch.alloc(f"idx_ptr_{i}") for i in range(n_vecs)]
     val_ptr = [scratch.alloc(f"val_ptr_{i}") for i in range(n_vecs)]
 
@@ -56,8 +61,11 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
     inp_values_p = scratch.alloc("inp_values_p")
     node_tmp = scratch.alloc("node_tmp")
 
-    # Cached nodes 0..30 as vectors (vbroadcast in setup)
-    node_v = [scratch.alloc(f"node_v_{i}", VLEN) for i in range(31)]
+    # Cached nodes 0..14 as vectors unless depth-4/5 caching is enabled.
+    node_cache = 31
+    if getattr(spec, "depth4_rounds", 0) == 0 and getattr(spec, "x5", 0) == 0:
+        node_cache = 15
+    node_v = [scratch.alloc(f"node_v_{i}", VLEN) for i in range(node_cache)]
 
     # Constants (scalar + vector)
     const_s: dict[int, int] = {}
@@ -96,14 +104,13 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
     for v in range(1, 31):
         reserve_const(v)
 
-    forest_base_v = scratch.alloc("forest_base_v", VLEN)
-
     return Layout(
         val=val,
         idx=idx,
         tmp=tmp,
         tmp2=tmp2,
         sel=sel,
+        extra=extra,
         idx_ptr=idx_ptr,
         val_ptr=val_ptr,
         node_v=node_v,
@@ -113,5 +120,4 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
         node_tmp=node_tmp,
         const_s=const_s,
         const_v=const_v,
-        forest_base_v=forest_base_v,
     )

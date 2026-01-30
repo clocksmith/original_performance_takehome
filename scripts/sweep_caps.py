@@ -12,8 +12,10 @@ Model assumptions:
 """
 from __future__ import annotations
 
+import argparse
+import json
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Iterable, Sequence
 
 # Constants
 VEC = 32
@@ -76,6 +78,7 @@ def feasible(
     depth4_rounds: int,
     shift_on_alu: bool,
     reset_on_flow: bool,
+    x_values: Iterable[int] | None = None,
 ) -> list[Result]:
     valu_cap = 6 * T
     alu_cap = 12 * T
@@ -89,7 +92,10 @@ def feasible(
     reset_flow_ops = VEC if reset_on_flow else 0
 
     out: list[Result] = []
-    for X in range(0, VEC + 1):
+    if x_values is None:
+        x_values = range(0, VEC + 1)
+
+    for X in x_values:
         load_ops = compute_load_ops(depth4_rounds=depth4_rounds, X=X)
         flow_ops = flow_base + FLOW_PER_VEC_DEPTH4 * X * depth4_rounds + reset_flow_ops
 
@@ -150,14 +156,116 @@ def format_rows(results: Iterable[Result]) -> list[str]:
     return rows
 
 
+def _parse_int_list(value: str, *, name: str) -> list[int]:
+    items = [v.strip() for v in value.split(",") if v.strip()]
+    if not items:
+        raise argparse.ArgumentTypeError(f"{name} must not be empty")
+    out = []
+    for item in items:
+        try:
+            out.append(int(item))
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(f"{name} must be ints: {item}") from exc
+    return out
+
+
+def _parse_bool_list(value: str, *, name: str) -> list[bool]:
+    value = value.strip().lower()
+    if value in {"both", "all"}:
+        return [False, True]
+    if value in {"true", "1", "yes"}:
+        return [True]
+    if value in {"false", "0", "no"}:
+        return [False]
+    raise argparse.ArgumentTypeError(f"{name} must be true/false/both")
+
+
 def main() -> None:
-    for flow_setup_ops in (0, FLOW_PTR_SETUP):
-        for shift_on_alu in (False, True):
-            for reset_on_flow in (False, True):
-                for depth4_rounds in (0, 1, 2):
-                    for setup_valu in (0, 16, 32, 48):
+    parser = argparse.ArgumentParser(description="Sweep cache/offload parameters.")
+    parser.add_argument("--T", default="1013,1016", help="Comma-separated cycle budgets.")
+    parser.add_argument(
+        "--flow-setup-ops",
+        default="0,64",
+        help="Comma-separated flow setup counts.",
+    )
+    parser.add_argument(
+        "--shift-on-alu",
+        default="both",
+        help="Whether shifts are on ALU: true/false/both.",
+    )
+    parser.add_argument(
+        "--reset-on-flow",
+        default="both",
+        help="Whether reset is on flow: true/false/both.",
+    )
+    parser.add_argument(
+        "--depth4-rounds",
+        default="0,1,2",
+        help="Comma-separated depth-4 cache rounds.",
+    )
+    parser.add_argument(
+        "--setup-valu",
+        default="0,16,32,48",
+        help="Comma-separated setup VALU op counts.",
+    )
+    parser.add_argument(
+        "--x",
+        default="",
+        help="Optional comma-separated list of X values (cached vectors).",
+    )
+    parser.add_argument("--json", action="store_true", help="Emit JSON output.")
+    args = parser.parse_args()
+
+    t_values = _parse_int_list(args.T, name="T")
+    flow_setup_values = _parse_int_list(args.flow_setup_ops, name="flow-setup-ops")
+    depth4_values = _parse_int_list(args.depth4_rounds, name="depth4-rounds")
+    setup_valu_values = _parse_int_list(args.setup_valu, name="setup-valu")
+    shift_values = _parse_bool_list(args.shift_on_alu, name="shift-on-alu")
+    reset_values = _parse_bool_list(args.reset_on_flow, name="reset-on-flow")
+    x_values: Sequence[int] | None = None
+    if args.x.strip():
+        x_values = _parse_int_list(args.x, name="x")
+
+    if args.json:
+        all_results = []
+        for flow_setup_ops in flow_setup_values:
+            for shift_on_alu in shift_values:
+                for reset_on_flow in reset_values:
+                    for depth4_rounds in depth4_values:
+                        for setup_valu in setup_valu_values:
+                            for T in t_values:
+                                results = feasible(
+                                    T,
+                                    setup_valu=setup_valu,
+                                    flow_setup_ops=flow_setup_ops,
+                                    depth4_rounds=depth4_rounds,
+                                    shift_on_alu=shift_on_alu,
+                                    reset_on_flow=reset_on_flow,
+                                    x_values=x_values,
+                                )
+                                if not results:
+                                    continue
+                                all_results.append(
+                                    {
+                                        "T": T,
+                                        "flow_setup": flow_setup_ops,
+                                        "shift_on_alu": shift_on_alu,
+                                        "reset_on_flow": reset_on_flow,
+                                        "depth4_rounds": depth4_rounds,
+                                        "setup_valu": setup_valu,
+                                        "results": [r.__dict__ for r in results],
+                                    }
+                                )
+        print(json.dumps(all_results, indent=2))
+        return
+
+    for flow_setup_ops in flow_setup_values:
+        for shift_on_alu in shift_values:
+            for reset_on_flow in reset_values:
+                for depth4_rounds in depth4_values:
+                    for setup_valu in setup_valu_values:
                         all_rows: list[str] = []
-                        for T in (1013, 1016):
+                        for T in t_values:
                             rows = feasible(
                                 T,
                                 setup_valu=setup_valu,
@@ -165,6 +273,7 @@ def main() -> None:
                                 depth4_rounds=depth4_rounds,
                                 shift_on_alu=shift_on_alu,
                                 reset_on_flow=reset_on_flow,
+                                x_values=x_values,
                             )
                             all_rows.extend(format_rows(rows))
                         if not all_rows:
