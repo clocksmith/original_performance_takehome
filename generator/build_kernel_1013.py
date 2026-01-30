@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .spec_1013 import SPEC_1013
+from .spec_1013 import SPEC_1013, Spec1013
 from .scratch_layout import ScratchAlloc, build_layout
 from .op_list import build_ops
 from .ops import Op
@@ -9,8 +9,9 @@ from problem import SLOT_LIMITS, VLEN
 from .schedule_dep import schedule_ops_dep
 
 
-def build_1013_instrs():
-    spec = SPEC_1013
+def build_1013_instrs(spec: Spec1013 | None = None):
+    if spec is None:
+        spec = SPEC_1013
     scratch = ScratchAlloc()
     layout = build_layout(spec, scratch)
 
@@ -34,15 +35,30 @@ def build_1013_instrs():
     ]
     _pack("load", ptr_loads)
 
-    # Pointer setup (flow add_imm).
-    flow_setup = [
-        ("add_imm", layout.idx_ptr[0], layout.inp_indices_p, 0),
-        ("add_imm", layout.val_ptr[0], layout.inp_values_p, 0),
-    ]
-    for v in range(1, spec.vectors):
-        flow_setup.append(("add_imm", layout.idx_ptr[v], layout.idx_ptr[v - 1], VLEN))
-        flow_setup.append(("add_imm", layout.val_ptr[v], layout.val_ptr[v - 1], VLEN))
-    _pack("flow", flow_setup)
+    # Broadcast forest_values_p pointer for uncached address compute.
+    setup_instrs.append({"valu": [("vbroadcast", layout.forest_values_v, layout.forest_values_p)]})
+
+    # Pointer setup (flow add_imm or ALU +, depending on spec).
+    ptr_engine = getattr(spec, "ptr_setup_engine", "flow")
+    if ptr_engine == "flow":
+        flow_setup = [
+            ("add_imm", layout.idx_ptr[0], layout.inp_indices_p, 0),
+            ("add_imm", layout.val_ptr[0], layout.inp_values_p, 0),
+        ]
+        for v in range(1, spec.vectors):
+            flow_setup.append(("add_imm", layout.idx_ptr[v], layout.idx_ptr[v - 1], VLEN))
+            flow_setup.append(("add_imm", layout.val_ptr[v], layout.val_ptr[v - 1], VLEN))
+        _pack("flow", flow_setup)
+    elif ptr_engine == "alu":
+        zero = layout.const_s[0]
+        vlen = layout.const_s[VLEN]
+        setup_instrs.append({"alu": [("+", layout.idx_ptr[0], layout.inp_indices_p, zero)]})
+        setup_instrs.append({"alu": [("+", layout.val_ptr[0], layout.inp_values_p, zero)]})
+        for v in range(1, spec.vectors):
+            setup_instrs.append({"alu": [("+", layout.idx_ptr[v], layout.idx_ptr[v - 1], vlen)]})
+            setup_instrs.append({"alu": [("+", layout.val_ptr[v], layout.val_ptr[v - 1], vlen)]})
+    else:
+        raise ValueError(f"unknown ptr_setup_engine {ptr_engine!r}")
 
     # Cached node loads + broadcasts (sequential to preserve node_tmp dependency).
     for i, vaddr in enumerate(layout.node_v):

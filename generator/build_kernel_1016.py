@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .spec_1016 import SPEC_1016
+from .spec_1016 import SPEC_1016, Spec1016
 from .scratch_layout import ScratchAlloc, build_layout
 from .op_list import build_ops
 from .ops import Op
@@ -8,8 +8,9 @@ from .schedule_dep import schedule_ops_dep
 from problem import VLEN
 
 
-def build_1016_instrs():
-    spec = SPEC_1016
+def build_1016_instrs(spec: Spec1016 | None = None):
+    if spec is None:
+        spec = SPEC_1016
     scratch = ScratchAlloc()
     layout = build_layout(spec, scratch)
 

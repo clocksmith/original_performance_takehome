@@ -1,0 +1,77 @@
+Role: Strategy lead for lowest-cycle kernels under the frozen ISA.
+
+Objectives
+1) Define new strategy families + proof-aligned specs.
+2) Extend sweep_caps.py formulas when a new strategy shape appears.
+3) Maintain a clean mapping: proof name → spec override → generator build wrapper → kernel wrapper.
+
+Ground Rules
+- Keep proof ↔ generator ↔ kernel names 1:1 and consistent with existing naming style.
+- Every new strategy must have a proof directory, a generator wrapper, and a kernel wrapper.
+- Any scheduling or spec edits must preserve correctness gates and be justified by updated proofs.
+- Prefer explicit, auditable counts (flow/load/valu/alu/store) in proofs.
+
+Loop (repeat for each strategy)
+
+Step 0: Choose a strategy family
+- Decide caching depth (top-3/top-4/top-5), cached rounds, and per-round partial caching (X4/X5).
+- Decide selection mode (equality-selection via vselect tree, or bitmask selection).
+- Decide reset placement (VALU vs FLOW) and shift placement (VALU vs ALU).
+- Decide setup placement (include_setup true/false; pointer setup engine flow/alu).
+
+Step 1: Feasibility sweep
+- Run sweep_caps.py with parameters matching the strategy family.
+- If the strategy shape is new (e.g., top-3 cache, depth-5 cache, different cached rounds, pointer setup engine), extend sweep_caps.py formulas accordingly.
+- Identify the lowest feasible cycle budget T and required offload.
+- Record flow/load/valu/alu counts for the chosen T.
+
+Step 2: Proof stub (or full proof)
+- Create proofs/<strategy_name>/LowerBound.lean and LowerBound.md.
+- Define totalCycles, flowOps, totalLoadOps, storeOps, totalVALU, BASE_ALU_OPS, and offloadNeeded.
+- Prove (or native_decide) the capacity constraints:
+  - flowOps ≤ FLOW_CAP * totalCycles
+  - totalLoadOps ≤ LOAD_CAP * totalCycles
+  - storeOps ≤ STORE_CAP * totalCycles
+  - totalALUOps ≤ ALU_CAP * totalCycles
+  - offloadNeeded ≤ offloadCap
+- Document all assumptions in LowerBound.md (setup included/excluded, selection mode, cached rounds).
+
+Step 3: Spec override
+- Add a SPEC_PROOF_* override in generator/<strategy_name>.py or reuse a shared spec module.
+- Ensure spec fields match the proof: depth4_rounds, x4, cached rounds, offload_op1, selection mode, total_cycles, include_setup, ptr_setup_engine, cached_nodes.
+
+Step 4: Generator wrapper
+- Create generator/<strategy_name>.py with build_instrs() calling build_1013_instrs(spec=SPEC_PROOF_*).
+- Keep build logic minimal and aligned with the proof.
+
+Step 5: Kernel wrapper
+- Create <strategy_name>.py kernel wrapper (KernelBuilder) that imports build_instrs() from generator.
+
+Step 6: Mapping update
+- Update scripts/proof_map.json with:
+  - proof_name
+  - spec module/object
+  - generator module/function
+  - kernel wrapper path/class
+  - alias_of if sharing a spec with another proof
+
+Step 7: Correctness gates
+- Run find_schedule_mismatch(spec=<strategy_name>) with a fixed seed.
+- Run frozen tests via tests/submission_tests.py --kernel-builder <strategy_name>.py.
+- If mismatch occurs: fix hazards (meta temp tags, scheduler deps) before proceeding.
+
+Step 8: Measure cycles
+- Use schedule_summary(spec=<strategy_name>) and submission_tests cycle output.
+- Compare to current best; if higher, revisit Step 0 or Step 1.
+
+Notes
+- sweep_caps.py is a feasibility filter only; it does not model scheduling hazards.
+- Proofs must match generator counts (setup included/excluded is critical).
+- Avoid mixing proof cycle budgets with generic schedulers without dependency guarantees.
+
+Deliverables for each strategy
+- Proof dir with LowerBound.lean + LowerBound.md
+- Generator wrapper + spec override
+- Kernel wrapper
+- proof_map.json entry
+- Verified correctness (mismatch + frozen tests) and recorded cycle count

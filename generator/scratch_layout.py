@@ -32,6 +32,7 @@ class Layout:
     val_ptr: list[int]
     node_v: list[int]
     forest_values_p: int
+    forest_values_v: int
     inp_indices_p: int
     inp_values_p: int
     node_tmp: int
@@ -57,14 +58,17 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
 
     # Base pointers (scalar)
     forest_values_p = scratch.alloc("forest_values_p")
+    forest_values_v = scratch.alloc("forest_values_v", VLEN)
     inp_indices_p = scratch.alloc("inp_indices_p")
     inp_values_p = scratch.alloc("inp_values_p")
     node_tmp = scratch.alloc("node_tmp")
 
-    # Cached nodes 0..14 as vectors unless depth-4/5 caching is enabled.
-    node_cache = 31
-    if getattr(spec, "depth4_rounds", 0) == 0 and getattr(spec, "x5", 0) == 0:
-        node_cache = 15
+    # Cached nodes as vectors. Allow an override for smaller caches (e.g. top-3).
+    node_cache = getattr(spec, "cached_nodes", None)
+    if node_cache is None:
+        node_cache = 31
+        if getattr(spec, "depth4_rounds", 0) == 0 and getattr(spec, "x5", 0) == 0:
+            node_cache = 15
     node_v = [scratch.alloc(f"node_v_{i}", VLEN) for i in range(node_cache)]
 
     # Constants (scalar + vector)
@@ -115,6 +119,7 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
         val_ptr=val_ptr,
         node_v=node_v,
         forest_values_p=forest_values_p,
+        forest_values_v=forest_values_v,
         inp_indices_p=inp_indices_p,
         inp_values_p=inp_values_p,
         node_tmp=node_tmp,

@@ -35,8 +35,62 @@ def resolve_model_path(model_path: str | None) -> str:
 
 
 def extract_tool_calls(text: str) -> list[dict[str, Any]]:
-    def cast(v: str) -> Any:
+    escape_token = "<escape>"
+
+    def split_top_level(value: str) -> list[str]:
+        parts: list[str] = []
+        buf: list[str] = []
+        depth = 0
+        in_escape = False
+        i = 0
+        while i < len(value):
+            if value.startswith(escape_token, i):
+                in_escape = not in_escape
+                i += len(escape_token)
+                continue
+            ch = value[i]
+            if not in_escape:
+                if ch in "[{":
+                    depth += 1
+                elif ch in "]}":
+                    depth = max(0, depth - 1)
+                elif ch == "," and depth == 0:
+                    part = "".join(buf).strip()
+                    if part:
+                        parts.append(part)
+                    buf = []
+                    i += 1
+                    continue
+            buf.append(ch)
+            i += 1
+        tail = "".join(buf).strip()
+        if tail:
+            parts.append(tail)
+        return parts
+
+    def parse_value(v: str) -> Any:
         v = v.strip()
+        if not v:
+            return ""
+        if v.startswith("[") and v.endswith("]"):
+            inner = v[1:-1].strip()
+            if not inner:
+                return []
+            return [parse_value(item) for item in split_top_level(inner)]
+        if v.startswith("{") and v.endswith("}"):
+            inner = v[1:-1].strip()
+            if not inner:
+                return {}
+            out: dict[str, Any] = {}
+            for item in split_top_level(inner):
+                if ":" not in item:
+                    continue
+                k_str, v_str = item.split(":", 1)
+                key = parse_value(k_str)
+                if not isinstance(key, str):
+                    key = str(key)
+                out[key] = parse_value(v_str)
+            return out
         if v.lower() in {"true", "false"}:
             return v.lower() == "true"
         try:
@@ -47,18 +101,23 @@ def extract_tool_calls(text: str) -> list[dict[str, Any]]:
             except ValueError:
                 return v.strip("\"'")
 
+    def parse_args(arg_str: str) -> dict[str, Any]:
+        parsed: dict[str, Any] = {}
+        for part in split_top_level(arg_str):
+            if ":" not in part:
+                continue
+            key, value = part.split(":", 1)
+            key = key.strip()
+            parsed[key] = parse_value(value)
+        return parsed
+
     calls = []
     for name, args in re.findall(
         r"<start_function_call>call:(\w+)\{(.*?)\}<end_function_call>",
         text,
         re.DOTALL,
     ):
-        arg_pairs = re.findall(
-            r"(\w+):(?:<escape>(.*?)<escape>|([^,}]*))", args
-        )
-        parsed_args = {
-            k: cast((v1 or v2).strip()) for k, v1, v2 in arg_pairs if k
-        }
+        parsed_args = parse_args(args)
         calls.append({"name": name, "arguments": parsed_args})
     return calls
 
@@ -75,9 +134,24 @@ def get_device(device_arg: str | None) -> str:
     return "cpu"
 
 
+def _load_prompt(prompt_arg: str | None, prompt_file: str | None) -> str:
+    if prompt_arg:
+        return prompt_arg
+    if prompt_file:
+        path = Path(prompt_file)
+        if not path.exists():
+            raise FileNotFoundError(f"Prompt file not found: {path}")
+        return path.read_text(encoding="utf-8")
+    default_path = Path(__file__).resolve().parent / "agent_prompt.txt"
+    if default_path.exists():
+        return default_path.read_text(encoding="utf-8")
+    raise ValueError("Provide --prompt or --prompt-file (no default prompt found).")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt", required=True)
+    parser.add_argument("--prompt")
+    parser.add_argument("--prompt-file")
     parser.add_argument("--model-path")
     parser.add_argument("--max-new-tokens", type=int, default=128)
     parser.add_argument("--max-turns", type=int, default=4)
@@ -103,9 +177,11 @@ def main() -> None:
 
     tools = build_tools()
 
+    prompt = _load_prompt(args.prompt, args.prompt_file)
+
     messages: list[dict[str, Any]] = [
         {"role": "developer", "content": DEFAULT_SYSTEM_MSG},
-        {"role": "user", "content": args.prompt},
+        {"role": "user", "content": prompt},
     ]
 
     for _ in range(args.max_turns):

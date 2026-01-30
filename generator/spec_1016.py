@@ -18,6 +18,11 @@ class Spec1016:
     shifts_on_valu: bool = True
     # Tuned for full-ISA schedule (no offload variant)
     offload_op1: int = 0
+    # Offload controls
+    offload_hash_op1: bool = True
+    offload_parity: bool = False
+    # Override cached node count if needed.
+    cached_nodes: int | None = None
 
     # Cached rounds
     base_cached_rounds: tuple[int, ...] = (0, 1, 2, 3, 11, 12, 13, 14)

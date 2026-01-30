@@ -60,6 +60,7 @@ def _variant_names() -> list[str]:
         "cache_top4_d4x15_reset_offload_1013",
         "cache_top4_d4x15_reset_offload_1015_full_window",
         "cache_top4_d4x15_reset_offload_1016",
+        "loadbound_preload15_uncached_1316",
     ]
 
 
@@ -103,16 +104,45 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
         "Run variant {v} on the frozen test case.",
         "Run kernel variant {v} with height 10, rounds 16, batch 256.",
         "Execute variant {v} with seed {seed}.",
+        "Run proof variant {v} on the frozen test case.",
     ]
     prompts_compare = [
         "Compare all variants on the frozen test case.",
         "Compare kernel variants and return the best cycle count.",
         "Compare variants {v1} and {v2} on height 10, rounds 16, batch 256.",
     ]
+    prompts_create_variant = [
+        "Create variant {name} based on {base}.",
+        "Write a new variant {name} using base spec {base}.",
+        "Create a kernel variant {name} with overrides.",
+        "Create variant {name} from base spec {base} with overrides.",
+        "Scaffold variant {name} on {base} and register it.",
+    ]
+    schedule_specs = [
+        "cache_top4_d4x15_reset_offload_1013",
+        "cache_top4_d4x15_reset_offload_1015_full_window",
+        "cache_top4_d4x15_reset_offload_1016",
+        "loadbound_preload15_uncached_1316",
+    ]
+    prompts_schedule_summary = [
+        "Summarize schedule stats for spec {spec}.",
+        "Show schedule utilization for {spec}.",
+        "Get schedule summary for spec {spec}.",
+    ]
+    prompts_find_mismatch = [
+        "Find the first schedule mismatch for spec {spec}.",
+        "Check schedule dependencies for spec {spec}.",
+        "Locate the first dependency mismatch in spec {spec}.",
+    ]
     prompts_make_env = [
         "Create env height {h}, batch {b}, rounds {r}, seed {s}.",
         "Make env with height {h}, batch {b}, rounds {r}.",
         "Create a frozen env height {h} batch {b} rounds {r} seed {s}.",
+    ]
+    prompts_reset_env = [
+        "Reset env {eid}.",
+        "Reset environment {eid} to initial state.",
+        "Reinitialize env {eid}.",
     ]
     prompts_run = [
         "Run env {eid}.",
@@ -148,7 +178,11 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
         ("sweep_caps", 6),
         ("run_variant", 6),
         ("compare_variants", 6),
+        ("create_variant", 4),
+        ("schedule_summary", 4),
+        ("find_schedule_mismatch", 4),
         ("make_env", 8),
+        ("reset_env", 6),
         ("run", 8),
         ("step", 6),
         ("read_mem", 6),
@@ -223,6 +257,61 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
                 "check_correctness": True,
             }
             examples.append(_make_example(user, [{"name": "compare_variants", "arguments": args}]))
+        elif choice == "create_variant":
+            base = rng.choice(["1013", "1016"])
+            name = f"autogen_{base}_{rng.randint(0, 9999)}"
+            if base == "1013":
+                overrides = {
+                    "depth4_rounds": rng.choice([0, 1, 2]),
+                    "x4": rng.choice([0, 8, 15, 24, 32]),
+                    "offload_op1": rng.choice([0, 400, 826, 1200]),
+                    "use_bitmask_selection": rng.choice([True, False]),
+                }
+            else:
+                overrides = {
+                    "depth4_rounds": rng.choice([0, 1, 2]),
+                    "x4": rng.choice([0, 8, 15, 24, 32]),
+                    "offload_op1": rng.choice([0, 400, 800, 1200]),
+                }
+            user = rng.choice(prompts_create_variant).format(name=name, base=base)
+            if rng.random() < 0.25:
+                overrides = {}
+            register = rng.random() < 0.85
+            overwrite = rng.random() < 0.1
+            examples.append(
+                _make_example(
+                    user,
+                    [
+                        {
+                            "name": "create_variant",
+                            "arguments": {
+                                "name": name,
+                                "base_spec": base,
+                                "overrides": overrides,
+                                "register": register,
+                                "overwrite": overwrite,
+                            },
+                        }
+                    ],
+                )
+            )
+        elif choice == "schedule_summary":
+            spec = rng.choice(schedule_specs)
+            user = rng.choice(prompts_schedule_summary).format(spec=spec)
+            examples.append(_make_example(user, [{"name": "schedule_summary", "arguments": {"spec": spec}}]))
+        elif choice == "find_schedule_mismatch":
+            spec = rng.choice(schedule_specs)
+            user = rng.choice(prompts_find_mismatch).format(spec=spec)
+            args = {
+                "spec": spec,
+                "forest_height": 10,
+                "rounds": 16,
+                "batch_size": 256,
+                "seed": rng.randint(0, 100),
+                "use_frozen": True,
+                "max_ops": None,
+            }
+            examples.append(_make_example(user, [{"name": "find_schedule_mismatch", "arguments": args}]))
         elif choice == "make_env":
             params = _random_env_params(rng)
             use_frozen = rng.random() < 0.4
@@ -241,6 +330,10 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
             if enable_debug:
                 args["enable_debug"] = True
             examples.append(_make_example(user, [{"name": "make_env", "arguments": args}]))
+        elif choice == "reset_env":
+            env_id = rng.randint(0, 3)
+            user = rng.choice(prompts_reset_env).format(eid=env_id)
+            examples.append(_make_example(user, [{"name": "reset_env", "arguments": {"env_id": env_id}}]))
         elif choice == "run":
             env_id = rng.randint(0, 3)
             if rng.random() < 0.5:

@@ -78,6 +78,7 @@ def feasible(
     depth4_rounds: int,
     shift_on_alu: bool,
     reset_on_flow: bool,
+    parity_on_alu: bool,
     x_values: Iterable[int] | None = None,
 ) -> list[Result]:
     valu_cap = 6 * T
@@ -88,6 +89,8 @@ def feasible(
     flow_base = FLOW_BASE_TOP4 + flow_setup_ops
     shift_ops = 3 * ROUNDS * VEC
     shift_alu_ops = shift_ops * VLEN if shift_on_alu else 0
+    parity_ops = PARITY_ROUNDS * VEC
+    parity_alu_ops = parity_ops * VLEN if parity_on_alu else 0
     reset_valu_ops = 0 if reset_on_flow else RESET_VALU_OPS
     reset_flow_ops = VEC if reset_on_flow else 0
 
@@ -105,12 +108,13 @@ def feasible(
             + reset_valu_ops * VEC
             + setup_valu
             - (shift_ops if shift_on_alu else 0)
+            - (parity_ops if parity_on_alu else 0)
         )
         min_offload = max(0, total_valu - valu_cap)
         if min_offload > MAX_OFFLOAD:
             continue
 
-        alu_ops = min_offload * VLEN + shift_alu_ops
+        alu_ops = min_offload * VLEN + shift_alu_ops + parity_alu_ops
         valu_ops = total_valu - min_offload
 
         if load_ops > load_cap:

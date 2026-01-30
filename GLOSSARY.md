@@ -1,0 +1,102 @@
+# Glossary
+
+Core terms
+- ALU: Arithmetic/logic execution slot for scalar-style operations such as add, shift, or compare. In this project, ALU ops are scheduled into the `alu` slot and appear in schedule summaries and proofs.
+- Autogen: Automatically generated variant derived from a base spec plus overrides. Here it typically comes from `create_variant`, which writes a generator spec in `generator/` and a wrapper module at repo root.
+- Batch: Number of inputs processed together in a run. In this project it maps to `batch_size` in tool calls and is fixed to 256 for the standard frozen benchmark.
+- Base spec: Canonical spec template that defines default parameters and limits. In this repo the base specs live in `generator/spec_1013.py` and `generator/spec_1016.py`.
+- Build: The act of assembling a kernel or instruction sequence from a spec. Here build functions (e.g., `build_1013_instrs`) turn spec fields into concrete op lists.
+- Builder: Code that emits kernels or instruction lists from specs. In this project that includes generator build functions and kernel builder templates/overrides.
+- Cache: Local storage used to reduce repeated memory accesses. Here it also shows up in variant names (e.g., `cache_top4...`) to denote caching strategies.
+- Cap sweep: Search over spec limits to identify feasible configurations. In this project `sweep_caps` explores caps like `setup_valu`, `flow_setup_ops`, and `x_values`.
+- Correctness check: Validation that output matches a reference implementation. Here `check_correctness` in `run_variant` gates whether a result is accepted.
+- Cycle: A single scheduling time unit; each cycle can host multiple slot ops. In this repo, cycle counts are the primary measure of performance.
+- Cycle count: Total cycles required for a run. Here `run_variant` returns the `cycle` metric used for ranking variants.
+- Dependency: Ordering constraint between operations. In this project, dependency violations are surfaced by `find_schedule_mismatch`.
+- Depth4 rounds: Spec field controlling the depth-4 portion of the algorithm. In this repo it is `depth4_rounds` and is frequently tuned or swept.
+- Deterministic: Fixed behavior given a seed and inputs. Here a `seed` in tool calls ensures reproducible cycle counts.
+- Dispatch: Scheduling of operations into execution slots. In this project dispatch decisions are reflected in schedule summaries and proof counts.
+- Environment (env): A simulated execution context for running program JSON. Here tools like `make_env`, `run`, `step`, `read_mem`, and `read_scratch` operate on env ids.
+- Escape: Encoding used to preserve special characters in tool-call strings. Here `<escape>...<escape>` wrapping allows commas in string arguments.
+- Explore: Trying new variants or parameters to discover improvements. In this repo exploration usually means new `create_variant` overrides or new cap sweeps.
+- Exploit: Refining the best-known variants for lower cycle counts. Here it means repeated `run_variant` on top candidates.
+- Flow: Control-flow slot category for setup, branching, or stalls. In this project `flow` ops are tightly budgeted in certain proofs.
+- Flow ops: Operations scheduled in the flow slot category. Here extra flow ops can break 1:1 proof alignment or increase cycle count.
+- Frozen problem: Fixed test case with known inputs used for stable comparisons. In this project it lives at `tests/frozen_problem.py` and is enabled via `use_frozen=True`.
+- Generator: Code that derives kernels from a spec and overrides. In this repo it lives under `generator/` and emits instruction sequences.
+- Golden output: Reference output used for correctness validation. Here it is produced by the reference kernel when `check_correctness` is enabled.
+- Heuristic: Rule of thumb guiding search or scheduling decisions. In this project heuristics rank variants before expensive runs.
+- ISA: Instruction set architecture defining available ops, slots, and limits. Here the ISA is expressed by program JSON slot types (`load`, `alu`, `valu`, `flow`) and spec limits.
+- Kernel: Compiled instruction sequence implementing the algorithm. Here each variant’s wrapper builds a kernel from the generator spec.
+- Kernel builder: Component that produces kernels from specs or variants. In this repo it includes template/override builder modules and generator build functions.
+- Kernel wrapper: Thin module that exposes a generated kernel for execution. Here wrappers live at repo root alongside variant names.
+- Latency: Delay from issue to completion of an operation. In this project latency constrains feasible schedules and can trigger mismatches.
+- Load: Memory fetch operation. Here `load` ops consume the load slot and drive memory-bound behavior.
+- Loadbound: Variant or spec emphasizing memory-bound performance. In this repo, loadbound proofs often have tight flow/setup budgets.
+- Manifest: File describing artifacts or metadata. Here `lake-manifest.json` records kernel/model metadata for tooling.
+- Mismatch: Any divergence between expected and actual schedule or output. Here mismatches are diagnosed with `find_schedule_mismatch`.
+- Offload: Moving work to a different unit or phase for efficiency. Here `offload_op1` and related fields shift work away from flow.
+- Override: Change to a base spec field to produce a new variant. In this project overrides are passed to `create_variant` or encoded in generator specs.
+- Params: Spec fields that configure a variant. Here common params include `x4`, `depth4_rounds`, `offload_op1`, and `setup_valu`.
+- Parser: Tool-call parser that extracts structured arguments from model output. In this repo `extract_tool_calls` handles arrays and escaped strings.
+- Pipeline: End-to-end path from spec to kernel to evaluation. Here it spans generator code, wrappers, `run_variant`, and analysis tools.
+- Pointer setup: Address calculation or buffer preparation before main work. In this project pointer setup can be scheduled in flow or ALU and affects proof alignment.
+- Proof: Formal constraints or counts matching a spec’s schedule. Here proofs are intended to map 1:1 to generators.
+- Proof name: Canonical identifier for a proof/spec pairing. In this project proof names appear in variant names and schedule tools.
+- Schedule: Assignment of ops to slots across cycles. Here schedule stats are reported per slot and compared against proofs.
+- Schedule summary: Aggregated stats about slot usage and cycles. In this repo `schedule_summary` returns per-spec totals.
+- Scheduler: Component that assigns operations to execution slots and cycles. Here it must respect dependencies and slot limits.
+- Seed: RNG input used to make tests deterministic. In this project it controls input generation for `run_variant` and `compare_variants`.
+- Shift: Data movement between lanes or registers. Here shifts can be scheduled in ALU or VALU depending on the op.
+- Slot: A category of execution per cycle (e.g., `load`, `alu`, `valu`, `flow`). Here slot counts are a key tuning signal.
+- Spec: Structured description of kernel parameters and limits. In this repo spec dataclasses live in `generator/`.
+- Spec field: Individual parameter within a spec. Here fields govern op counts, setup costs, and scheduling caps.
+- Step: Single instruction advance in an environment. In this project `step` runs a small number of instructions for debugging.
+- Sweep: Systematic exploration across parameter ranges. Here `sweep_caps` enumerates feasible caps and returns candidates.
+- Synthetic data: Generated training examples for tool calling. In this repo they are built by `build_synthetic_examples` in `scripts/functiongemma_finetune.py`.
+- Tool call: Structured invocation of a function with arguments. Here tool calls are emitted by the model and parsed into Python functions.
+- Tool schema: Formal definition of tool arguments and types. In this project schemas are derived from `functiongemma_tools.py`.
+- Top-k: Set of best-performing variants by cycle count. Here top-k lists are used to track winners during search.
+- Trace: Detailed record of scheduled ops or execution events. In this repo `trace.json` and trace tooling support debugging.
+- Tuple field: Spec field whose value is a tuple type. Here list overrides are converted to tuples before spec replacement.
+- Use_frozen: Flag to run against the frozen test case. In this project `use_frozen=True` ensures comparability with the baseline.
+- VALU: Vector ALU slot category for SIMD-like operations. Here `valu` ops execute across lanes and consume VLEN resources.
+- Variant: Named kernel configuration derived from a base spec. In this repo variants map to generator files and wrapper modules.
+- Variant registry: In-memory mapping of variant names to builders. Here `_VARIANTS` powers `list_variants` and `run_variant`.
+- VLEN: Vector length (lanes per vector op). In this project it is reported by `get_limits` and constrains vector ops.
+- X4: Spec parameter controlling tree fanout or breadth. Here `x4` is commonly tuned in overrides and sweeps.
+
+ISA + tuning terms
+- Bank: A memory subdivision used to enable parallel access. In this project, bank count or layout affects load scheduling and stalls.
+- Barrier: Explicit sync point that prevents reordering across it. Here barriers may be modeled as flow ops or schedule boundaries.
+- Bundle: Set of ops issued in the same cycle across slots. In this repo a bundle can include load, ALU, VALU, and flow ops.
+- Const: Immediate constant load into a register. Here `const` appears in program JSON as a load op.
+- Decode: Mapping of opcodes to execution slot types. In this project decode is implicit in the slot a given op targets.
+- Dual-issue: Scheduling multiple slot ops in the same cycle. Here it means filling more than one slot per cycle.
+- Fanout: Number of child nodes processed from a single node. In this repo it is linked to tree params like `x4`.
+- Fetch: Stage that reads the next instruction(s). Here fetch is abstracted but still influences the cycle model indirectly.
+- Flow stall: Lost cycle due to flow slot constraints or hazards. In this project extra flow ops can introduce stalls.
+- Hazard: Scheduling conflict that violates a dependency or resource. Here hazards surface as schedule mismatches.
+- Immediate: Literal value embedded in an instruction. Here immediates appear in JSON ops like `const` or literal ALU ops.
+- Issue: Sending an op to its execution slot. In this repo issue counts per slot are reflected in schedule summaries.
+- Lane: Single element position within a vector op. Here lanes are counted by VLEN and used by VALU ops.
+- Lane mask: Bitmask enabling/disabling per-lane computation. In this project it relates to `use_bitmask_selection`.
+- Load/store: Memory read/write operations in the ISA. Here loads are explicit and stores are part of program semantics.
+- Mask select: Conditional selection controlled by a bitmask. Here mask-based selection is governed by spec flags.
+- Memory bound: Performance limited by memory ops rather than compute. Here loadbound variants prioritize reducing non-load overhead.
+- Op latency: Cycles between issue and result readiness. In this project latency bounds scheduling and dependency spacing.
+- Opcode: Encoded instruction type in the ISA. Here op names in program JSON correspond to opcode classes.
+- Predicate: Condition that enables or disables an op or lane. In this repo predicates are represented by masks or flow control.
+- Queue depth: Buffered operations pending execution. Here queue depth is a conceptual limit modeled by scheduler constraints.
+- Register file: Storage for scalar/vector registers. In this project register limits are part of ISA limits.
+- Replay: Re-issuing ops after a hazard or stall. Here replays show up as longer cycle counts.
+- Resource conflict: Two ops requiring the same slot in one cycle. Here the scheduler must serialize them, increasing cycles.
+- Scalar: Single-lane value or op. In this repo scalar ops generally map to ALU slots.
+- Scratch: On-chip temporary memory used by kernels. Here `read_scratch` inspects scratch state for debugging.
+- Scratch stride: Step size between scratch addresses. In this project it affects access patterns and load efficiency.
+- Slot pressure: Excess demand for a given slot category. Here it is inferred from schedule summaries and cycle counts.
+- Stall: Cycle where progress halts due to hazards or limits. In this repo stalls inflate the reported cycle count.
+- Store: Memory write operation. Here it is part of program semantics even if not always explicit in summaries.
+- Throttle: Intentional reduction of issue rate to avoid hazards. Here it can be achieved by tighter caps or setup changes.
+- Throughput: Ops per cycle sustained under steady state. In this project higher throughput implies better slot balance.
+- Unroll: Replication of a loop body to reduce control overhead. Here unrolling can be produced by generator choices.

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import random
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from importlib import util
 from pathlib import Path
 from typing import Any
@@ -13,6 +13,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from perf_takehome import KernelBuilder
+
+from generator.op_list import build_ops
+from generator.ops import Op
+from generator.schedule_dep import _reads_writes, schedule_ops_dep
+from generator.scratch_layout import ScratchAlloc, build_layout
+from kernel_analyzer import analyze_instrs
+from problem import DebugInfo, SLOT_LIMITS, VLEN
 
 
 def _load_problem(use_frozen: bool):
@@ -83,6 +90,30 @@ def _load_kernel_builder(variant: str):
     if not hasattr(module, "KernelBuilder"):
         raise AttributeError("KernelBuilder override module must define `KernelBuilder`.")
     return module.KernelBuilder
+
+
+def _load_generator_module(name: str):
+    # Prefer package import so relative imports inside generator modules work.
+    try:
+        return importlib.import_module(f"generator.{name}")
+    except Exception:
+        pass
+    gen_path = ROOT / "generator" / f"{name}.py"
+    if not gen_path.exists():
+        return None
+    module_name = f"generator_{name}"
+    spec = util.spec_from_file_location(module_name, str(gen_path))
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Failed to load generator module: {gen_path}")
+    module = util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _validate_variant_name(name: str) -> None:
+    if not name or not all(c.isalnum() or c == "_" for c in name):
+        raise ValueError("variant name must be alphanumeric/underscore only")
 
 
 def _run_machine(machine: Any, max_cycles: int | None, max_instructions: int | None) -> int:
@@ -431,6 +462,399 @@ def compare_variants(
     return {"results": results_sorted, "best": best}
 
 
+def create_variant(
+    name: str,
+    base_spec: str = "1013",
+    overrides: dict[str, Any] | None = None,
+    register: bool = True,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """
+    Create a generator spec override + kernel wrapper and optionally register it.
+
+    Args:
+        name: Variant name (alphanumeric + underscore).
+        base_spec: "1013" or "1016".
+        overrides: Spec override dict (e.g. {"offload_op1": 826}).
+        register: If True, add to the in-memory variant registry.
+        overwrite: If True, overwrite existing files.
+    """
+    _validate_variant_name(name)
+    overrides = overrides or {}
+
+    if base_spec not in {"1013", "1016"}:
+        return {"ok": False, "error": f"unknown base_spec '{base_spec}'"}
+
+    gen_path = ROOT / "generator" / f"{name}.py"
+    wrapper_path = ROOT / f"{name}.py"
+
+    if not overwrite:
+        if name in _VARIANTS:
+            return {"ok": False, "error": f"variant '{name}' already registered"}
+        if gen_path.exists() or wrapper_path.exists():
+            return {"ok": False, "error": f"variant files already exist for '{name}'"}
+
+    if base_spec == "1013":
+        from generator.spec_1013 import SPEC_1013
+
+        spec_obj = SPEC_1013
+        spec_import = "from generator.spec_1013 import SPEC_1013"
+        build_import = "from generator.build_kernel_1013 import build_1013_instrs"
+        build_call = "build_1013_instrs"
+    else:
+        from generator.spec_1016 import SPEC_1016
+
+        spec_obj = SPEC_1016
+        spec_import = "from generator.spec_1016 import SPEC_1016"
+        build_import = "from generator.build_kernel_1016 import build_1016_instrs"
+        build_call = "build_1016_instrs"
+
+    field_names = {f.name for f in fields(type(spec_obj))}
+    bad_keys = [k for k in overrides.keys() if k not in field_names]
+    if bad_keys:
+        return {"ok": False, "error": f"unknown spec fields: {bad_keys}"}
+
+    tuple_fields = {f.name for f in fields(type(spec_obj)) if str(f.type).startswith("tuple")}
+    clean_overrides: dict[str, Any] = {}
+    for key, value in overrides.items():
+        if key in tuple_fields and isinstance(value, list):
+            clean_overrides[key] = tuple(value)
+        else:
+            clean_overrides[key] = value
+
+    spec_const = f"SPEC_{name.upper()}"
+    if clean_overrides:
+        override_lines = ",\n    ".join(f"{k}={repr(v)}" for k, v in clean_overrides.items())
+        spec_def = (
+            f"{spec_const} = replace(\n"
+            f"    {spec_import.split()[-1]},\n"
+            f"    {override_lines},\n"
+            ")\n"
+        )
+        spec_ref = spec_const
+    else:
+        spec_def = f"{spec_const} = {spec_import.split()[-1]}\n"
+        spec_ref = spec_const
+
+    gen_code = (
+        "from __future__ import annotations\n\n"
+        "from dataclasses import replace\n\n"
+        f"{spec_import}\n"
+        f"{build_import}\n\n"
+        f"{spec_def}\n"
+        "def build_instrs():\n"
+        f"    return {build_call}(spec={spec_ref})\n"
+    )
+
+    wrapper_code = (
+        "from perf_takehome import KernelBuilder as BaseKernelBuilder\n"
+        f"from generator.{name} import build_instrs\n\n\n"
+        "class KernelBuilder(BaseKernelBuilder):\n"
+        "    def build_kernel(\n"
+        "        self, forest_height: int, n_nodes: int, batch_size: int, rounds: int\n"
+        "    ):\n"
+        "        self.instrs = build_instrs()\n"
+    )
+
+    gen_path.write_text(gen_code, encoding="utf-8")
+    wrapper_path.write_text(wrapper_code, encoding="utf-8")
+
+    if register:
+        _VARIANTS[name] = wrapper_path
+
+    return {
+        "ok": True,
+        "name": name,
+        "base_spec": base_spec,
+        "generator_path": str(gen_path),
+        "wrapper_path": str(wrapper_path),
+        "registered": register,
+    }
+
+
+def _build_setup_instrs_1013(spec, layout) -> list[dict[str, list[tuple[Any, ...]]]]:
+    setup_instrs: list[dict[str, list[tuple[Any, ...]]]] = []
+
+    def _pack(engine: str, slots: list[tuple[Any, ...]]) -> None:
+        cap = SLOT_LIMITS[engine]
+        for i in range(0, len(slots), cap):
+            setup_instrs.append({engine: slots[i : i + cap]})
+
+    const_loads = [("const", addr, val) for val, addr in sorted(layout.const_s.items())]
+    _pack("load", const_loads)
+
+    ptr_loads = [
+        ("load", layout.forest_values_p, layout.const_s[4]),
+        ("load", layout.inp_indices_p, layout.const_s[5]),
+        ("load", layout.inp_values_p, layout.const_s[6]),
+    ]
+    _pack("load", ptr_loads)
+
+    flow_setup = [
+        ("add_imm", layout.idx_ptr[0], layout.inp_indices_p, 0),
+        ("add_imm", layout.val_ptr[0], layout.inp_values_p, 0),
+    ]
+    for v in range(1, spec.vectors):
+        flow_setup.append(("add_imm", layout.idx_ptr[v], layout.idx_ptr[v - 1], VLEN))
+        flow_setup.append(("add_imm", layout.val_ptr[v], layout.val_ptr[v - 1], VLEN))
+    _pack("flow", flow_setup)
+
+    for i, vaddr in enumerate(layout.node_v):
+        setup_instrs.append({"alu": [("+", layout.node_tmp, layout.forest_values_p, layout.const_s[i])]})
+        setup_instrs.append({"load": [("load", layout.node_tmp, layout.node_tmp)]})
+        setup_instrs.append({"valu": [("vbroadcast", vaddr, layout.node_tmp)]})
+
+    const_v_broadcasts = [
+        ("vbroadcast", vaddr, layout.const_s[val]) for val, vaddr in sorted(layout.const_v.items())
+    ]
+    _pack("valu", const_v_broadcasts)
+
+    vloads = []
+    for v in range(spec.vectors):
+        vloads.append(("vload", layout.idx[v], layout.idx_ptr[v]))
+        vloads.append(("vload", layout.val[v], layout.val_ptr[v]))
+    _pack("load", vloads)
+
+    return setup_instrs
+
+
+def _build_final_ops(spec, layout) -> list[Op]:
+    ordered_ops: list[Op] = []
+    build_ops(spec, layout, ordered_ops=ordered_ops)
+
+    final_ops: list[Op] = []
+    offloaded = 0
+    offload_limit = getattr(spec, "offload_op1", 0)
+    for op in ordered_ops:
+        if op.offloadable and offloaded < offload_limit:
+            op_name, dest, a, b = op.slot
+            for lane in range(VLEN):
+                final_ops.append(
+                    Op(
+                        engine="alu",
+                        slot=(op_name, dest + lane, a + lane, b + lane),
+                        meta=op.meta,
+                    )
+                )
+            offloaded += 1
+        else:
+            final_ops.append(op)
+
+    pad_cycles = getattr(spec, "valu_pad_cycles", 0)
+    if pad_cycles:
+        pad_count = pad_cycles * getattr(spec, "valu_cap", 0)
+        pad_dest = layout.tmp[0]
+        for _ in range(pad_count):
+            final_ops.insert(0, Op(engine="valu", slot=("^", pad_dest, pad_dest, pad_dest)))
+
+    return final_ops
+
+
+def _resolve_schedule_target(name: str) -> tuple[str, Any, Any]:
+    if name == "1013":
+        from generator.spec_1013 import SPEC_1013
+        from generator.build_kernel_1013 import build_1013_instrs
+
+        return name, SPEC_1013, build_1013_instrs
+
+    if name == "1016":
+        from generator.spec_1016 import SPEC_1016
+        from generator.build_kernel_1016 import build_1016_instrs
+
+        return name, SPEC_1016, build_1016_instrs
+
+    if name == "cache_top4_d4x15_reset_offload_1013":
+        from generator.cache_top4_d4x15_reset_offload_1013 import SPEC_PROOF_1013, build_instrs
+
+        return name, SPEC_PROOF_1013, build_instrs
+
+    if name == "cache_top4_d4x15_reset_offload_1015_full_window":
+        from generator.cache_top4_d4x15_reset_offload_1015_full_window import build_instrs
+        from generator.cache_top4_d4x15_reset_offload_1013 import SPEC_PROOF_1013
+
+        return name, SPEC_PROOF_1013, build_instrs
+
+    if name == "cache_top4_d4x15_reset_offload_1016":
+        from generator.spec_1016 import SPEC_1016
+        from generator.cache_top4_d4x15_reset_offload_1016 import build_instrs
+
+        return name, SPEC_1016, build_instrs
+
+    if name == "loadbound_preload15_uncached_1316":
+        from generator.loadbound_preload15_uncached_1316 import SPEC_LOADBOUND_1316, build_instrs
+
+        return name, SPEC_LOADBOUND_1316, build_instrs
+
+    module = _load_generator_module(name)
+    if module is not None:
+        spec_obj = None
+        for attr in dir(module):
+            if attr.startswith("SPEC_"):
+                spec_obj = getattr(module, attr)
+                break
+        build_fn = getattr(module, "build_instrs", None)
+        if build_fn is None:
+            raise ValueError(f"Generator module '{name}' lacks build_instrs().")
+        return name, spec_obj, build_fn
+
+    raise ValueError(
+        f"Unknown spec '{name}' (expected proof/variant name or 1013/1016)."
+    )
+
+
+def schedule_summary(spec: str = "cache_top4_d4x15_reset_offload_1013") -> dict[str, Any]:
+    """
+    Build generator schedule and return cycle utilization stats.
+
+    Args:
+        spec: Proof/variant name (e.g. cache_top4_d4x15_reset_offload_1013) or "1013"/"1016".
+    """
+    display, spec_obj, build_fn = _resolve_schedule_target(spec)
+    instrs = build_fn()
+
+    report = analyze_instrs(instrs)
+    stats = {
+        eng: {
+            "total_slots": st.total_slots,
+            "max_per_cycle": st.max_per_cycle,
+            "op_counts": dict(st.op_counts) if st.op_counts else {},
+        }
+        for eng, st in report["stats"].items()
+    }
+    return {
+        "spec": display,
+        "resolved_spec": type(spec_obj).__name__ if spec_obj is not None else None,
+        "cycles": report["cycles"],
+        "caps": report["caps"],
+        "utilization": report["utilization"],
+        "stats": stats,
+    }
+
+
+def find_schedule_mismatch(
+    spec: str = "cache_top4_d4x15_reset_offload_1013",
+    forest_height: int = 10,
+    rounds: int = 16,
+    batch_size: int = 256,
+    seed: int | None = 0,
+    use_frozen: bool = True,
+    max_ops: int | None = None,
+) -> dict[str, Any]:
+    """
+    Compare sequential op order vs dependency schedule, return first mismatch.
+
+    Args:
+        spec: Proof/variant name (e.g. cache_top4_d4x15_reset_offload_1016) or "1013"/"1016".
+        forest_height: Tree height.
+        rounds: Number of rounds.
+        batch_size: Number of inputs.
+        seed: RNG seed for deterministic inputs (None for random).
+        use_frozen: If True, use tests/frozen_problem semantics.
+        max_ops: Optional cap on op count to check.
+    """
+    if seed is not None:
+        random.seed(seed)
+
+    problem = _load_problem(use_frozen)
+    forest = problem.Tree.generate(forest_height)
+    inp = problem.Input.generate(forest, batch_size, rounds)
+    mem = problem.build_mem_image(forest, inp)
+
+    display, spec_obj, _ = _resolve_schedule_target(spec)
+    if spec_obj is None:
+        return {"ok": False, "spec": display, "error": "spec object not found for mismatch analysis"}
+
+    scratch = ScratchAlloc()
+    layout = build_layout(spec_obj, scratch)
+
+    include_setup = getattr(spec_obj, "include_setup", True)
+    setup_instrs = [] if include_setup else _build_setup_instrs_1013(spec_obj, layout)
+
+    final_ops = _build_final_ops(spec_obj, layout)
+    if max_ops is not None:
+        final_ops = final_ops[:max_ops]
+
+    debug_info = DebugInfo(scratch_map={})
+
+    # Run setup to seed scratch/mem state.
+    setup_machine = problem.Machine(
+        mem.copy(),
+        [],
+        debug_info,
+        n_cores=problem.N_CORES,
+        scratch_size=problem.SCRATCH_SIZE,
+    )
+    setup_core = setup_machine.cores[0]
+    for instr in setup_instrs:
+        setup_machine.step(instr, setup_core)
+
+    scratch0 = setup_core.scratch.copy()
+    mem0 = setup_machine.mem.copy()
+
+    # Sequential expected reads.
+    seq_machine = problem.Machine(
+        mem0.copy(),
+        [],
+        debug_info,
+        n_cores=problem.N_CORES,
+        scratch_size=problem.SCRATCH_SIZE,
+    )
+    seq_core = seq_machine.cores[0]
+    seq_core.scratch = scratch0.copy()
+
+    seq_reads: list[dict[int, int]] = []
+    for op in final_ops:
+        reads, _ = _reads_writes(op)
+        seq_reads.append({addr: seq_core.scratch[addr] for addr in reads})
+        seq_machine.step({op.engine: [op.slot]}, seq_core)
+
+    op_index = {id(op): i for i, op in enumerate(final_ops)}
+    instrs_ops = schedule_ops_dep(final_ops, return_ops=True)
+
+    sched_machine = problem.Machine(
+        mem0.copy(),
+        [],
+        debug_info,
+        n_cores=problem.N_CORES,
+        scratch_size=problem.SCRATCH_SIZE,
+    )
+    sched_core = sched_machine.cores[0]
+    sched_core.scratch = scratch0.copy()
+
+    for cycle, instr in enumerate(instrs_ops):
+        for engine, ops in instr.items():
+            for op in ops:
+                idx = op_index[id(op)]
+                expected = seq_reads[idx]
+                for addr, exp in expected.items():
+                    actual = sched_core.scratch[addr]
+                    if actual != exp:
+                        return {
+                            "ok": False,
+                            "spec": display,
+                            "resolved_spec": type(spec_obj).__name__ if spec_obj is not None else None,
+                            "op_index": idx,
+                            "cycle": cycle,
+                            "engine": engine,
+                            "slot": op.slot,
+                            "addr": addr,
+                            "expected": exp,
+                            "actual": actual,
+                            "meta": op.meta or {},
+                        }
+
+        instr_slots = {eng: [op.slot for op in ops] for eng, ops in instr.items()}
+        sched_machine.step(instr_slots, sched_core)
+
+    return {
+        "ok": True,
+        "spec": display,
+        "resolved_spec": type(spec_obj).__name__ if spec_obj is not None else None,
+        "ops": len(final_ops),
+        "cycles": len(instrs_ops),
+    }
+
+
 def make_env(
     forest_height: int,
     batch_size: int,
@@ -663,6 +1087,9 @@ TOOL_FUNCS = [
     sweep_caps,
     run_variant,
     compare_variants,
+    create_variant,
+    schedule_summary,
+    find_schedule_mismatch,
     make_env,
     reset_env,
     run,

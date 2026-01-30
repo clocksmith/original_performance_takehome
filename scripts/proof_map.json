@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "mappings": [
+    {
+      "proof_name": "cache_top4_d4x15_reset_offload_1013",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1013",
+        "object": "SPEC_PROOF_1013"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1013",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_reset_offload_1013.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_d4x15_reset_offload_1015_full_window",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1013",
+        "object": "SPEC_PROOF_1013",
+        "alias_of": "cache_top4_d4x15_reset_offload_1013"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1015_full_window",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_reset_offload_1015_full_window.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_d4x15_reset_offload_1016",
+      "spec": {
+        "module": "generator.spec_1016",
+        "object": "SPEC_1016"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1016",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_reset_offload_1016.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "loadbound_preload15_uncached_1316",
+      "spec": {
+        "module": "generator.loadbound_preload15_uncached_1316",
+        "object": "SPEC_LOADBOUND_1316"
+      },
+      "generator": {
+        "module": "generator.loadbound_preload15_uncached_1316",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "loadbound_preload15_uncached_1316.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_d4x15_reset_offload_1013_override",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1013",
+        "object": "SPEC_PROOF_1013",
+        "alias_of": "cache_top4_d4x15_reset_offload_1013"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1013_override",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_reset_offload_1013_override.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_d4x15_reset_offload_1227",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1227",
+        "object": "SPEC_PROOF_1227"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1227",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_reset_offload_1227.py",
+        "class": "KernelBuilder"
+      }
+    }
+  ]
+}

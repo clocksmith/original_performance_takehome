@@ -21,6 +21,20 @@ def _record(op: Op) -> None:
     _ORDERED_OPS.append(op)
 
 
+def _tag_temp(meta: dict | None, key: str) -> dict:
+    new_meta = {} if meta is None else dict(meta)
+    temps = new_meta.get("temp")
+    if temps is None:
+        temps = []
+    elif isinstance(temps, str):
+        temps = [temps]
+    else:
+        temps = list(temps)
+    temps.append(key)
+    new_meta["temp"] = temps
+    return new_meta
+
+
 @dataclass(frozen=True)
 class LinearStage:
     mult: int
@@ -189,6 +203,9 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
             _add_load(load_ops, layout.node_tmp, layout.node_tmp, meta={"setup": True, "node": i})
             _add_vbroadcast(valu_ops, vaddr, layout.node_tmp, meta={"setup": True, "node": i})
 
+        # Broadcast forest_values_p pointer for uncached address compute.
+        _add_vbroadcast(valu_ops, layout.forest_values_v, layout.forest_values_p, meta={"setup": True, "ptr": "forest_values_p"})
+
         # Initial vloads
         for v in range(spec.vectors):
             _add_vload(load_ops, layout.idx[v], layout.idx_ptr[v], meta={"vec": v})
@@ -214,10 +231,14 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
         sel = layout.sel[v]
         extra = None
         extra2 = None
+        extra_key = None
+        extra2_key = None
         if layout.extra:
             extra = layout.extra[v % len(layout.extra)]
+            extra_key = f"extra:{v % len(layout.extra)}"
             if len(layout.extra) > 1:
                 extra2 = layout.extra[(v + 1) % len(layout.extra)]
+                extra2_key = f"extra:{(v + 1) % len(layout.extra)}"
         idx = layout.idx[v]
         val = layout.val[v]
 
@@ -237,9 +258,23 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                 if getattr(spec, "use_bitmask_selection", False) and extra is not None:
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
                     _add_vselect(flow_ops, sel, tmp, layout.node_v[3], layout.node_v[4], meta={"round": r, "vec": v})
-                    _add_vselect(flow_ops, extra, tmp, layout.node_v[5], layout.node_v[6], meta={"round": r, "vec": v})
+                    _add_vselect(
+                        flow_ops,
+                        extra,
+                        tmp,
+                        layout.node_v[5],
+                        layout.node_v[6],
+                        meta=_tag_temp({"round": r, "vec": v}, extra_key),
+                    )
                     _add_alu_vec(alu_ops, "<", tmp, idx, layout.const_s[5], meta={"round": r, "vec": v})
-                    _add_vselect(flow_ops, sel, tmp, sel, extra, meta={"round": r, "vec": v})
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        tmp,
+                        sel,
+                        extra,
+                        meta=_tag_temp({"round": r, "vec": v}, extra_key),
+                    )
                     _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
                 else:
                     nodes = [(i, layout.node_v[i]) for i in range(3, 7)]
@@ -251,24 +286,59 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
                     _add_vselect(flow_ops, sel, tmp, layout.node_v[7], layout.node_v[8], meta={"round": r, "vec": v})
                     if extra2 is not None:
-                        _add_vselect(flow_ops, extra2, tmp, layout.node_v[9], layout.node_v[10], meta={"round": r, "vec": v})
+                        _add_vselect(
+                            flow_ops,
+                            extra2,
+                            tmp,
+                            layout.node_v[9],
+                            layout.node_v[10],
+                            meta=_tag_temp({"round": r, "vec": v}, extra2_key),
+                        )
                         _add_alu_vec(alu_ops, "<", tmp, idx, layout.const_s[9], meta={"round": r, "vec": v})
-                        _add_vselect(flow_ops, sel, tmp, sel, extra2, meta={"round": r, "vec": v})
+                        _add_vselect(
+                            flow_ops,
+                            sel,
+                            tmp,
+                            sel,
+                            extra2,
+                            meta=_tag_temp({"round": r, "vec": v}, extra2_key),
+                        )
                     else:
-                        _add_vselect(flow_ops, extra, tmp, layout.node_v[9], layout.node_v[10], meta={"round": r, "vec": v})
+                        _add_vselect(
+                            flow_ops,
+                            extra,
+                            tmp,
+                            layout.node_v[9],
+                            layout.node_v[10],
+                            meta=_tag_temp({"round": r, "vec": v}, extra_key),
+                        )
                         _add_alu_vec(alu_ops, "<", tmp, idx, layout.const_s[9], meta={"round": r, "vec": v})
-                        _add_vselect(flow_ops, sel, tmp, sel, extra, meta={"round": r, "vec": v})
+                        _add_vselect(
+                            flow_ops,
+                            sel,
+                            tmp,
+                            sel,
+                            extra,
+                            meta=_tag_temp({"round": r, "vec": v}, extra_key),
+                        )
 
                     # Upper half: nodes 11..14 (use LSB selection)
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
-                    _add_vselect(flow_ops, extra, tmp, layout.node_v[11], layout.node_v[12], meta={"round": r, "vec": v})
+                    _add_vselect(
+                        flow_ops,
+                        extra,
+                        tmp,
+                        layout.node_v[11],
+                        layout.node_v[12],
+                        meta=_tag_temp({"round": r, "vec": v}, extra_key),
+                    )
                     _add_vselect(
                         flow_ops,
                         extra2 if extra2 is not None else sel,
                         tmp,
                         layout.node_v[13],
                         layout.node_v[14],
-                        meta={"round": r, "vec": v},
+                        meta=_tag_temp({"round": r, "vec": v}, extra2_key or extra_key),
                     )
                     _add_alu_vec(alu_ops, "<", tmp, idx, layout.const_s[13], meta={"round": r, "vec": v})
                     _add_vselect(
@@ -277,12 +347,19 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         tmp,
                         extra,
                         extra2 if extra2 is not None else sel,
-                        meta={"round": r, "vec": v},
+                        meta=_tag_temp({"round": r, "vec": v}, extra_key),
                     )
 
                     # Final select between lower and upper
                     _add_alu_vec(alu_ops, "<", tmp, idx, layout.const_s[11], meta={"round": r, "vec": v})
-                    _add_vselect(flow_ops, sel, tmp, sel, extra, meta={"round": r, "vec": v})
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        tmp,
+                        sel,
+                        extra,
+                        meta=_tag_temp({"round": r, "vec": v}, extra_key),
+                    )
                     _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
                 else:
                     nodes = [(i, layout.node_v[i]) for i in range(7, 15)]
@@ -290,7 +367,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
             else:
                 # Shouldn't happen for current spec, but keep uncached fallback.
-                _add_alu_vec(alu_ops, "+", sel, idx, layout.forest_values_p, meta={"round": r, "vec": v})
+                _add_valu(valu_ops, "+", sel, idx, layout.forest_values_v, meta={"round": r, "vec": v})
                 for lane in range(VLEN):
                     _add_load_offset(load_ops, tmp, sel, lane, meta={"round": r, "vec": v, "lane": lane})
                 _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
@@ -300,7 +377,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
             _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
         else:
             # Uncached: load node values
-            _add_alu_vec(alu_ops, "+", sel, idx, layout.forest_values_p, meta={"round": r, "vec": v})
+            _add_valu(valu_ops, "+", sel, idx, layout.forest_values_v, meta={"round": r, "vec": v})
             for lane in range(VLEN):
                 _add_load_offset(load_ops, tmp, sel, lane, meta={"round": r, "vec": v, "lane": lane})
             _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
@@ -321,7 +398,15 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                 const_v = layout.const_v[stage.const]
                 shift_v = layout.const_v[stage.shift]
                 _add_valu(valu_ops, stage.shift_op, tmp, val, shift_v, meta={"round": r, "vec": v, "stage": "shift"})
-                _add_valu(valu_ops, stage.op1, val, val, const_v, meta={"round": r, "vec": v, "stage": "op1"}, offloadable=True)
+                _add_valu(
+                    valu_ops,
+                    stage.op1,
+                    val,
+                    val,
+                    const_v,
+                    meta={"round": r, "vec": v, "stage": "op1"},
+                    offloadable=getattr(spec, "offload_hash_op1", True),
+                )
                 _add_valu(valu_ops, stage.op2, val, val, tmp, meta={"round": r, "vec": v, "stage": "op2"})
 
         # Index update
@@ -330,7 +415,15 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
         elif r != 15:
             one_v = layout.const_v[1]
             two_v = layout.const_v[2]
-            _add_valu(valu_ops, "&", tmp, val, one_v, meta={"round": r, "vec": v})
+            _add_valu(
+                valu_ops,
+                "&",
+                tmp,
+                val,
+                one_v,
+                meta={"round": r, "vec": v},
+                offloadable=getattr(spec, "offload_parity", False),
+            )
             _add_valu(valu_ops, "+", tmp, tmp, one_v, meta={"round": r, "vec": v})
             _add_vmuladd(valu_ops, idx, idx, two_v, tmp, meta={"round": r, "vec": v})
 
