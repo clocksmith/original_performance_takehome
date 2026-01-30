@@ -169,6 +169,178 @@ def get_limits() -> dict[str, Any]:
     }
 
 
+def _isa_op_counts() -> dict[str, dict[str, int]]:
+    alu_ops = ["+", "-", "*", "//", "cdiv", "^", "&", "|", "<<", ">>", "%", "<", "=="]
+    op_counts: dict[str, dict[str, int]] = {
+        "alu": {op: 3 for op in alu_ops},
+        "valu": {op: 3 for op in alu_ops},
+        "load": {
+            "load": 2,
+            "load_offset": 3,
+            "vload": 2,
+            "const": 2,
+        },
+        "store": {"store": 2, "vstore": 2},
+        "flow": {
+            "select": 4,
+            "add_imm": 3,
+            "vselect": 4,
+            "halt": 0,
+            "pause": 0,
+            "trace_write": 1,
+            "cond_jump": 2,
+            "cond_jump_rel": 2,
+            "jump": 1,
+            "jump_indirect": 1,
+            "coreid": 1,
+        },
+        "debug": {"compare": 2, "vcompare": 2},
+    }
+    op_counts["valu"].update({"vbroadcast": 2, "multiply_add": 4})
+    return op_counts
+
+
+def _validate_instruction_obj(
+    instr: dict[str, list[list[Any]]], use_frozen: bool, validate_ops: bool
+) -> list[str]:
+    errors: list[str] = []
+    problem = _load_problem(use_frozen)
+    slot_limits = problem.SLOT_LIMITS
+    op_counts = _isa_op_counts() if validate_ops else {}
+
+    if not isinstance(instr, dict):
+        return ["instruction must be a dict"]
+
+    for engine, slots in instr.items():
+        if engine not in slot_limits:
+            errors.append(f"unknown engine '{engine}'")
+            continue
+        if not isinstance(slots, list):
+            errors.append(f"engine '{engine}' slots must be a list")
+            continue
+        if len(slots) > slot_limits[engine]:
+            errors.append(
+                f"engine '{engine}' has {len(slots)} slots, limit {slot_limits[engine]}"
+            )
+        if not validate_ops:
+            continue
+        engine_ops = op_counts.get(engine, {})
+        for si, slot in enumerate(slots):
+            if not isinstance(slot, (list, tuple)) or len(slot) == 0:
+                errors.append(f"engine '{engine}' slot {si} must be a non-empty list")
+                continue
+            op = slot[0]
+            if op not in engine_ops:
+                errors.append(f"engine '{engine}' slot {si} has unknown op '{op}'")
+                continue
+            expected = engine_ops[op]
+            got = len(slot) - 1
+            if got != expected:
+                errors.append(
+                    f"engine '{engine}' slot {si} op '{op}' expects {expected} args, got {got}"
+                )
+
+    return errors
+
+
+def get_isa_spec(use_frozen: bool = True) -> dict[str, Any]:
+    """
+    Return ISA slot limits and op signatures.
+
+    Args:
+        use_frozen: If True, use tests/frozen_problem semantics.
+    """
+    problem = _load_problem(use_frozen)
+    return {
+        "slot_limits": problem.SLOT_LIMITS,
+        "vlen": problem.VLEN,
+        "n_cores": problem.N_CORES,
+        "scratch_size": problem.SCRATCH_SIZE,
+        "op_arg_counts": _isa_op_counts(),
+    }
+
+
+def assemble_instruction(
+    slots: dict[str, list[list[Any]]],
+    validate: bool = True,
+    use_frozen: bool = True,
+) -> dict[str, Any]:
+    """
+    Assemble a single instruction bundle from engine slots.
+
+    Args:
+        slots: Mapping of engine -> list of slot lists.
+        validate: If True, validate slot limits and op arity.
+        use_frozen: If True, use tests/frozen_problem semantics.
+    """
+    instr = slots
+    errors: list[str] = []
+    if validate:
+        errors = _validate_instruction_obj(instr, use_frozen, validate_ops=True)
+    return {"ok": len(errors) == 0, "instruction": instr, "errors": errors}
+
+
+def assemble_program(
+    instructions: list[dict[str, list[list[Any]]]],
+    validate: bool = True,
+    use_frozen: bool = True,
+) -> dict[str, Any]:
+    """
+    Assemble a program (list of instruction bundles).
+
+    Args:
+        instructions: List of instruction dicts.
+        validate: If True, validate slot limits and op arity.
+        use_frozen: If True, use tests/frozen_problem semantics.
+    """
+    errors: list[str] = []
+    if not isinstance(instructions, list):
+        return {"ok": False, "errors": ["instructions must be a list"], "program": []}
+
+    if validate:
+        for i, instr in enumerate(instructions):
+            if not isinstance(instr, dict):
+                errors.append(f"instr {i}: not a dict")
+                continue
+            instr_errors = _validate_instruction_obj(instr, use_frozen, validate_ops=True)
+            errors.extend([f"instr {i}: {e}" for e in instr_errors])
+
+    program_json = json.dumps(instructions)
+    return {
+        "ok": len(errors) == 0,
+        "program": instructions,
+        "program_json": program_json,
+        "errors": errors,
+    }
+
+
+def validate_program_ops(program_json: str, use_frozen: bool = True) -> dict[str, Any]:
+    """
+    Validate a program JSON string against slot limits and op signatures.
+
+    Args:
+        program_json: JSON-encoded list of instruction dicts.
+        use_frozen: If True, use tests/frozen_problem semantics.
+    """
+    try:
+        program = json.loads(program_json)
+    except json.JSONDecodeError as exc:
+        return {"ok": False, "errors": [f"json: {exc}"]}
+
+    if not isinstance(program, list):
+        return {"ok": False, "errors": ["program must be a list of instruction dicts"]}
+
+    errors: list[str] = []
+    for i, instr in enumerate(program):
+        if not isinstance(instr, dict):
+            errors.append(f"instr {i}: not a dict")
+            continue
+        instr_errors = _validate_instruction_obj(instr, use_frozen, validate_ops=True)
+        errors.extend([f"instr {i}: {e}" for e in instr_errors])
+
+    return {"ok": len(errors) == 0, "errors": errors}
+
+
 def list_variants() -> dict[str, Any]:
     """
     List available kernel builder variants.
@@ -349,6 +521,64 @@ def sweep_caps(
     return {"configs": configs}
 
 
+def sweep_proof_strategies(
+    config_path: str | None = None,
+    strategy: str | None = None,
+    T_values: list[int] | None = None,
+    max_results_per_strategy: int | None = None,
+) -> dict[str, Any]:
+    """
+    Sweep proof strategies defined in scripts/proof_strategies.json.
+
+    Args:
+        config_path: Optional path to a proof strategies JSON file.
+        strategy: Optional strategy name to filter.
+        T_values: Optional override of cycle budgets for all strategies.
+        max_results_per_strategy: Optional cap on results per strategy.
+    """
+    from scripts.sweep_caps import feasible_strategy, format_rows
+
+    if config_path is None:
+        config_path = str(ROOT / "scripts" / "proof_strategies.json")
+    cfg_path = Path(config_path)
+    if not cfg_path.exists():
+        return {"ok": False, "error": f"config not found: {config_path}"}
+
+    data = json.loads(cfg_path.read_text(encoding="utf-8"))
+    strategies = data.get("strategies", [])
+    if strategy:
+        strategies = [cfg for cfg in strategies if cfg.get("name") == strategy]
+        if not strategies:
+            return {"ok": False, "error": f"strategy not found: {strategy}"}
+
+    results = []
+    for cfg in strategies:
+        name = cfg.get("name", "<unknown>")
+        if T_values is not None:
+            Ts = list(T_values)
+        else:
+            T_cfg = cfg.get("T")
+            if isinstance(T_cfg, list):
+                Ts = [int(v) for v in T_cfg]
+            elif T_cfg is None:
+                Ts = [1013, 1016]
+            else:
+                Ts = [int(T_cfg)]
+        res = feasible_strategy(cfg, T_values=Ts)
+        if max_results_per_strategy is not None:
+            res = res[:max_results_per_strategy]
+        results.append(
+            {
+                "strategy": name,
+                "T_values": Ts,
+                "results": [r.__dict__ for r in res],
+                "summary": format_rows(res) if res else [],
+            }
+        )
+
+    return {"ok": True, "config_path": str(cfg_path), "strategies": results}
+
+
 def run_variant(
     variant: str,
     forest_height: int = 10,
@@ -468,6 +698,8 @@ def create_variant(
     overrides: dict[str, Any] | None = None,
     register: bool = True,
     overwrite: bool = False,
+    create_proof: bool = True,
+    alias_of: str | None = None,
 ) -> dict[str, Any]:
     """
     Create a generator spec override + kernel wrapper and optionally register it.
@@ -478,6 +710,8 @@ def create_variant(
         overrides: Spec override dict (e.g. {"offload_op1": 826}).
         register: If True, add to the in-memory variant registry.
         overwrite: If True, overwrite existing files.
+        create_proof: If True, create proof stubs and update proof_map.json.
+        alias_of: Optional proof_name this spec aliases (proof mapping only).
     """
     _validate_variant_name(name)
     overrides = overrides or {}
@@ -487,12 +721,18 @@ def create_variant(
 
     gen_path = ROOT / "generator" / f"{name}.py"
     wrapper_path = ROOT / f"{name}.py"
+    proof_dir = ROOT / "proofs" / name
+    proof_md = proof_dir / "LowerBound.md"
+    proof_lean = proof_dir / "LowerBound.lean"
+    proof_map_path = ROOT / "scripts" / "proof_map.json"
 
     if not overwrite:
         if name in _VARIANTS:
             return {"ok": False, "error": f"variant '{name}' already registered"}
         if gen_path.exists() or wrapper_path.exists():
             return {"ok": False, "error": f"variant files already exist for '{name}'"}
+        if create_proof and proof_dir.exists():
+            return {"ok": False, "error": f"proof directory already exists for '{name}'"}
 
     if base_spec == "1013":
         from generator.spec_1013 import SPEC_1013
@@ -559,8 +799,68 @@ def create_variant(
     gen_path.write_text(gen_code, encoding="utf-8")
     wrapper_path.write_text(wrapper_code, encoding="utf-8")
 
+    proof_created = False
+    proof_map_updated = False
+    if create_proof:
+        proof_dir.mkdir(parents=True, exist_ok=True)
+        if not proof_md.exists():
+            proof_md.write_text(
+                (
+                    f"# {name}\n\n"
+                    "TODO: Fill in capacity bounds and assumptions.\n"
+                ),
+                encoding="utf-8",
+            )
+        if not proof_lean.exists():
+            proof_lean.write_text(
+                (
+                    "import proofs.common.ISA\n"
+                    "import proofs.common.Machine\n\n"
+                    f"-- Proof stub for {name}\n"
+                    "-- TODO: add lower-bound lemmas and capacity proofs.\n"
+                ),
+                encoding="utf-8",
+            )
+        proof_created = True
+
+        # Update proof_map.json
+        spec_entry = {
+            "module": f"generator.{name}",
+            "object": spec_const,
+        }
+        if alias_of:
+            spec_entry["alias_of"] = alias_of
+        mapping = {
+            "proof_name": name,
+            "spec": spec_entry,
+            "generator": {
+                "module": f"generator.{name}",
+                "function": "build_instrs",
+            },
+            "kernel_wrapper": {
+                "path": f"{name}.py",
+                "class": "KernelBuilder",
+            },
+        }
+
+        if proof_map_path.exists():
+            data = json.loads(proof_map_path.read_text(encoding="utf-8"))
+        else:
+            data = {"version": 1, "mappings": []}
+        mappings = data.get("mappings", [])
+        idx = next((i for i, m in enumerate(mappings) if m.get("proof_name") == name), None)
+        if idx is not None:
+            if not overwrite:
+                return {"ok": False, "error": f"proof_map already contains '{name}'"}
+            mappings[idx] = mapping
+        else:
+            mappings.append(mapping)
+        data["mappings"] = mappings
+        proof_map_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        proof_map_updated = True
+
     if register:
-        _VARIANTS[name] = wrapper_path
+        _VARIANTS[name] = str(wrapper_path)
 
     return {
         "ok": True,
@@ -568,6 +868,9 @@ def create_variant(
         "base_spec": base_spec,
         "generator_path": str(gen_path),
         "wrapper_path": str(wrapper_path),
+        "proof_dir": str(proof_dir) if create_proof else None,
+        "proof_created": proof_created,
+        "proof_map_updated": proof_map_updated,
         "registered": register,
     }
 
@@ -688,10 +991,14 @@ def _resolve_schedule_target(name: str) -> tuple[str, Any, Any]:
     module = _load_generator_module(name)
     if module is not None:
         spec_obj = None
-        for attr in dir(module):
-            if attr.startswith("SPEC_"):
-                spec_obj = getattr(module, attr)
-                break
+        preferred = f"SPEC_{name.upper()}"
+        if hasattr(module, preferred):
+            spec_obj = getattr(module, preferred)
+        else:
+            for attr in dir(module):
+                if attr.startswith("SPEC_"):
+                    spec_obj = getattr(module, attr)
+                    break
         build_fn = getattr(module, "build_instrs", None)
         if build_fn is None:
             raise ValueError(f"Generator module '{name}' lacks build_instrs().")
@@ -1081,15 +1388,101 @@ def set_program(env_id: int, program_json: str) -> dict[str, Any]:
     return {"ok": True, "env_id": env_id, "program_len": len(program)}
 
 
+def run_program(
+    program_json: str,
+    forest_height: int = 3,
+    rounds: int = 1,
+    batch_size: int = 8,
+    seed: int | None = 0,
+    use_frozen: bool = True,
+    max_cycles: int | None = None,
+    max_instructions: int | None = None,
+    enable_debug: bool = False,
+    mem_size: int | None = None,
+) -> dict[str, Any]:
+    """
+    Run a JSON program on a fresh Machine instance.
+
+    Args:
+        program_json: JSON-encoded list of instruction dicts.
+        forest_height: Tree height (ignored if mem_size is provided).
+        rounds: Number of rounds (ignored if mem_size is provided).
+        batch_size: Number of inputs (ignored if mem_size is provided).
+        seed: RNG seed for deterministic inputs (None for random).
+        use_frozen: If True, use tests/frozen_problem semantics.
+        max_cycles: Optional maximum cycle count.
+        max_instructions: Optional maximum instruction bundles to execute.
+        enable_debug: If True, enable debug compare slots (requires valid trace keys).
+        mem_size: If provided, use a zeroed memory image of this size.
+    """
+    try:
+        program = json.loads(program_json)
+    except json.JSONDecodeError as exc:
+        return {"ok": False, "errors": [f"json: {exc}"]}
+
+    if not isinstance(program, list):
+        return {"ok": False, "errors": ["program must be a list of instruction dicts"]}
+
+    errors: list[str] = []
+    for i, instr in enumerate(program):
+        if not isinstance(instr, dict):
+            errors.append(f"instr {i}: not a dict")
+            continue
+        instr_errors = _validate_instruction_obj(instr, use_frozen, validate_ops=True)
+        errors.extend([f"instr {i}: {e}" for e in instr_errors])
+    if errors:
+        return {"ok": False, "errors": errors}
+
+    if seed is not None:
+        random.seed(seed)
+
+    problem = _load_problem(use_frozen)
+    if mem_size is not None:
+        mem = [0] * mem_size
+    else:
+        forest = problem.Tree.generate(forest_height)
+        inp = problem.Input.generate(forest, batch_size, rounds)
+        mem = problem.build_mem_image(forest, inp)
+
+    value_trace = _build_value_trace(problem, mem) if enable_debug else {}
+    debug_info = problem.DebugInfo(scratch_map={})
+    machine = problem.Machine(
+        mem,
+        program,
+        debug_info,
+        n_cores=problem.N_CORES,
+        scratch_size=problem.SCRATCH_SIZE,
+        trace=False,
+        value_trace=value_trace,
+    )
+    if not enable_debug:
+        machine.enable_debug = False
+
+    steps = _run_machine(machine, max_cycles, max_instructions)
+    return {
+        "ok": True,
+        "cycle": machine.cycle,
+        "steps": steps,
+        "pcs": [c.pc for c in machine.cores],
+        "states": [c.state.name for c in machine.cores],
+        "halted": all(c.state == c.state.STOPPED for c in machine.cores),
+        "mem_size": len(machine.mem),
+    }
+
+
 TOOL_FUNCS = [
     get_limits,
+    get_isa_spec,
     list_variants,
     sweep_caps,
+    sweep_proof_strategies,
     run_variant,
     compare_variants,
     create_variant,
     schedule_summary,
     find_schedule_mismatch,
+    assemble_instruction,
+    assemble_program,
     make_env,
     reset_env,
     run,
@@ -1097,5 +1490,7 @@ TOOL_FUNCS = [
     read_mem,
     read_scratch,
     validate_program,
+    validate_program_ops,
     set_program,
+    run_program,
 ]

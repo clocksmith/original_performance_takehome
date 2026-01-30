@@ -11,6 +11,7 @@ SPEC_CACHE_TOP4_D4X15_RESET_OFFLOAD_1016_BITMASK = replace(
     vector_block=32,
     extra_vecs=2,
     offload_op1=0,
+    total_cycles=1577,
 )
 
 def build_instrs():

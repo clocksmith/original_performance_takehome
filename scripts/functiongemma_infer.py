@@ -148,6 +148,22 @@ def _load_prompt(prompt_arg: str | None, prompt_file: str | None) -> str:
     raise ValueError("Provide --prompt or --prompt-file (no default prompt found).")
 
 
+def _load_model(model_path: str, device: str, lora_path: str | None, merge_lora: bool) -> Any:
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path, torch_dtype="auto", local_files_only=True
+    )
+    if lora_path:
+        try:
+            from peft import PeftModel
+        except ImportError as exc:  # pragma: no cover - optional dependency
+            raise ImportError("peft is required for --lora-path") from exc
+        model = PeftModel.from_pretrained(model, lora_path, is_trainable=False)
+        if merge_lora:
+            model = model.merge_and_unload()
+    model.to(device)
+    return model
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--prompt")
@@ -157,6 +173,8 @@ def main() -> None:
     parser.add_argument("--max-turns", type=int, default=4)
     parser.add_argument("--device")
     parser.add_argument("--show-raw", action="store_true")
+    parser.add_argument("--lora-path", help="Optional LoRA adapter directory")
+    parser.add_argument("--merge-lora", action="store_true", help="Merge LoRA weights into base model")
     args = parser.parse_args()
 
     model_path = resolve_model_path(args.model_path)
@@ -170,10 +188,7 @@ def main() -> None:
         if template_path.exists():
             chat_template = template_path.read_text(encoding="utf-8")
 
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path, torch_dtype="auto", local_files_only=True
-    )
-    model.to(device)
+    model = _load_model(model_path, device, args.lora_path, args.merge_lora)
 
     tools = build_tools()
 

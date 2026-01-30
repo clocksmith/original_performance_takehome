@@ -49,7 +49,10 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
     sel = tmp2
 
     extra: list[int] = []
-    if getattr(spec, "use_bitmask_selection", False):
+    selection_mode = getattr(spec, "selection_mode", None)
+    if selection_mode is None:
+        selection_mode = "bitmask" if getattr(spec, "use_bitmask_selection", False) else "eq"
+    if selection_mode in {"bitmask", "mask", "mask_precompute"}:
         extra_vecs = getattr(spec, "extra_vecs", 1)
         extra = [scratch.alloc(f"extra_{i}", VLEN) for i in range(extra_vecs)]
 
@@ -85,12 +88,20 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
             const_v[val] = scratch.alloc(f"vconst_{val}", VLEN)
         return const_v[val]
 
-    # Scalar consts: pointer slots + masks + hash constants
-    for v in (0, 1, 2, 4, 5, 6, 8, 10, 12, 14, 31, VLEN):
+    # Scalar consts: pointer slots + masks + hash constants.
+    base_consts = {0, 1, 2, 4, 5, 6, 8, 10, 12, 14, 31, VLEN}
+    if getattr(spec, "use_bitmask_selection", False):
+        # Bitmask selection thresholds (depth3) require 11 and 13.
+        base_consts.update({11, 13})
+    for v in sorted(base_consts):
         reserve_const(v)
 
     # Vector consts needed for hash + shifts; small masks as needed.
     vec_consts = {1, 2}
+    if not getattr(spec, "reset_on_valu", True) and not getattr(spec, "idx_shifted", False):
+        vec_consts.add(0)
+    if selection_mode in {"mask", "mask_precompute"}:
+        vec_consts.add(3)
     for op1, val1, op2, op3, val3 in HASH_STAGES:
         if op1 == "+" and op2 == "+":
             mult = (1 + (1 << val3)) % (2**32)
@@ -104,9 +115,27 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
         reserve_const(v)
         reserve_vconst(v)
 
-    # Scalar node indices for ALU equality selection (1..31). +1 supports idx-shifted mode.
-    for v in range(1, 32):
+    # Scalar node indices for cached-node address setup (always needed).
+    node_const_max = node_cache + (1 if getattr(spec, "idx_shifted", False) else 0)
+    for v in range(node_const_max):
         reserve_const(v)
+
+    # Scalar node indices for ALU equality selection (conditional).
+    use_bitmask = getattr(spec, "use_bitmask_selection", False)
+    depth4_rounds = getattr(spec, "depth4_rounds", 0)
+    x4 = getattr(spec, "x4", 0)
+    depth4_bitmask = use_bitmask and getattr(spec, "extra_vecs", 1) >= 3
+
+    if not use_bitmask:
+        for v in range(1, 15):
+            reserve_const(v)
+    if depth4_rounds and x4 > 0 and not depth4_bitmask:
+        for v in range(15, 31):
+            reserve_const(v)
+    if depth4_bitmask and depth4_rounds and x4 > 0:
+        # Depth4 bitmask thresholds.
+        for v in (17, 19, 21, 23, 25, 27, 29):
+            reserve_const(v)
 
     return Layout(
         val=val,

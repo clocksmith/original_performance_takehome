@@ -1,0 +1,441 @@
+{
+  "strategies": [
+    {
+      "name": "cache_top4_d4x15_reset_offload_1013",
+      "T": 1174,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 15,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": true,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": false,
+      "cached_nodes": null
+    },
+    {
+      "name": "cache_top4_d4x15_reset_offload_1015_full_window",
+      "T": 1174,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 15,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": true,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": false,
+      "cached_nodes": null
+    },
+    {
+      "name": "cache_top4_d4x15_reset_offload_1016",
+      "T": 1312,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 15,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": false,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": true,
+      "cached_nodes": null
+    },
+    {
+      "name": "loadbound_preload15_uncached_1316",
+      "T": 1316,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        11,
+        12,
+        13
+      ],
+      "depth4_rounds": [],
+      "depth5_rounds": [],
+      "x4": 0,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": true,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "alu",
+      "include_setup": false,
+      "cached_nodes": 7
+    },
+    {
+      "name": "cache_top4_d4x15_reset_offload_1013_override",
+      "T": 1174,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 15,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": true,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": false,
+      "cached_nodes": null
+    },
+    {
+      "name": "cache_top4_d4x15_reset_offload_1227",
+      "T": 1227,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 15,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": false,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": false,
+      "cached_nodes": null
+    },
+    {
+      "name": "cache_top4_d4x15_reset_offload_1016_parity_off",
+      "T": 1312,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 15,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": false,
+      "shift_on_alu": false,
+      "parity_on_alu": true,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": true,
+      "cached_nodes": null
+    },
+    {
+      "name": "cache_top4_d4x15_reset_offload_1016_parity_off_idxshift_ptralu",
+      "T": 1645,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 15,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": true,
+      "shift_on_alu": false,
+      "parity_on_alu": true,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "alu",
+      "include_setup": true,
+      "cached_nodes": null
+    },
+    {
+      "name": "cache_top4_d4x15_skip_r3_r13_1509",
+      "T": 1312,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        11,
+        12,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 15,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": true,
+      "shift_on_alu": false,
+      "parity_on_alu": true,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": true,
+      "cached_nodes": 31
+    },
+    {
+      "name": "cache_top4_d4x15_skip_r3_x4_24_1456",
+      "T": 1312,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 24,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": true,
+      "shift_on_alu": false,
+      "parity_on_alu": true,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": true,
+      "cached_nodes": 31
+    },
+    {
+      "name": "cache_top4_d4x15_reset_offload_1016_bitmask",
+      "T": 1577,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 15,
+      "x5": 0,
+      "selection_mode": "bitmask",
+      "idx_shifted": false,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": true,
+      "cached_nodes": null
+    },
+    {
+      "name": "cache_top4_bitmask_idxshift_off1117_1088",
+      "T": 1088,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [],
+      "depth5_rounds": [],
+      "x4": 0,
+      "x5": 0,
+      "selection_mode": "bitmask",
+      "idx_shifted": true,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": true,
+      "cached_nodes": null
+    },
+    {
+      "name": "cache_top4_bitmask_idxshift_resetflow_off1109_1084",
+      "T": 1084,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [],
+      "depth5_rounds": [],
+      "x4": 0,
+      "x5": 0,
+      "selection_mode": "bitmask",
+      "idx_shifted": true,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": true,
+      "ptr_setup_engine": "flow",
+      "include_setup": true,
+      "cached_nodes": null
+    },
+    {
+      "name": "cache_top4_d4x15_reset_offload_1016_parity_off_bitmask",
+      "T": 1615,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 15,
+      "x5": 0,
+      "selection_mode": "bitmask",
+      "idx_shifted": false,
+      "shift_on_alu": false,
+      "parity_on_alu": true,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": true,
+      "cached_nodes": null
+    },
+    {
+      "name": "cache_top4_d4x15_reset_offload_1016_off128",
+      "T": 1647,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 15,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": false,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": true,
+      "cached_nodes": null
+    },
+    {
+      "name": "cache_top4_d4x15_reset_offload_1016_off1024",
+      "T": 1726,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 15,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": false,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": true,
+      "cached_nodes": null
+    }
+  ]
+}

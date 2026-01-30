@@ -132,6 +132,13 @@ def _add_vselect_parity(spec, ops: list[Op], dest: int, cond: int, a: int, b: in
     _add_vselect(ops, dest, cond, a, b, meta=meta)
 
 
+def _selection_mode(spec) -> str:
+    mode = getattr(spec, "selection_mode", None)
+    if mode:
+        return mode
+    return "bitmask" if getattr(spec, "use_bitmask_selection", False) else "eq"
+
+
 def _select_by_eq_alu(
     spec,
     alu_ops: list[Op],
@@ -187,6 +194,9 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
     store_ops: list[Op] = []
 
     linear, bitwise = _split_hash_stages()
+    selection_mode = _selection_mode(spec)
+    mask_mode = selection_mode in {"mask", "mask_precompute"}
+    mask_precompute = selection_mode == "mask_precompute" and len(layout.extra) >= 4
 
     if getattr(spec, "include_setup", True):
         # Scalar constants
@@ -274,7 +284,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
             for r in range(spec.rounds):
                 for v in range(block_start, block_end):
                     vec_round_pairs.append((v, r))
-    elif getattr(spec, "use_bitmask_selection", False):
+    elif selection_mode in {"bitmask", "mask", "mask_precompute"}:
         vec_round_pairs = [(v, r) for v in range(spec.vectors) for r in range(spec.rounds)]
     else:
         vec_round_pairs = [(v, r) for r in range(spec.rounds) for v in range(spec.vectors)]
@@ -284,22 +294,72 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
         sel = layout.sel[v]
         extra = None
         extra2 = None
+        extra3 = None
         extra_key = None
         extra2_key = None
+        extra3_key = None
+        tmp_read_key = f"tmp_read:{r}:{v}"
         if layout.extra:
             extra = layout.extra[v % len(layout.extra)]
             extra_key = f"extra:{v % len(layout.extra)}"
             if len(layout.extra) > 1:
                 extra2 = layout.extra[(v + 1) % len(layout.extra)]
                 extra2_key = f"extra:{(v + 1) % len(layout.extra)}"
+            if len(layout.extra) > 2:
+                extra3 = layout.extra[(v + 2) % len(layout.extra)]
+                extra3_key = f"extra:{(v + 2) % len(layout.extra)}"
         idx = layout.idx[v]
         val = layout.val[v]
+
+        bits0 = None
+        bits1 = None
+        data1 = None
+        data2 = None
+        if mask_precompute:
+            mask_depth = None
+            if r in (1, 12):
+                mask_depth = 1
+            elif r in (2, 13):
+                mask_depth = 2
+            elif r in (3, 14):
+                mask_depth = 3
+            elif r in spec.depth4_cached_rounds and v < spec.x4:
+                mask_depth = 4
+            if mask_depth is not None:
+                bits0, bits1, data1, data2 = layout.extra[:4]
+                one_v = layout.const_v[1]
+                _add_valu(valu_ops, "&", bits0, idx, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
+                if mask_depth >= 2:
+                    _add_valu(valu_ops, ">>", bits1, idx, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
+                    _add_valu(valu_ops, "&", bits1, bits1, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
 
         if r in spec.base_cached_rounds:
             if r in (0, 11):
                 _add_valu(valu_ops, "^", val, val, layout.node_v[0], meta={"round": r, "vec": v})
             elif r in (1, 12):
-                if getattr(spec, "use_bitmask_selection", False) and extra is not None:
+                if mask_precompute and getattr(spec, "idx_shifted", False):
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        bits0,
+                        layout.node_v[2],
+                        layout.node_v[1],
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                    )
+                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                elif selection_mode == "mask" and getattr(spec, "idx_shifted", False):
+                    one_v = layout.const_v[1]
+                    _add_valu(valu_ops, "&", tmp, idx, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        tmp,
+                        layout.node_v[2],
+                        layout.node_v[1],
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, tmp_read_key),
+                    )
+                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                elif selection_mode == "bitmask" and extra is not None:
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
                     _add_vselect_parity(
                         spec,
@@ -308,7 +368,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         tmp,
                         layout.node_v[1],
                         layout.node_v[2],
-                        meta={"round": r, "vec": v},
+                        meta=_tag_temp({"round": r, "vec": v}, tmp_read_key),
                     )
                     _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
                 else:
@@ -316,7 +376,64 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
                     _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
             elif r in (2, 13):
-                if getattr(spec, "use_bitmask_selection", False) and extra is not None:
+                if mask_precompute and getattr(spec, "idx_shifted", False):
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        bits0,
+                        layout.node_v[4],
+                        layout.node_v[3],
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                    )
+                    _add_vselect(
+                        flow_ops,
+                        data1,
+                        bits0,
+                        layout.node_v[6],
+                        layout.node_v[5],
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                    )
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        bits1,
+                        data1,
+                        sel,
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                    )
+                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                elif selection_mode == "mask" and getattr(spec, "idx_shifted", False) and extra is not None:
+                    one_v = layout.const_v[1]
+                    shift1 = layout.const_v[1]
+                    _add_valu(valu_ops, "&", tmp, idx, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        tmp,
+                        layout.node_v[4],
+                        layout.node_v[3],
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, tmp_read_key),
+                    )
+                    _add_vselect(
+                        flow_ops,
+                        extra,
+                        tmp,
+                        layout.node_v[6],
+                        layout.node_v[5],
+                        meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key), tmp_read_key),
+                    )
+                    _add_valu(valu_ops, ">>", tmp, idx, shift1, meta={"round": r, "vec": v, "sel": "mask"})
+                    _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        tmp,
+                        extra,
+                        sel,
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key),
+                    )
+                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                elif selection_mode == "bitmask" and extra is not None:
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
                     _add_vselect_parity(
                         spec,
@@ -325,7 +442,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         tmp,
                         layout.node_v[3],
                         layout.node_v[4],
-                        meta={"round": r, "vec": v},
+                        meta=_tag_temp({"round": r, "vec": v}, tmp_read_key),
                     )
                     _add_vselect_parity(
                         spec,
@@ -334,7 +451,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         tmp,
                         layout.node_v[5],
                         layout.node_v[6],
-                        meta=_tag_temp({"round": r, "vec": v}, extra_key),
+                        meta=_tag_temp(_tag_temp({"round": r, "vec": v}, extra_key), tmp_read_key),
                     )
                     _add_alu_vec(
                         alu_ops,
@@ -358,7 +475,150 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
                     _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
             elif r in (3, 14):
-                if getattr(spec, "use_bitmask_selection", False) and extra is not None:
+                if mask_precompute and getattr(spec, "idx_shifted", False):
+                    one_v = layout.const_v[1]
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        bits0,
+                        layout.node_v[8],
+                        layout.node_v[7],
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                    )
+                    _add_vselect(
+                        flow_ops,
+                        data1,
+                        bits0,
+                        layout.node_v[10],
+                        layout.node_v[9],
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                    )
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        bits1,
+                        data1,
+                        sel,
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                    )
+                    _add_vselect(
+                        flow_ops,
+                        data1,
+                        bits0,
+                        layout.node_v[12],
+                        layout.node_v[11],
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                    )
+                    _add_vselect(
+                        flow_ops,
+                        data2,
+                        bits0,
+                        layout.node_v[14],
+                        layout.node_v[13],
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                    )
+                    _add_vselect(
+                        flow_ops,
+                        data1,
+                        bits1,
+                        data2,
+                        data1,
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                    )
+                    _add_valu(valu_ops, ">>", tmp, idx, layout.const_v[2], meta={"round": r, "vec": v, "sel": "mask_pre"})
+                    _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        tmp,
+                        data1,
+                        sel,
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                    )
+                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                elif (
+                    selection_mode == "mask"
+                    and getattr(spec, "idx_shifted", False)
+                    and extra is not None
+                    and extra2 is not None
+                ):
+                    one_v = layout.const_v[1]
+                    shift1 = layout.const_v[1]
+                    shift2 = layout.const_v[2]
+
+                    # mask0 -> tmp, select pairs for nodes 7..10
+                    _add_valu(valu_ops, "&", tmp, idx, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        tmp,
+                        layout.node_v[8],
+                        layout.node_v[7],
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, tmp_read_key),
+                    )
+                    _add_vselect(
+                        flow_ops,
+                        extra2,
+                        tmp,
+                        layout.node_v[10],
+                        layout.node_v[9],
+                        meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra2_key), tmp_read_key),
+                    )
+                    # mask1 -> tmp, select between pairs (lower half)
+                    _add_valu(valu_ops, ">>", tmp, idx, shift1, meta={"round": r, "vec": v, "sel": "mask"})
+                    _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        tmp,
+                        extra2,
+                        sel,
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra2_key),
+                    )
+
+                    # mask0 -> tmp, select pairs for nodes 11..14
+                    _add_valu(valu_ops, "&", tmp, idx, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                    _add_vselect(
+                        flow_ops,
+                        extra,
+                        tmp,
+                        layout.node_v[12],
+                        layout.node_v[11],
+                        meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key), tmp_read_key),
+                    )
+                    _add_vselect(
+                        flow_ops,
+                        extra2,
+                        tmp,
+                        layout.node_v[14],
+                        layout.node_v[13],
+                        meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra2_key), tmp_read_key),
+                    )
+                    # mask1 -> tmp, select between pairs (upper half)
+                    _add_valu(valu_ops, ">>", tmp, idx, shift1, meta={"round": r, "vec": v, "sel": "mask"})
+                    _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                    _add_vselect(
+                        flow_ops,
+                        extra,
+                        tmp,
+                        extra2,
+                        extra,
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra2_key or extra_key),
+                    )
+
+                    # mask2 -> tmp, select between lower and upper
+                    _add_valu(valu_ops, ">>", tmp, idx, shift2, meta={"round": r, "vec": v, "sel": "mask"})
+                    _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                    _add_vselect(
+                        flow_ops,
+                        sel,
+                        tmp,
+                        extra,
+                        sel,
+                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key),
+                    )
+                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                elif selection_mode == "bitmask" and extra is not None:
                     # Lower half: nodes 7..10
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
                     _add_vselect_parity(
@@ -368,7 +628,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         tmp,
                         layout.node_v[7],
                         layout.node_v[8],
-                        meta={"round": r, "vec": v},
+                        meta=_tag_temp({"round": r, "vec": v}, tmp_read_key),
                     )
                     if extra2 is not None:
                         _add_vselect_parity(
@@ -378,7 +638,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                             tmp,
                             layout.node_v[9],
                             layout.node_v[10],
-                            meta=_tag_temp({"round": r, "vec": v}, extra2_key),
+                            meta=_tag_temp(_tag_temp({"round": r, "vec": v}, extra2_key), tmp_read_key),
                         )
                         _add_alu_vec(
                             alu_ops,
@@ -403,7 +663,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                             tmp,
                             layout.node_v[9],
                             layout.node_v[10],
-                            meta=_tag_temp({"round": r, "vec": v}, extra_key),
+                            meta=_tag_temp(_tag_temp({"round": r, "vec": v}, extra_key), tmp_read_key),
                         )
                         _add_alu_vec(
                             alu_ops,
@@ -431,7 +691,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         tmp,
                         layout.node_v[11],
                         layout.node_v[12],
-                        meta=_tag_temp({"round": r, "vec": v}, extra_key),
+                        meta=_tag_temp(_tag_temp({"round": r, "vec": v}, extra_key), tmp_read_key),
                     )
                     _add_vselect_parity(
                         spec,
@@ -440,7 +700,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         tmp,
                         layout.node_v[13],
                         layout.node_v[14],
-                        meta=_tag_temp({"round": r, "vec": v}, extra2_key or extra_key),
+                        meta=_tag_temp(_tag_temp({"round": r, "vec": v}, extra2_key or extra_key), tmp_read_key),
                     )
                     _add_alu_vec(
                         alu_ops,
@@ -488,9 +748,498 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     _add_load_offset(load_ops, tmp, sel, lane, meta={"round": r, "vec": v, "lane": lane})
                 _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
         elif r in spec.depth4_cached_rounds and v < spec.x4:
-            nodes = [(i, layout.node_v[i]) for i in range(15, 31)]
-            _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
-            _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
+            if mask_precompute and getattr(spec, "idx_shifted", False):
+                one_v = layout.const_v[1]
+                # Lower half (15..22) -> sel
+                _add_vselect(
+                    flow_ops,
+                    sel,
+                    bits0,
+                    layout.node_v[16],
+                    layout.node_v[15],
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    data1,
+                    bits0,
+                    layout.node_v[18],
+                    layout.node_v[17],
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    sel,
+                    bits1,
+                    data1,
+                    sel,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    data1,
+                    bits0,
+                    layout.node_v[20],
+                    layout.node_v[19],
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    data2,
+                    bits0,
+                    layout.node_v[22],
+                    layout.node_v[21],
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    data1,
+                    bits1,
+                    data2,
+                    data1,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+                _add_valu(valu_ops, ">>", tmp, idx, layout.const_v[2], meta={"round": r, "vec": v, "sel": "mask_pre"})
+                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
+                _add_vselect(
+                    flow_ops,
+                    sel,
+                    tmp,
+                    data1,
+                    sel,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+
+                # Upper half (23..30) -> data1
+                _add_vselect(
+                    flow_ops,
+                    data1,
+                    bits0,
+                    layout.node_v[24],
+                    layout.node_v[23],
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    data2,
+                    bits0,
+                    layout.node_v[26],
+                    layout.node_v[25],
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    data1,
+                    bits1,
+                    data2,
+                    data1,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    data2,
+                    bits0,
+                    layout.node_v[28],
+                    layout.node_v[27],
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    tmp,
+                    bits0,
+                    layout.node_v[30],
+                    layout.node_v[29],
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    data2,
+                    bits1,
+                    tmp,
+                    data2,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+                _add_valu(valu_ops, ">>", tmp, idx, layout.const_v[2], meta={"round": r, "vec": v, "sel": "mask_pre"})
+                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
+                _add_vselect(
+                    flow_ops,
+                    data1,
+                    tmp,
+                    data2,
+                    data1,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+
+                # Final select between lower and upper
+                _add_valu(valu_ops, ">>", tmp, idx, layout.const_v[3], meta={"round": r, "vec": v, "sel": "mask_pre"})
+                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
+                _add_vselect(
+                    flow_ops,
+                    sel,
+                    tmp,
+                    data1,
+                    sel,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
+                )
+                _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+            elif selection_mode == "bitmask" and extra is not None and extra2 is not None and extra3 is not None:
+                # Depth4 bitmask selection (nodes 15..30) with extra temp vectors.
+                # Upper half (23..30) -> extra
+                _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v, "sel": "bitmask"})
+                _add_vselect_parity(
+                    spec,
+                    flow_ops,
+                    extra,
+                    tmp,
+                    layout.node_v[23],
+                    layout.node_v[24],
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, tmp_read_key),
+                )
+                _add_vselect_parity(
+                    spec,
+                    flow_ops,
+                    extra2,
+                    tmp,
+                    layout.node_v[25],
+                    layout.node_v[26],
+                    meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra2_key), tmp_read_key),
+                )
+                _add_alu_vec(
+                    alu_ops,
+                    "<",
+                    tmp,
+                    idx,
+                    _idx_const(spec, layout.const_s, 25),
+                    meta={"round": r, "vec": v, "sel": "bitmask"},
+                )
+                _add_vselect(
+                    flow_ops,
+                    extra,
+                    tmp,
+                    extra,
+                    extra2,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra2_key),
+                )
+
+                _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v, "sel": "bitmask"})
+                _add_vselect_parity(
+                    spec,
+                    flow_ops,
+                    extra2,
+                    tmp,
+                    layout.node_v[27],
+                    layout.node_v[28],
+                    meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra2_key), tmp_read_key),
+                )
+                _add_vselect_parity(
+                    spec,
+                    flow_ops,
+                    extra3,
+                    tmp,
+                    layout.node_v[29],
+                    layout.node_v[30],
+                    meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra3_key), tmp_read_key),
+                )
+                _add_alu_vec(
+                    alu_ops,
+                    "<",
+                    tmp,
+                    idx,
+                    _idx_const(spec, layout.const_s, 29),
+                    meta={"round": r, "vec": v, "sel": "bitmask"},
+                )
+                _add_vselect(
+                    flow_ops,
+                    extra2,
+                    tmp,
+                    extra2,
+                    extra3,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra3_key),
+                )
+                _add_alu_vec(
+                    alu_ops,
+                    "<",
+                    tmp,
+                    idx,
+                    _idx_const(spec, layout.const_s, 27),
+                    meta={"round": r, "vec": v, "sel": "bitmask"},
+                )
+                _add_vselect(
+                    flow_ops,
+                    extra,
+                    tmp,
+                    extra,
+                    extra2,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra2_key),
+                )
+
+                # Lower half (15..22) -> sel
+                _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v, "sel": "bitmask"})
+                _add_vselect_parity(
+                    spec,
+                    flow_ops,
+                    sel,
+                    tmp,
+                    layout.node_v[15],
+                    layout.node_v[16],
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, tmp_read_key),
+                )
+                _add_vselect_parity(
+                    spec,
+                    flow_ops,
+                    extra2,
+                    tmp,
+                    layout.node_v[17],
+                    layout.node_v[18],
+                    meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra2_key), tmp_read_key),
+                )
+                _add_alu_vec(
+                    alu_ops,
+                    "<",
+                    tmp,
+                    idx,
+                    _idx_const(spec, layout.const_s, 17),
+                    meta={"round": r, "vec": v, "sel": "bitmask"},
+                )
+                _add_vselect(
+                    flow_ops,
+                    sel,
+                    tmp,
+                    sel,
+                    extra2,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra2_key),
+                )
+
+                _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v, "sel": "bitmask"})
+                _add_vselect_parity(
+                    spec,
+                    flow_ops,
+                    extra2,
+                    tmp,
+                    layout.node_v[19],
+                    layout.node_v[20],
+                    meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra2_key), tmp_read_key),
+                )
+                _add_vselect_parity(
+                    spec,
+                    flow_ops,
+                    extra3,
+                    tmp,
+                    layout.node_v[21],
+                    layout.node_v[22],
+                    meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra3_key), tmp_read_key),
+                )
+                _add_alu_vec(
+                    alu_ops,
+                    "<",
+                    tmp,
+                    idx,
+                    _idx_const(spec, layout.const_s, 21),
+                    meta={"round": r, "vec": v, "sel": "bitmask"},
+                )
+                _add_vselect(
+                    flow_ops,
+                    extra2,
+                    tmp,
+                    extra2,
+                    extra3,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra3_key),
+                )
+                _add_alu_vec(
+                    alu_ops,
+                    "<",
+                    tmp,
+                    idx,
+                    _idx_const(spec, layout.const_s, 19),
+                    meta={"round": r, "vec": v, "sel": "bitmask"},
+                )
+                _add_vselect(
+                    flow_ops,
+                    sel,
+                    tmp,
+                    sel,
+                    extra2,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra2_key),
+                )
+
+                # Final select between lower (sel) and upper (extra)
+                _add_alu_vec(
+                    alu_ops,
+                    "<",
+                    tmp,
+                    idx,
+                    _idx_const(spec, layout.const_s, 23),
+                    meta={"round": r, "vec": v, "sel": "bitmask"},
+                )
+                _add_vselect(
+                    flow_ops,
+                    sel,
+                    tmp,
+                    sel,
+                    extra,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra_key),
+                )
+                _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+            elif (
+                selection_mode == "mask"
+                and getattr(spec, "idx_shifted", False)
+                and extra is not None
+                and extra2 is not None
+                and extra3 is not None
+            ):
+                one_v = layout.const_v[1]
+                shift1 = layout.const_v[1]
+                shift2 = layout.const_v[2]
+                shift3 = layout.const_v[3]
+
+                # Lower half (15..22) -> extra2
+                _add_valu(valu_ops, "&", tmp, idx, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_vselect(
+                    flow_ops,
+                    sel,
+                    tmp,
+                    layout.node_v[16],
+                    layout.node_v[15],
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    extra,
+                    tmp,
+                    layout.node_v[18],
+                    layout.node_v[17],
+                    meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key), tmp_read_key),
+                )
+                _add_valu(valu_ops, ">>", tmp, idx, shift1, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_vselect(
+                    flow_ops,
+                    sel,
+                    tmp,
+                    extra,
+                    sel,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key),
+                )
+                _add_valu(valu_ops, "&", tmp, idx, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_vselect(
+                    flow_ops,
+                    extra,
+                    tmp,
+                    layout.node_v[20],
+                    layout.node_v[19],
+                    meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key), tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    extra3,
+                    tmp,
+                    layout.node_v[22],
+                    layout.node_v[21],
+                    meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra3_key), tmp_read_key),
+                )
+                _add_valu(valu_ops, ">>", tmp, idx, shift1, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_vselect(
+                    flow_ops,
+                    extra,
+                    tmp,
+                    extra3,
+                    extra,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra3_key),
+                )
+                _add_valu(valu_ops, ">>", tmp, idx, shift2, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_vselect(
+                    flow_ops,
+                    extra2,
+                    tmp,
+                    extra,
+                    sel,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key),
+                )
+
+                # Upper half (23..30) -> extra
+                _add_valu(valu_ops, "&", tmp, idx, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_vselect(
+                    flow_ops,
+                    sel,
+                    tmp,
+                    layout.node_v[24],
+                    layout.node_v[23],
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    extra,
+                    tmp,
+                    layout.node_v[26],
+                    layout.node_v[25],
+                    meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key), tmp_read_key),
+                )
+                _add_valu(valu_ops, ">>", tmp, idx, shift1, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_vselect(
+                    flow_ops,
+                    sel,
+                    tmp,
+                    extra,
+                    sel,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key),
+                )
+                _add_valu(valu_ops, "&", tmp, idx, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_vselect(
+                    flow_ops,
+                    extra,
+                    tmp,
+                    layout.node_v[28],
+                    layout.node_v[27],
+                    meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key), tmp_read_key),
+                )
+                _add_vselect(
+                    flow_ops,
+                    extra3,
+                    tmp,
+                    layout.node_v[30],
+                    layout.node_v[29],
+                    meta=_tag_temp(_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra3_key), tmp_read_key),
+                )
+                _add_valu(valu_ops, ">>", tmp, idx, shift1, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_vselect(
+                    flow_ops,
+                    extra,
+                    tmp,
+                    extra3,
+                    extra,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra3_key),
+                )
+                _add_valu(valu_ops, ">>", tmp, idx, shift2, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_vselect(
+                    flow_ops,
+                    extra,
+                    tmp,
+                    extra,
+                    sel,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key),
+                )
+
+                # bit3 selects between lower (extra2) and upper (extra)
+                _add_valu(valu_ops, ">>", tmp, idx, shift3, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask"})
+                _add_vselect(
+                    flow_ops,
+                    sel,
+                    tmp,
+                    extra,
+                    extra2,
+                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra2_key),
+                )
+                _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+            else:
+                nodes = [(i, layout.node_v[i]) for i in range(15, 31)]
+                _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
+                _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
         else:
             # Uncached: load node values
             _add_valu(valu_ops, "+", sel, idx, layout.forest_values_v, meta={"round": r, "vec": v})
@@ -528,10 +1277,21 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
         # Index update
         one_v = layout.const_v[1]
         two_v = layout.const_v[2]
-        if r == 10 and spec.reset_on_valu:
-            _add_valu(valu_ops, "^", idx, idx, idx, meta={"round": r, "vec": v})
-            if getattr(spec, "idx_shifted", False):
-                _add_valu(valu_ops, "+", idx, idx, one_v, meta={"round": r, "vec": v})
+        if r == 10:
+            if spec.reset_on_valu:
+                _add_valu(valu_ops, "^", idx, idx, idx, meta={"round": r, "vec": v})
+                if getattr(spec, "idx_shifted", False):
+                    _add_valu(valu_ops, "+", idx, idx, one_v, meta={"round": r, "vec": v})
+            else:
+                reset_v = one_v if getattr(spec, "idx_shifted", False) else layout.const_v[0]
+                _add_vselect(
+                    flow_ops,
+                    idx,
+                    one_v,
+                    reset_v,
+                    idx,
+                    meta={"round": r, "vec": v, "reset": "flow"},
+                )
         elif r != 15:
             _add_valu(
                 valu_ops,

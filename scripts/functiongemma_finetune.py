@@ -64,6 +64,142 @@ def _variant_names() -> list[str]:
     ]
 
 
+def _proof_names() -> list[str]:
+    path = Path(__file__).resolve().parent / "proof_map.json"
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    names = [m.get("proof_name") for m in data.get("mappings", [])]
+    return [n for n in names if isinstance(n, str) and n]
+
+
+def _strategy_names() -> list[str]:
+    path = Path(__file__).resolve().parent / "proof_strategies.json"
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    names = [s.get("name") for s in data.get("strategies", [])]
+    return [n for n in names if isinstance(n, str) and n]
+
+
+def _proof_like_overrides() -> list[dict[str, Any]]:
+    return [
+        {
+            "base_spec": "1013",
+            "name_hint": "top4_d4x15_eq_idxshift_off826",
+            "overrides": {
+                "depth4_rounds": 1,
+                "x4": 15,
+                "offload_op1": 826,
+                "use_bitmask_selection": False,
+                "selection_mode": "eq",
+                "idx_shifted": True,
+                "include_setup": False,
+            },
+        },
+        {
+            "base_spec": "1013",
+            "name_hint": "top4_d4x15_eq_off911",
+            "overrides": {
+                "depth4_rounds": 1,
+                "x4": 15,
+                "offload_op1": 911,
+                "use_bitmask_selection": False,
+                "selection_mode": "eq",
+                "include_setup": False,
+            },
+        },
+        {
+            "base_spec": "1013",
+            "name_hint": "top3_loadbound_idxshift_ptralu",
+            "overrides": {
+                "depth4_rounds": 0,
+                "x4": 0,
+                "cached_nodes": 7,
+                "base_cached_rounds": (0, 1, 2, 11, 12, 13),
+                "offload_op1": 1510,
+                "idx_shifted": True,
+                "ptr_setup_engine": "alu",
+                "include_setup": False,
+                "total_cycles": 1316,
+            },
+        },
+        {
+            "base_spec": "1013",
+            "name_hint": "mask_idxshift_1012",
+            "overrides": {
+                "selection_mode": "mask",
+                "idx_shifted": True,
+                "extra_vecs": 4,
+                "vector_block": 4,
+                "offload_op1": 1518,
+                "total_cycles": 1012,
+                "include_setup": False,
+            },
+        },
+        {
+            "base_spec": "1016",
+            "name_hint": "parity_off_off448",
+            "overrides": {
+                "offload_hash_op1": False,
+                "offload_parity": True,
+                "offload_op1": 448,
+            },
+        },
+        {
+            "base_spec": "1016",
+            "name_hint": "bitmask_idxshift_off1117",
+            "overrides": {
+                "use_bitmask_selection": True,
+                "selection_mode": "bitmask",
+                "idx_shifted": True,
+                "offload_op1": 1117,
+                "depth4_rounds": 0,
+                "depth4_cached_rounds": (),
+                "x4": 0,
+                "total_cycles": 1088,
+            },
+        },
+        {
+            "base_spec": "1016",
+            "name_hint": "bitmask_idxshift_resetflow_off1109",
+            "overrides": {
+                "use_bitmask_selection": True,
+                "selection_mode": "bitmask",
+                "idx_shifted": True,
+                "reset_on_valu": False,
+                "offload_op1": 1109,
+                "depth4_rounds": 0,
+                "depth4_cached_rounds": (),
+                "x4": 0,
+                "total_cycles": 1084,
+            },
+        },
+        {
+            "base_spec": "1016",
+            "name_hint": "skip_r3_x4_24_parity_off",
+            "overrides": {
+                "base_cached_rounds": (0, 1, 2, 11, 12, 13, 14),
+                "depth4_rounds": 1,
+                "depth4_cached_rounds": (4,),
+                "x4": 24,
+                "cached_nodes": 31,
+                "idx_shifted": True,
+                "offload_hash_op1": False,
+                "offload_parity": True,
+                "offload_op1": 448,
+                "use_bitmask_selection": False,
+            },
+        },
+    ]
+
+
 def _random_env_params(rng: random.Random) -> dict[str, Any]:
     heights = [3, 4, 5, 6, 8, 10]
     batches = [8, 16, 32, 64, 128, 256]
@@ -89,6 +225,11 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
         "Show ISA limits.",
         "What are the slot limits and VLEN?",
         "List the machine caps.",
+    ]
+    prompts_get_isa_spec = [
+        "Show ISA op signatures.",
+        "List ISA op arg counts.",
+        "Get ISA spec.",
     ]
     prompts_list_variants = [
         "List kernel variants.",
@@ -118,21 +259,34 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
         "Create variant {name} from base spec {base} with overrides.",
         "Scaffold variant {name} on {base} and register it.",
     ]
-    schedule_specs = [
+    proof_names = _proof_names()
+    schedule_specs = proof_names or [
         "cache_top4_d4x15_reset_offload_1013",
         "cache_top4_d4x15_reset_offload_1015_full_window",
         "cache_top4_d4x15_reset_offload_1016",
         "loadbound_preload15_uncached_1316",
     ]
+    schedule_specs = sorted(set(schedule_specs + ["1013", "1016"]))
+    strategy_names = _strategy_names() or schedule_specs
+    proof_overrides = _proof_like_overrides()
     prompts_schedule_summary = [
         "Summarize schedule stats for spec {spec}.",
         "Show schedule utilization for {spec}.",
         "Get schedule summary for spec {spec}.",
+        "Report bottlenecks for {spec} and note the tightest engine.",
     ]
     prompts_find_mismatch = [
         "Find the first schedule mismatch for spec {spec}.",
         "Check schedule dependencies for spec {spec}.",
         "Locate the first dependency mismatch in spec {spec}.",
+    ]
+    prompts_sweep_proof = [
+        "Sweep proof strategies from the default config.",
+        "Run proof strategy sweep for {strategy}.",
+        "Sweep proof strategies with T={T}.",
+        "Run proof strategy sweep for {strategy} with T={T}.",
+        "Find the lowest feasible T for proof strategy {strategy}.",
+        "Check proof strategy {strategy} for low-cycle feasibility.",
     ]
     prompts_make_env = [
         "Create env height {h}, batch {b}, rounds {r}, seed {s}.",
@@ -169,27 +323,58 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
         "Set env {eid} program to this json.",
         "Update env {eid} with the program json.",
     ]
+    prompts_create_variant_opt = [
+        "Create a proof-aligned variant {name} from {base}.",
+        "Create a low-cycle variant {name} using {base} with optimized overrides.",
+        "Scaffold a proof-inspired variant {name} on base {base}.",
+    ]
+    prompts_assemble_instruction = [
+        "Assemble an instruction bundle with a const load and halt.",
+        "Create a single instruction with an add and a load.",
+        "Build an instruction bundle with a vload.",
+    ]
+    prompts_assemble_program = [
+        "Assemble a program with a const then halt.",
+        "Create a program list with two instructions.",
+        "Build a short program with a load and halt.",
+    ]
+    prompts_validate_ops = [
+        "Validate this program json with op checks.",
+        "Check op signatures for this program json.",
+        "Validate program ops for this json.",
+    ]
+    prompts_run_program = [
+        "Run this program json as a smoke test.",
+        "Execute this program json for a few steps.",
+        "Run this program json for at most 4 instructions.",
+    ]
 
     examples: list[dict[str, Any]] = []
 
     tool_weights = [
         ("get_limits", 4),
+        ("get_isa_spec", 4),
         ("list_variants", 4),
-        ("sweep_caps", 6),
-        ("run_variant", 6),
-        ("compare_variants", 6),
-        ("create_variant", 4),
-        ("schedule_summary", 4),
-        ("find_schedule_mismatch", 4),
-        ("make_env", 8),
-        ("reset_env", 6),
-        ("run", 8),
-        ("step", 6),
-        ("read_mem", 6),
-        ("read_scratch", 6),
-        ("validate_program", 4),
-        ("set_program", 4),
-        ("multi", 4),
+        ("sweep_caps", 8),
+        ("run_variant", 8),
+        ("compare_variants", 8),
+        ("create_variant", 8),
+        ("schedule_summary", 8),
+        ("find_schedule_mismatch", 6),
+        ("sweep_proof_strategies", 8),
+        ("make_env", 6),
+        ("reset_env", 4),
+        ("run", 6),
+        ("step", 4),
+        ("read_mem", 3),
+        ("read_scratch", 3),
+        ("validate_program", 2),
+        ("set_program", 2),
+        ("assemble_instruction", 2),
+        ("assemble_program", 2),
+        ("validate_program_ops", 2),
+        ("run_program", 2),
+        ("multi", 6),
     ]
     tool_choices = [t for t, w in tool_weights for _ in range(w)]
 
@@ -202,6 +387,13 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
                     [{"name": "get_limits", "arguments": {}}],
                 )
             )
+        elif choice == "get_isa_spec":
+            examples.append(
+                _make_example(
+                    rng.choice(prompts_get_isa_spec),
+                    [{"name": "get_isa_spec", "arguments": {"use_frozen": True}}],
+                )
+            )
         elif choice == "list_variants":
             examples.append(
                 _make_example(
@@ -210,7 +402,7 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
                 )
             )
         elif choice == "sweep_caps":
-            T = rng.choice([1013, 1016])
+            T = rng.choice([1012, 1013, 1016, 1084, 1088, 1174, 1227, 1312, 1316, 1456, 1577, 1615, 1647, 1726])
             d4 = rng.choice([0, 1, 2])
             x = rng.choice([0, 8, 15, 24, 32])
             setup = rng.choice([0, 16, 32, 45, 48])
@@ -258,24 +450,45 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
             }
             examples.append(_make_example(user, [{"name": "compare_variants", "arguments": args}]))
         elif choice == "create_variant":
-            base = rng.choice(["1013", "1016"])
-            name = f"autogen_{base}_{rng.randint(0, 9999)}"
-            if base == "1013":
-                overrides = {
-                    "depth4_rounds": rng.choice([0, 1, 2]),
-                    "x4": rng.choice([0, 8, 15, 24, 32]),
-                    "offload_op1": rng.choice([0, 400, 826, 1200]),
-                    "use_bitmask_selection": rng.choice([True, False]),
-                }
+            use_proof = rng.random() < 0.65 and proof_overrides
+            if use_proof:
+                tmpl = rng.choice(proof_overrides)
+                base = tmpl["base_spec"]
+                name = f"autogen_{tmpl['name_hint']}_{rng.randint(0, 9999)}"
+                overrides = dict(tmpl["overrides"])
+                user = rng.choice(prompts_create_variant_opt).format(name=name, base=base)
             else:
-                overrides = {
-                    "depth4_rounds": rng.choice([0, 1, 2]),
-                    "x4": rng.choice([0, 8, 15, 24, 32]),
-                    "offload_op1": rng.choice([0, 400, 800, 1200]),
-                }
-            user = rng.choice(prompts_create_variant).format(name=name, base=base)
-            if rng.random() < 0.25:
-                overrides = {}
+                base = rng.choice(["1013", "1016"])
+                name = f"autogen_{base}_{rng.randint(0, 9999)}"
+                if base == "1013":
+                    overrides = {
+                        "depth4_rounds": rng.choice([0, 1, 2]),
+                        "x4": rng.choice([0, 8, 15, 24, 32]),
+                        "offload_op1": rng.choice([0, 400, 826, 1200, 1518]),
+                        "use_bitmask_selection": rng.choice([True, False]),
+                        "selection_mode": rng.choice(["eq", "bitmask", "mask", "mask_precompute"]),
+                        "idx_shifted": rng.choice([True, False]),
+                        "ptr_setup_engine": rng.choice(["flow", "alu"]),
+                        "reset_on_valu": rng.choice([True, False]),
+                        "shifts_on_valu": rng.choice([True, False]),
+                    }
+                else:
+                    overrides = {
+                        "depth4_rounds": rng.choice([0, 1, 2]),
+                        "x4": rng.choice([0, 8, 15, 24, 32]),
+                        "offload_op1": rng.choice([0, 400, 800, 1024, 1117]),
+                        "use_bitmask_selection": rng.choice([True, False]),
+                        "selection_mode": rng.choice(["eq", "bitmask", "mask", "mask_precompute"]),
+                        "idx_shifted": rng.choice([True, False]),
+                        "ptr_setup_engine": rng.choice(["flow", "alu"]),
+                        "reset_on_valu": rng.choice([True, False]),
+                        "shifts_on_valu": rng.choice([True, False]),
+                        "offload_hash_op1": rng.choice([True, False]),
+                        "offload_parity": rng.choice([True, False]),
+                    }
+                user = rng.choice(prompts_create_variant).format(name=name, base=base)
+                if rng.random() < 0.2:
+                    overrides = {}
             register = rng.random() < 0.85
             overwrite = rng.random() < 0.1
             examples.append(
@@ -312,6 +525,26 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
                 "max_ops": None,
             }
             examples.append(_make_example(user, [{"name": "find_schedule_mismatch", "arguments": args}]))
+        elif choice == "sweep_proof_strategies":
+            strategy = rng.choice(strategy_names)
+            T = rng.choice([1012, 1013, 1016, 1084, 1088, 1174, 1227, 1312, 1316, 1456, 1577, 1615])
+            user = rng.choice(prompts_sweep_proof).format(strategy=strategy, T=T)
+            args: dict[str, Any] = {}
+            if "strategy" in user:
+                args["strategy"] = strategy
+            if "T=" in user:
+                args["T_values"] = [T]
+            examples.append(
+                _make_example(
+                    user,
+                    [
+                        {
+                            "name": "sweep_proof_strategies",
+                            "arguments": args,
+                        }
+                    ],
+                )
+            )
         elif choice == "make_env":
             params = _random_env_params(rng)
             use_frozen = rng.random() < 0.4
@@ -391,17 +624,117 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
                     [{"name": "set_program", "arguments": {"env_id": env_id, "program_json": program_json}}],
                 )
             )
-        else:
-            user = "Show ISA limits and list kernel variants."
+        elif choice == "assemble_instruction":
+            instr = {"load": [["const", 0, 1]], "flow": [["halt"]]}
             examples.append(
                 _make_example(
-                    user,
+                    rng.choice(prompts_assemble_instruction),
                     [
-                        {"name": "get_limits", "arguments": {}},
-                        {"name": "list_variants", "arguments": {}},
+                        {
+                            "name": "assemble_instruction",
+                            "arguments": {"slots": instr, "validate": True, "use_frozen": True},
+                        }
                     ],
                 )
             )
+        elif choice == "assemble_program":
+            program = [
+                {"load": [["const", 0, 1]]},
+                {"flow": [["halt"]]},
+            ]
+            examples.append(
+                _make_example(
+                    rng.choice(prompts_assemble_program),
+                    [
+                        {
+                            "name": "assemble_program",
+                            "arguments": {"instructions": program, "validate": True, "use_frozen": True},
+                        }
+                    ],
+                )
+            )
+        elif choice == "validate_program_ops":
+            program_json = rng.choice(program_samples)
+            examples.append(
+                _make_example(
+                    rng.choice(prompts_validate_ops),
+                    [
+                        {
+                            "name": "validate_program_ops",
+                            "arguments": {"program_json": program_json, "use_frozen": True},
+                        }
+                    ],
+                )
+            )
+        elif choice == "run_program":
+            program_json = rng.choice(program_samples)
+            examples.append(
+                _make_example(
+                    rng.choice(prompts_run_program),
+                    [
+                        {
+                            "name": "run_program",
+                            "arguments": {
+                                "program_json": program_json,
+                                "max_instructions": 4,
+                                "use_frozen": True,
+                            },
+                        }
+                    ],
+                )
+            )
+        else:
+            if rng.random() < 0.5:
+                spec = rng.choice(schedule_specs)
+                user = f"Sweep proof strategies and summarize schedule for {spec}."
+                examples.append(
+                    _make_example(
+                        user,
+                        [
+                            {"name": "sweep_proof_strategies", "arguments": {"max_results_per_strategy": 5}},
+                            {"name": "schedule_summary", "arguments": {"spec": spec}},
+                        ],
+                    )
+                )
+            else:
+                tmpl = rng.choice(proof_overrides) if proof_overrides else None
+                if tmpl:
+                    base = tmpl["base_spec"]
+                    name = f"autogen_{tmpl['name_hint']}_{rng.randint(0, 9999)}"
+                    overrides = dict(tmpl["overrides"])
+                else:
+                    base = rng.choice(["1013", "1016"])
+                    name = f"autogen_{base}_{rng.randint(0, 9999)}"
+                    overrides = {}
+                user = f"Create variant {name} and run it on the frozen test case."
+                examples.append(
+                    _make_example(
+                        user,
+                        [
+                            {
+                                "name": "create_variant",
+                                "arguments": {
+                                    "name": name,
+                                    "base_spec": base,
+                                    "overrides": overrides,
+                                    "register": True,
+                                },
+                            },
+                            {
+                                "name": "run_variant",
+                                "arguments": {
+                                    "variant": name,
+                                    "forest_height": 10,
+                                    "rounds": 16,
+                                    "batch_size": 256,
+                                    "seed": 0,
+                                    "use_frozen": True,
+                                    "check_correctness": True,
+                                },
+                            },
+                        ],
+                    )
+                )
 
     return examples
 
@@ -425,6 +758,7 @@ def create_conversation(sample: dict[str, Any], tools: list[dict[str, Any]]) -> 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-path")
+    parser.add_argument("--dataset-in", help="Optional JSONL dataset to use instead of synthetic examples.")
     parser.add_argument("--output-dir", default="functiongemma-tools-ft")
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--batch-size", type=int, default=1)
@@ -457,21 +791,36 @@ def main() -> None:
             chat_template = template_path.read_text(encoding="utf-8")
     tools = [get_json_schema(fn) for fn in TOOL_FUNCS]
 
-    examples = build_synthetic_examples(args.synthetic_size, args.synthetic_seed)
-    dataset = Dataset.from_list(examples)
-    dataset = dataset.map(lambda s: create_conversation(s, tools), remove_columns=dataset.column_names)
+    if args.dataset_in:
+        samples: list[dict[str, Any]] = []
+        with open(args.dataset_in, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                samples.append(json.loads(line))
+    else:
+        samples = build_synthetic_examples(args.synthetic_size, args.synthetic_seed)
 
-    def _to_text(sample: dict[str, Any]) -> dict[str, Any]:
+    def _sample_to_text(sample: dict[str, Any]) -> dict[str, Any]:
+        if "messages" in sample:
+            messages = sample["messages"]
+            tool_spec = sample.get("tools", tools)
+        else:
+            conv = create_conversation(sample, tools)
+            messages = conv["messages"]
+            tool_spec = conv["tools"]
         text = processor.apply_chat_template(
-            sample["messages"],
-            tools=sample["tools"],
+            messages,
+            tools=tool_spec,
             add_generation_prompt=False,
             tokenize=False,
             chat_template=chat_template,
         )
         return {"text": text}
 
-    dataset = dataset.map(_to_text, remove_columns=dataset.column_names)
+    text_rows = [_sample_to_text(sample) for sample in samples]
+    dataset = Dataset.from_list(text_rows)
     dataset = dataset.train_test_split(test_size=0.2, shuffle=True, seed=42)
 
     if args.dataset_out:

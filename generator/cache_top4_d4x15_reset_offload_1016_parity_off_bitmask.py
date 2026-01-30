@@ -13,6 +13,7 @@ SPEC_CACHE_TOP4_D4X15_RESET_OFFLOAD_1016_PARITY_OFF_BITMASK = replace(
     offload_hash_op1=False,
     offload_parity=True,
     offload_op1=448,
+    total_cycles=1615,
 )
 
 def build_instrs():

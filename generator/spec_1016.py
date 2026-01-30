@@ -26,6 +26,7 @@ class Spec1016:
     ptr_setup_engine: str = "flow"
     # Selection mode
     use_bitmask_selection: bool = False
+    selection_mode: str = "eq"
     extra_vecs: int = 2
     vector_block: int = 32
     # Override cached node count if needed.

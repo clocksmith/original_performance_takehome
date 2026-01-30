@@ -35,8 +35,8 @@
     {
       "proof_name": "cache_top4_d4x15_reset_offload_1016",
       "spec": {
-        "module": "generator.spec_1016",
-        "object": "SPEC_1016"
+        "module": "generator.cache_top4_d4x15_reset_offload_1016",
+        "object": "SPEC_PROOF_1016"
       },
       "generator": {
         "module": "generator.cache_top4_d4x15_reset_offload_1016",
@@ -150,6 +150,112 @@
       },
       "kernel_wrapper": {
         "path": "cache_top4_d4x15_skip_r3_x4_24_1456.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_d4x15_reset_offload_1016_bitmask",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1016_bitmask",
+        "object": "SPEC_CACHE_TOP4_D4X15_RESET_OFFLOAD_1016_BITMASK"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1016_bitmask",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_reset_offload_1016_bitmask.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_d4x15_reset_offload_1016_parity_off_bitmask",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1016_parity_off_bitmask",
+        "object": "SPEC_CACHE_TOP4_D4X15_RESET_OFFLOAD_1016_PARITY_OFF_BITMASK"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1016_parity_off_bitmask",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_reset_offload_1016_parity_off_bitmask.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_d4x15_reset_offload_1016_off128",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1016_off128",
+        "object": "SPEC_CACHE_TOP4_D4X15_RESET_OFFLOAD_1016_OFF128"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1016_off128",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_reset_offload_1016_off128.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_d4x15_reset_offload_1016_off1024",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1016_off1024",
+        "object": "SPEC_CACHE_TOP4_D4X15_RESET_OFFLOAD_1016_OFF1024"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1016_off1024",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_reset_offload_1016_off1024.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_bitmask_idxshift_off1117_1088",
+      "spec": {
+        "module": "generator.cache_top4_bitmask_idxshift_off1117_1088",
+        "object": "SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_OFF1117_1088"
+      },
+      "generator": {
+        "module": "generator.cache_top4_bitmask_idxshift_off1117_1088",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_bitmask_idxshift_off1117_1088.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_d4x15_mask_idxshift_1012",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_mask_idxshift_1012",
+        "object": "SPEC_CACHE_TOP4_D4X15_MASK_IDXSHIFT_1012",
+        "alias_of": "cache_top4_d4x15_reset_offload_1013"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_mask_idxshift_1012",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_d4x15_mask_idxshift_1012.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_bitmask_idxshift_resetflow_off1109_1084",
+      "spec": {
+        "module": "generator.cache_top4_bitmask_idxshift_resetflow_off1109_1084",
+        "object": "SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_RESETFLOW_OFF1109_1084"
+      },
+      "generator": {
+        "module": "generator.cache_top4_bitmask_idxshift_resetflow_off1109_1084",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_bitmask_idxshift_resetflow_off1109_1084.py",
         "class": "KernelBuilder"
       }
     }

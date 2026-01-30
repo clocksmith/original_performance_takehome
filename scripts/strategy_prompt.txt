@@ -10,15 +10,79 @@ Ground Rules
 - Every new strategy must have a proof directory, a generator wrapper, and a kernel wrapper.
 - Any scheduling or spec edits must preserve correctness gates and be justified by updated proofs.
 - Prefer explicit, auditable counts (flow/load/valu/alu/store) in proofs.
+- Do not modify `tests/`, `perf_takehome.py`, `problem.py`, or `frozen_problem.py`.
+- Use `create_variant` for new variants; do not hand-write wrappers unless explicitly requested.
+- Proof mapping must point at the proof’s own generator module + SPEC_PROOF_* object (no base spec modules for proof-named variants).
 
 Loop (repeat for each strategy)
 
 Step 0: Choose a strategy family
 - Decide caching depth (top-3/top-4/top-5), cached rounds, and per-round partial caching (X4/X5).
-- Decide selection mode (equality-selection via vselect tree, or bitmask selection).
+- Decide selection mode (eq / bitmask / mask / mask_precompute). For mask_precompute, use `idx_shifted=true` and `extra_vecs=4`; bits0/1 are precomputed, bits2/3 computed on demand.
 - Decide reset placement (VALU vs FLOW) and shift placement (VALU vs ALU).
 - Decide setup placement (include_setup true/false; pointer setup engine flow/alu).
 - Decide idx representation: 0-based (idx_shifted=false) or 1-based (idx_shifted=true) to drop the +1 in idx update.
+
+Step 0.5: Observe + hypothesize before proofing
+- Observe bottlenecks (flow/load/valu/alu utilization + schedule gaps) from schedule_summary/tests.
+- Think creatively and horizontally about structure: reorder cached rounds, change cache depth, switch selection mode, shift idx representation, or move work across engines.
+- Aim for the lowest cycle count, not just local fixes—consider new strategy families even if they diverge from prior proofs.
+- Sanity-check the hypothesis with sweep_caps counts before writing a proof.
+
+Caps-Driven Strategy Checklist (1008/1012 targets)
+1) Think in rounds × vectors × engines.
+   Each round per vector is a fixed op graph: cached node select → xor → 6-stage hash → parity update.
+   Only uncached rounds add 8 loads per vector (load_offset). Your job is to pack this graph into per-cycle
+   caps—6 VALU, 12 ALU, 2 LOAD, 1 FLOW—if hazards allow.
+2) Parallelism exists only across vectors/lanes.
+   You cannot compute idx(r+1) before hash(r), so each vector is serial. Ordering (round-major vs vector-major
+   vs block-major) determines whether inter-vector parallelism actually fills slots.
+3) Load cap is the first gate at T=1008.
+   LOAD cap = 2T = 2016. One fully uncached round costs 32×8 = 256 loads. Eight uncached rounds already exceed
+   the cap. If you don't minimize uncached rounds, 1008 is impossible. You can reduce uncached pressure by:
+   reducing uncached vector count via x4/x5 per round, shrinking cached node ranges (top-3 vs top-4, which for eq-selection
+   also reduces flow via smaller selection trees), or shifting which rounds are cached.
+4) Cache depth trades load for flow.
+   Baseline eq-selection vselect trees: depth-3 ≈ 7 vselects, depth-4 ≈ 15 (method-dependent). More cache
+   reduces load pressure but increases flow usage. Choose depth based on the tightest engine.
+5) Selection mode chooses which engine you pay.
+   Eq-selection is ALU-heavy; bitmask reduces ALU but keeps flow; mask-precompute trades ALU for VALU. Use this
+   as an engine-budget dial, not a universal win.
+6) Hash placement matters.
+   Hash cost is 12 VALU ops per round per vector if shifts stay on VALU. Moving shifts to ALU adds +3 ALU ops
+   per round per vector—good only if ALU slack exists.
+7) Parity placement matters too.
+   Parity update can be VALU or ALU; moving it to ALU helps only if ALU still fits once shifts and offloads are
+   accounted for.
+8) Offload math is lane-expanded.
+   base_alu = ALU ops required before offload/shift/parity moves (selection + setup + addr math).
+   Every offloaded VALU op costs 8 ALU ops, but only offloadable VALU ops (e.g., hash op1 stages, sometimes
+   parity) can be moved. Always verify:
+   base_alu + 8*offload ≤ 12T
+   (where base_alu excludes offload/shift/parity moves).
+9) idx_shifted (1-based) is a trade, not free.
+   It removes the "+1" in idx update but adds setup cost (idx shift on vload + optional base-pointer bias). Use
+   it only if net VALU/ALU savings outweigh setup costs.
+10) Index-range proofs are required.
+    Deep caching is only legal where idx range is provably small. The proof must encode that range; otherwise the
+    kernel is invalid regardless of speed.
+11) Temp hazards can destroy packing.
+    Shared temps serialize schedules. Use extra_vecs or block-major ordering to avoid false dependencies—but
+    watch scratch size.
+12) Scratch is a hard cap (1536 words).
+    Each extra_vec costs 8 words and can force fewer cached nodes or constants. Budget scratch early.
+13) Feasibility math beats intuition.
+    If any engine count exceeds cap, no scheduler can save it. Quick rule:
+    If VALU > 6T + floor((12T − base_alu)/8), then T is impossible.
+14) Setup can be a hidden cost.
+    Proofs often exclude setup; runtime doesn't unless you pre-bake or separately schedule it. Be explicit about
+    proof vs runtime cycles.
+15) Static schedules win at extremes.
+    At 1008, greedy list scheduling is too loose. You likely need fixed per-cycle allocation or a tightly
+    hazard-aware schedule.
+16) Use sweeps to prune hard.
+    Before coding, run sweep_caps or manual counts. If load/flow/alu/valu exceed caps, switch strategies instead
+    of tuning a dead end.
 
 Step 1: Feasibility sweep
 - Run sweep_caps.py with parameters matching the strategy family.
@@ -60,6 +124,7 @@ Step 7: Correctness gates
 - Run find_schedule_mismatch(spec=<strategy_name>) with a fixed seed.
 - Run frozen tests via tests/submission_tests.py --kernel-builder <strategy_name>.py.
 - If mismatch occurs: fix hazards (meta temp tags, scheduler deps) before proceeding.
+  - Bitmask selection requires tmp-read ordering: tag the parity vselects that read tmp with a shared temp key so compare writes to tmp can’t be scheduled before those reads.
 
 Step 8: Measure cycles
 - Use schedule_summary(spec=<strategy_name>) and submission_tests cycle output.
