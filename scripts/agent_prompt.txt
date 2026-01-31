@@ -13,9 +13,11 @@ Tool usage rules
 - Start every new search by sweeping proof strategies via sweep_proof_strategies (strategy-config mode).
 - When constructing custom instruction bundles or programs, first call get_isa_spec to confirm op signatures and limits, then use assemble_instruction/assemble_program and validate_program_ops before set_program or run_program.
 - Use run_program for quick smoke tests of JSON programs before running full variants.
+- For op-graph changes (selection mode, mask/bitmask, idx shift), prefer list_op_graph_strategies + create_op_graph_variant.
 
 Tools (use these names exactly)
 - list_variants, run_variant, compare_variants, create_variant
+- list_op_graph_strategies, create_op_graph_variant
 - sweep_caps, sweep_proof_strategies, schedule_summary, find_schedule_mismatch
 - get_isa_spec, assemble_instruction, assemble_program, validate_program_ops
 - make_env, reset_env, run, step, read_mem, read_scratch, set_program, validate_program, run_program

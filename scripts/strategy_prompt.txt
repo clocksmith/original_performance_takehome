@@ -26,6 +26,7 @@ Step 0: Choose a strategy family
 Step 0.5: Observe + hypothesize before proofing
 - Observe bottlenecks (flow/load/valu/alu utilization + schedule gaps) from schedule_summary/tests.
 - Think creatively and horizontally about structure: reorder cached rounds, change cache depth, switch selection mode, shift idx representation, or move work across engines.
+- Treat the op graph itself as a lever: redesign the per-round DAG (within ISA + correct semantics) to reduce total VALU/ALU/flow/load ops, not just scheduling.
 - Aim for the lowest cycle count, not just local fixes—consider new strategy families even if they diverge from prior proofs.
 - Sanity-check the hypothesis with sweep_caps counts before writing a proof.
 

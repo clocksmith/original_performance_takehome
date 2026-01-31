@@ -20,6 +20,8 @@ class Spec1016:
     offload_op1: int = 0
     # Offload controls
     offload_hash_op1: bool = True
+    offload_hash_shift: bool = False
+    offload_hash_op2: bool = False
     offload_parity: bool = False
     # Indexing mode (1-based) + pointer setup engine.
     idx_shifted: bool = False
@@ -27,6 +29,8 @@ class Spec1016:
     # Selection mode
     use_bitmask_selection: bool = False
     selection_mode: str = "eq"
+    # Use incremental pointer for cached node preload to reduce const loads.
+    node_ptr_incremental: bool = False
     extra_vecs: int = 2
     vector_block: int = 32
     # Override cached node count if needed.

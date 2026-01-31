@@ -144,6 +144,17 @@ def _proof_like_overrides() -> list[dict[str, Any]]:
             },
         },
         {
+            "base_spec": "1013",
+            "name_hint": "mask_precompute_idxshift",
+            "overrides": {
+                "selection_mode": "mask_precompute",
+                "idx_shifted": True,
+                "extra_vecs": 4,
+                "vector_block": 4,
+                "include_setup": False,
+            },
+        },
+        {
             "base_spec": "1016",
             "name_hint": "parity_off_off448",
             "overrides": {
@@ -230,6 +241,11 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
         "Show ISA op signatures.",
         "List ISA op arg counts.",
         "Get ISA spec.",
+    ]
+    prompts_list_op_graph = [
+        "List op-graph strategies.",
+        "Show op-graph templates.",
+        "What op-graph strategies are available?",
     ]
     prompts_list_variants = [
         "List kernel variants.",
@@ -328,6 +344,11 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
         "Create a low-cycle variant {name} using {base} with optimized overrides.",
         "Scaffold a proof-inspired variant {name} on base {base}.",
     ]
+    prompts_create_op_graph = [
+        "Create op-graph variant {name} using strategy {strategy}.",
+        "Scaffold op-graph variant {name} with {strategy}.",
+        "Make op-graph variant {name} from template {strategy}.",
+    ]
     prompts_assemble_instruction = [
         "Assemble an instruction bundle with a const load and halt.",
         "Create a single instruction with an add and a load.",
@@ -355,10 +376,12 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
         ("get_limits", 4),
         ("get_isa_spec", 4),
         ("list_variants", 4),
+        ("list_op_graph_strategies", 4),
         ("sweep_caps", 8),
         ("run_variant", 8),
         ("compare_variants", 8),
         ("create_variant", 8),
+        ("create_op_graph_variant", 6),
         ("schedule_summary", 8),
         ("find_schedule_mismatch", 6),
         ("sweep_proof_strategies", 8),
@@ -392,6 +415,13 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
                 _make_example(
                     rng.choice(prompts_get_isa_spec),
                     [{"name": "get_isa_spec", "arguments": {"use_frozen": True}}],
+                )
+            )
+        elif choice == "list_op_graph_strategies":
+            examples.append(
+                _make_example(
+                    rng.choice(prompts_list_op_graph),
+                    [{"name": "list_op_graph_strategies", "arguments": {}}],
                 )
             )
         elif choice == "list_variants":
@@ -503,6 +533,33 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
                                 "overrides": overrides,
                                 "register": register,
                                 "overwrite": overwrite,
+                            },
+                        }
+                    ],
+                )
+            )
+        elif choice == "create_op_graph_variant":
+            strategies = [
+                "mask_precompute_idxshift",
+                "mask_idxshift",
+                "bitmask_idxshift",
+                "bitmask_idxshift_resetflow",
+                "top3_loadbound_ptralu",
+                "skip_r3_x4_24_parity_off",
+            ]
+            strategy = rng.choice(strategies)
+            name = f"autograph_{strategy}_{rng.randint(0, 9999)}"
+            user = rng.choice(prompts_create_op_graph).format(name=name, strategy=strategy)
+            examples.append(
+                _make_example(
+                    user,
+                    [
+                        {
+                            "name": "create_op_graph_variant",
+                            "arguments": {
+                                "name": name,
+                                "strategy": strategy,
+                                "register": True,
                             },
                         }
                     ],
@@ -706,35 +763,64 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
                     base = rng.choice(["1013", "1016"])
                     name = f"autogen_{base}_{rng.randint(0, 9999)}"
                     overrides = {}
-                user = f"Create variant {name} and run it on the frozen test case."
-                examples.append(
-                    _make_example(
-                        user,
+                if rng.random() < 0.5:
+                    strategy = rng.choice(
                         [
-                            {
-                                "name": "create_variant",
-                                "arguments": {
-                                    "name": name,
-                                    "base_spec": base,
-                                    "overrides": overrides,
-                                    "register": True,
-                                },
-                            },
-                            {
-                                "name": "run_variant",
-                                "arguments": {
-                                    "variant": name,
-                                    "forest_height": 10,
-                                    "rounds": 16,
-                                    "batch_size": 256,
-                                    "seed": 0,
-                                    "use_frozen": True,
-                                    "check_correctness": True,
-                                },
-                            },
-                        ],
+                            "mask_precompute_idxshift",
+                            "mask_idxshift",
+                            "bitmask_idxshift",
+                            "bitmask_idxshift_resetflow",
+                            "top3_loadbound_ptralu",
+                            "skip_r3_x4_24_parity_off",
+                        ]
                     )
-                )
+                    name = f"autograph_{strategy}_{rng.randint(0, 9999)}"
+                    user = f"Create op-graph variant {name} and run it on the frozen test case."
+                    calls = [
+                        {"name": "list_op_graph_strategies", "arguments": {}},
+                        {
+                            "name": "create_op_graph_variant",
+                            "arguments": {"name": name, "strategy": strategy, "register": True},
+                        },
+                        {
+                            "name": "run_variant",
+                            "arguments": {
+                                "variant": name,
+                                "forest_height": 10,
+                                "rounds": 16,
+                                "batch_size": 256,
+                                "seed": 0,
+                                "use_frozen": True,
+                                "check_correctness": True,
+                            },
+                        },
+                    ]
+                else:
+                    user = f"Create variant {name} and run it on the frozen test case."
+                    calls = [
+                        {
+                            "name": "create_variant",
+                            "arguments": {
+                                "name": name,
+                                "base_spec": base,
+                                "overrides": overrides,
+                                "register": True,
+                            },
+                        },
+                        {
+                            "name": "run_variant",
+                            "arguments": {
+                                "variant": name,
+                                "forest_height": 10,
+                                "rounds": 16,
+                                "batch_size": 256,
+                                "seed": 0,
+                                "use_frozen": True,
+                                "check_correctness": True,
+                            },
+                        },
+                    ]
+                examples.append(_make_example(user, calls))
 
     return examples
 

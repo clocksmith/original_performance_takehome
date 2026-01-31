@@ -115,10 +115,11 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
         reserve_const(v)
         reserve_vconst(v)
 
-    # Scalar node indices for cached-node address setup (always needed).
-    node_const_max = node_cache + (1 if getattr(spec, "idx_shifted", False) else 0)
-    for v in range(node_const_max):
-        reserve_const(v)
+    # Scalar node indices for cached-node address setup (needed unless using incremental pointer preload).
+    if not getattr(spec, "node_ptr_incremental", False):
+        node_const_max = node_cache + (1 if getattr(spec, "idx_shifted", False) else 0)
+        for v in range(node_const_max):
+            reserve_const(v)
 
     # Scalar node indices for ALU equality selection (conditional).
     use_bitmask = getattr(spec, "use_bitmask_selection", False)

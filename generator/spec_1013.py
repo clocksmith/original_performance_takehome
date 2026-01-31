@@ -20,9 +20,13 @@ class Spec1013:
     offload_op1: int = 826
     # Offload controls
     offload_hash_op1: bool = True
+    offload_hash_shift: bool = False
+    offload_hash_op2: bool = False
     offload_parity: bool = False
     use_bitmask_selection: bool = False
     selection_mode: str = "eq"
+    # Use incremental pointer for cached node preload to reduce const loads.
+    node_ptr_incremental: bool = False
     # Use 1-based idx representation to drop the +1 in update.
     idx_shifted: bool = False
     # Pointer setup engine ("flow" or "alu").

@@ -355,6 +355,140 @@ def list_variants() -> dict[str, Any]:
     }
 
 
+_OP_GRAPH_STRATEGIES: dict[str, dict[str, Any]] = {
+    "mask_precompute_idxshift": {
+        "base_spec": "1013",
+        "description": "Mask-precompute selection with idx-shifted vectors and extra scratch.",
+        "overrides": {
+            "selection_mode": "mask_precompute",
+            "idx_shifted": True,
+            "extra_vecs": 4,
+            "vector_block": 4,
+            "include_setup": False,
+        },
+    },
+    "mask_idxshift": {
+        "base_spec": "1013",
+        "description": "Mask selection with idx-shifted vectors and extra scratch.",
+        "overrides": {
+            "selection_mode": "mask",
+            "idx_shifted": True,
+            "extra_vecs": 4,
+            "vector_block": 4,
+            "include_setup": False,
+        },
+    },
+    "bitmask_idxshift": {
+        "base_spec": "1016",
+        "description": "Bitmask selection with idx-shifted vectors and no depth4 caching.",
+        "overrides": {
+            "use_bitmask_selection": True,
+            "selection_mode": "bitmask",
+            "idx_shifted": True,
+            "depth4_rounds": 0,
+            "depth4_cached_rounds": (),
+            "x4": 0,
+        },
+    },
+    "bitmask_idxshift_resetflow": {
+        "base_spec": "1016",
+        "description": "Bitmask selection + idx shift with reset on flow (no depth4 caching).",
+        "overrides": {
+            "use_bitmask_selection": True,
+            "selection_mode": "bitmask",
+            "idx_shifted": True,
+            "reset_on_valu": False,
+            "depth4_rounds": 0,
+            "depth4_cached_rounds": (),
+            "x4": 0,
+        },
+    },
+    "top3_loadbound_ptralu": {
+        "base_spec": "1013",
+        "description": "Top-3 caching, idx-shifted, pointer setup on ALU.",
+        "overrides": {
+            "cached_nodes": 7,
+            "base_cached_rounds": (0, 1, 2, 11, 12, 13),
+            "depth4_rounds": 0,
+            "x4": 0,
+            "idx_shifted": True,
+            "ptr_setup_engine": "alu",
+            "include_setup": False,
+        },
+    },
+    "skip_r3_x4_24_parity_off": {
+        "base_spec": "1016",
+        "description": "Skip round 3 caching, X4=24, parity offload.",
+        "overrides": {
+            "base_cached_rounds": (0, 1, 2, 11, 12, 13, 14),
+            "depth4_rounds": 1,
+            "depth4_cached_rounds": (4,),
+            "x4": 24,
+            "cached_nodes": 31,
+            "idx_shifted": True,
+            "offload_hash_op1": False,
+            "offload_parity": True,
+            "offload_op1": 448,
+        },
+    },
+}
+
+
+def list_op_graph_strategies() -> dict[str, Any]:
+    """
+    List op-graph strategy templates for create_op_graph_variant().
+    """
+    strategies = []
+    for name, cfg in _OP_GRAPH_STRATEGIES.items():
+        strategies.append(
+            {
+                "name": name,
+                "base_spec": cfg["base_spec"],
+                "description": cfg.get("description", ""),
+                "overrides": cfg.get("overrides", {}),
+            }
+        )
+    return {"strategies": strategies}
+
+
+def create_op_graph_variant(
+    name: str,
+    strategy: str,
+    base_spec: str | None = None,
+    overrides: dict[str, Any] | None = None,
+    register: bool = True,
+    overwrite: bool = False,
+    create_proof: bool = True,
+) -> dict[str, Any]:
+    """
+    Create a variant using a predefined op-graph strategy template.
+
+    Args:
+        name: Variant name (alphanumeric + underscore).
+        strategy: Strategy key from list_op_graph_strategies().
+        base_spec: Optional override for base spec ("1013" or "1016").
+        overrides: Extra spec overrides to merge on top of the template.
+        register: If True, add to in-memory variant registry.
+        overwrite: If True, overwrite existing files.
+        create_proof: If True, create proof stubs and update proof_map.json.
+    """
+    if strategy not in _OP_GRAPH_STRATEGIES:
+        return {"ok": False, "error": f"unknown op-graph strategy '{strategy}'"}
+    template = _OP_GRAPH_STRATEGIES[strategy]
+    base = base_spec or template["base_spec"]
+    merged = dict(template.get("overrides", {}))
+    if overrides:
+        merged.update(overrides)
+    return create_variant(
+        name=name,
+        base_spec=base,
+        overrides=merged,
+        register=register,
+        overwrite=overwrite,
+        create_proof=create_proof,
+    )
+
+
 def sweep_caps(
     T_values: list[int] | None = None,
     flow_setup_ops: list[int] | None = None,
@@ -1474,11 +1608,13 @@ TOOL_FUNCS = [
     get_limits,
     get_isa_spec,
     list_variants,
+    list_op_graph_strategies,
     sweep_caps,
     sweep_proof_strategies,
     run_variant,
     compare_variants,
     create_variant,
+    create_op_graph_variant,
     schedule_summary,
     find_schedule_mismatch,
     assemble_instruction,

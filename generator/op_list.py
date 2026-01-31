@@ -232,10 +232,20 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
             _add_vbroadcast(valu_ops, vaddr, layout.const_s[val], meta={"setup": True, "const": val})
 
         # Cached node loads + broadcasts
-        for i, vaddr in enumerate(layout.node_v):
-            _add_alu(alu_ops, "+", layout.node_tmp, layout.forest_values_p, layout.const_s[i], meta={"setup": True, "node": i})
-            _add_load(load_ops, layout.node_tmp, layout.node_tmp, meta={"setup": True, "node": i})
-            _add_vbroadcast(valu_ops, vaddr, layout.node_tmp, meta={"setup": True, "node": i})
+        if getattr(spec, "node_ptr_incremental", False):
+            zero = layout.const_s[0]
+            one = layout.const_s[1]
+            _add_alu(alu_ops, "+", layout.node_tmp, layout.forest_values_p, zero, meta={"setup": True, "node": "base"})
+            for i, vaddr in enumerate(layout.node_v):
+                _add_load(load_ops, layout.node_tmp, layout.node_tmp, meta={"setup": True, "node": i})
+                _add_vbroadcast(valu_ops, vaddr, layout.node_tmp, meta={"setup": True, "node": i})
+                if i + 1 < len(layout.node_v):
+                    _add_alu(alu_ops, "+", layout.node_tmp, layout.node_tmp, one, meta={"setup": True, "node": "inc"})
+        else:
+            for i, vaddr in enumerate(layout.node_v):
+                _add_alu(alu_ops, "+", layout.node_tmp, layout.forest_values_p, layout.const_s[i], meta={"setup": True, "node": i})
+                _add_load(load_ops, layout.node_tmp, layout.node_tmp, meta={"setup": True, "node": i})
+                _add_vbroadcast(valu_ops, vaddr, layout.node_tmp, meta={"setup": True, "node": i})
 
         # Broadcast forest_values pointer for uncached address compute (shifted if needed).
         if getattr(spec, "idx_shifted", False):
@@ -1262,7 +1272,15 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                 bit_i += 1
                 const_v = layout.const_v[stage.const]
                 shift_v = layout.const_v[stage.shift]
-                _add_valu(valu_ops, stage.shift_op, tmp, val, shift_v, meta={"round": r, "vec": v, "stage": "shift"})
+                _add_valu(
+                    valu_ops,
+                    stage.shift_op,
+                    tmp,
+                    val,
+                    shift_v,
+                    meta={"round": r, "vec": v, "stage": "shift"},
+                    offloadable=getattr(spec, "offload_hash_shift", False),
+                )
                 _add_valu(
                     valu_ops,
                     stage.op1,
@@ -1272,7 +1290,15 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     meta={"round": r, "vec": v, "stage": "op1"},
                     offloadable=getattr(spec, "offload_hash_op1", True),
                 )
-                _add_valu(valu_ops, stage.op2, val, val, tmp, meta={"round": r, "vec": v, "stage": "op2"})
+                _add_valu(
+                    valu_ops,
+                    stage.op2,
+                    val,
+                    val,
+                    tmp,
+                    meta={"round": r, "vec": v, "stage": "op2"},
+                    offloadable=getattr(spec, "offload_hash_op2", False),
+                )
 
         # Index update
         one_v = layout.const_v[1]
