@@ -23,6 +23,7 @@ class Spec1013:
     offload_hash_shift: bool = False
     offload_hash_op2: bool = False
     offload_parity: bool = False
+    offload_node_xor: bool = False
     use_bitmask_selection: bool = False
     selection_mode: str = "eq"
     # Use incremental pointer for cached node preload to reduce const loads.

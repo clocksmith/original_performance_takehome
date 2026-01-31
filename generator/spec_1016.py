@@ -23,6 +23,7 @@ class Spec1016:
     offload_hash_shift: bool = False
     offload_hash_op2: bool = False
     offload_parity: bool = False
+    offload_node_xor: bool = False
     # Indexing mode (1-based) + pointer setup engine.
     idx_shifted: bool = False
     ptr_setup_engine: str = "flow"

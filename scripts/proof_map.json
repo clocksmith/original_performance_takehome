@@ -260,6 +260,22 @@
       }
     },
     {
+      "proof_name": "cache_top4_bitmask_idxshift_resetflow_parity_1118",
+      "spec": {
+        "module": "generator.cache_top4_bitmask_idxshift_resetflow_parity_1118",
+        "object": "SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_RESETFLOW_PARITY_1118",
+        "alias_of": "cache_top4_d4x15_reset_offload_1016"
+      },
+      "generator": {
+        "module": "generator.cache_top4_bitmask_idxshift_resetflow_parity_1118",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_bitmask_idxshift_resetflow_parity_1118.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
       "proof_name": "cache_top4_bitmask_idxshift_extra8_off1109",
       "spec": {
         "module": "generator.cache_top4_bitmask_idxshift_extra8_off1109",

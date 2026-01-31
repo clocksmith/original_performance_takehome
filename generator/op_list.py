@@ -328,6 +328,18 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                 extra3_key = f"extra:{(v + 2) % len(layout.extra)}"
         idx = layout.idx[v]
         val = layout.val[v]
+        offload_node_xor = getattr(spec, "offload_node_xor", False)
+
+        def _node_xor(src: int, meta=None) -> None:
+            _add_valu(
+                valu_ops,
+                "^",
+                val,
+                val,
+                src,
+                meta=meta,
+                offloadable=offload_node_xor,
+            )
 
         bits0 = None
         bits1 = None
@@ -353,7 +365,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
 
         if r in spec.base_cached_rounds:
             if r in (0, 11):
-                _add_valu(valu_ops, "^", val, val, layout.node_v[0], meta={"round": r, "vec": v})
+                _node_xor(layout.node_v[0], meta={"round": r, "vec": v})
             elif r in (1, 12):
                 if mask_precompute and getattr(spec, "idx_shifted", False):
                     _add_vselect(
@@ -364,7 +376,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         layout.node_v[1],
                         meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
                     )
-                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                    _node_xor(sel, meta={"round": r, "vec": v})
                 elif selection_mode == "mask" and getattr(spec, "idx_shifted", False):
                     one_v = layout.const_v[1]
                     _add_valu(valu_ops, "&", tmp, idx, one_v, meta={"round": r, "vec": v, "sel": "mask"})
@@ -376,7 +388,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         layout.node_v[1],
                         meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, tmp_read_key),
                     )
-                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                    _node_xor(sel, meta={"round": r, "vec": v})
                 elif selection_mode == "bitmask" and extra is not None:
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
                     _add_vselect_parity(
@@ -388,11 +400,11 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         layout.node_v[2],
                         meta=_tag_temp({"round": r, "vec": v}, tmp_read_key),
                     )
-                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                    _node_xor(sel, meta={"round": r, "vec": v})
                 else:
                     nodes = [(1, layout.node_v[1]), (2, layout.node_v[2])]
                     _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
-                    _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
+                    _node_xor(tmp, meta={"round": r, "vec": v})
             elif r in (2, 13):
                 if mask_precompute and getattr(spec, "idx_shifted", False):
                     _add_vselect(
@@ -419,7 +431,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         sel,
                         meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
                     )
-                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                    _node_xor(sel, meta={"round": r, "vec": v})
                 elif selection_mode == "mask" and getattr(spec, "idx_shifted", False) and extra is not None:
                     one_v = layout.const_v[1]
                     shift1 = layout.const_v[1]
@@ -450,7 +462,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         sel,
                         meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key),
                     )
-                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                    _node_xor(sel, meta={"round": r, "vec": v})
                 elif selection_mode == "bitmask" and extra is not None:
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
                     _add_vselect_parity(
@@ -487,11 +499,11 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         extra,
                         meta=_tag_temp({"round": r, "vec": v}, extra_key),
                     )
-                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                    _node_xor(sel, meta={"round": r, "vec": v})
                 else:
                     nodes = [(i, layout.node_v[i]) for i in range(3, 7)]
                     _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
-                    _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
+                    _node_xor(tmp, meta={"round": r, "vec": v})
             elif r in (3, 14):
                 if mask_precompute and getattr(spec, "idx_shifted", False):
                     one_v = layout.const_v[1]
@@ -553,7 +565,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         sel,
                         meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
                     )
-                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                    _node_xor(sel, meta={"round": r, "vec": v})
                 elif (
                     selection_mode == "mask"
                     and getattr(spec, "idx_shifted", False)
@@ -635,7 +647,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         sel,
                         meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key),
                     )
-                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                    _node_xor(sel, meta={"round": r, "vec": v})
                 elif selection_mode == "bitmask" and extra is not None:
                     # Lower half: nodes 7..10
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
@@ -754,17 +766,17 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         extra,
                         meta=_tag_temp({"round": r, "vec": v}, extra_key),
                     )
-                    _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                    _node_xor(sel, meta={"round": r, "vec": v})
                 else:
                     nodes = [(i, layout.node_v[i]) for i in range(7, 15)]
                     _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
-                    _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
+                    _node_xor(tmp, meta={"round": r, "vec": v})
             else:
                 # Shouldn't happen for current spec, but keep uncached fallback.
                 _add_valu(valu_ops, "+", sel, idx, layout.forest_values_v, meta={"round": r, "vec": v})
                 for lane in range(VLEN):
                     _add_load_offset(load_ops, tmp, sel, lane, meta={"round": r, "vec": v, "lane": lane})
-                _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
+                _node_xor(tmp, meta={"round": r, "vec": v})
         elif r in spec.depth4_cached_rounds and v < spec.x4:
             if mask_precompute and getattr(spec, "idx_shifted", False):
                 one_v = layout.const_v[1]
@@ -899,7 +911,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     sel,
                     meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
                 )
-                _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                _node_xor(sel, meta={"round": r, "vec": v})
             elif selection_mode == "bitmask" and extra is not None and extra2 is not None and extra3 is not None:
                 # Depth4 bitmask selection (nodes 15..30) with extra temp vectors.
                 # Upper half (23..30) -> extra
@@ -1097,7 +1109,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     extra,
                     meta=_tag_temp({"round": r, "vec": v, "sel": "bitmask"}, extra_key),
                 )
-                _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                _node_xor(sel, meta={"round": r, "vec": v})
             elif (
                 selection_mode == "mask"
                 and getattr(spec, "idx_shifted", False)
@@ -1253,17 +1265,17 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     extra2,
                     meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra2_key),
                 )
-                _add_valu(valu_ops, "^", val, val, sel, meta={"round": r, "vec": v})
+                _node_xor(sel, meta={"round": r, "vec": v})
             else:
                 nodes = [(i, layout.node_v[i]) for i in range(15, 31)]
                 _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
-                _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
+                _node_xor(tmp, meta={"round": r, "vec": v})
         else:
             # Uncached: load node values
             _add_valu(valu_ops, "+", sel, idx, layout.forest_values_v, meta={"round": r, "vec": v})
             for lane in range(VLEN):
                 _add_load_offset(load_ops, tmp, sel, lane, meta={"round": r, "vec": v, "lane": lane})
-            _add_valu(valu_ops, "^", val, val, tmp, meta={"round": r, "vec": v})
+            _node_xor(tmp, meta={"round": r, "vec": v})
 
         # Hash stages
         lin_i = 0
