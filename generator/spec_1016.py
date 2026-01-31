@@ -27,6 +27,8 @@ class Spec1016:
     # Selection mode
     use_bitmask_selection: bool = False
     selection_mode: str = "eq"
+    # Use incremental pointer for cached node preload to reduce const loads.
+    node_ptr_incremental: bool = False
     extra_vecs: int = 2
     vector_block: int = 32
     # Override cached node count if needed.

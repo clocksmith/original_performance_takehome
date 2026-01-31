@@ -27,7 +27,12 @@ Step 0.5: Observe + hypothesize before proofing
 - Observe bottlenecks (flow/load/valu/alu utilization + schedule gaps) from schedule_summary/tests.
 - Think creatively and horizontally about structure: reorder cached rounds, change cache depth, switch selection mode, shift idx representation, or move work across engines.
 - Aim for the lowest cycle count, not just local fixes—consider new strategy families even if they diverge from prior proofs.
+- **Radical** changes are encouraged. You may change the op graph itself (e.g., flow-free selection, alternative index math, static schedules, or precomputed transforms) as long as semantics remain correct and ISA constraints are respected.
 - Sanity-check the hypothesis with sweep_caps counts before writing a proof.
+
+Radical change menu (beyond op-graph tweaks)
+- These are examples only — do not limit yourself to them. Radical thinking is encouraged; any idea is allowed.
+- Hard constraints: do NOT change the machine/ISA, tests, or any code in perf_takehome.py outside build_kernel.
 
 Caps-Driven Strategy Checklist (1008/1012 targets)
 1) Think in rounds × vectors × engines.

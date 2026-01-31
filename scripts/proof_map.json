@@ -258,6 +258,111 @@
         "path": "cache_top4_bitmask_idxshift_resetflow_off1109_1084.py",
         "class": "KernelBuilder"
       }
+    },
+    {
+      "proof_name": "cache_top4_bitmask_idxshift_extra8_off1109",
+      "spec": {
+        "module": "generator.cache_top4_bitmask_idxshift_extra8_off1109",
+        "object": "SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_EXTRA8_OFF1109"
+      },
+      "generator": {
+        "module": "generator.cache_top4_bitmask_idxshift_extra8_off1109",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_bitmask_idxshift_extra8_off1109.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_bitmask_idxshift_extra16_off1109",
+      "spec": {
+        "module": "generator.cache_top4_bitmask_idxshift_extra16_off1109",
+        "object": "SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_EXTRA16_OFF1109"
+      },
+      "generator": {
+        "module": "generator.cache_top4_bitmask_idxshift_extra16_off1109",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_bitmask_idxshift_extra16_off1109.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_bitmask_idxshift_extra20_off1109",
+      "spec": {
+        "module": "generator.cache_top4_bitmask_idxshift_extra20_off1109",
+        "object": "SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_EXTRA20_OFF1109"
+      },
+      "generator": {
+        "module": "generator.cache_top4_bitmask_idxshift_extra20_off1109",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_bitmask_idxshift_extra20_off1109.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_bitmask_idxshift_off1150",
+      "spec": {
+        "module": "generator.cache_top4_bitmask_idxshift_off1150",
+        "object": "SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_OFF1150"
+      },
+      "generator": {
+        "module": "generator.cache_top4_bitmask_idxshift_off1150",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_bitmask_idxshift_off1150.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_bitmask_idxshift_extra1_off1155",
+      "spec": {
+        "module": "generator.cache_top4_bitmask_idxshift_extra1_off1155",
+        "object": "SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_EXTRA1_OFF1155"
+      },
+      "generator": {
+        "module": "generator.cache_top4_bitmask_idxshift_extra1_off1155",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_bitmask_idxshift_extra1_off1155.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_bitmask_idxshift_ptrinc_off1150",
+      "spec": {
+        "module": "generator.cache_top4_bitmask_idxshift_ptrinc_off1150",
+        "object": "SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_PTRINC_OFF1150"
+      },
+      "generator": {
+        "module": "generator.cache_top4_bitmask_idxshift_ptrinc_off1150",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_bitmask_idxshift_ptrinc_off1150.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_mask_idxshift_off1200",
+      "spec": {
+        "module": "generator.cache_top4_mask_idxshift_off1200",
+        "object": "SPEC_CACHE_TOP4_MASK_IDXSHIFT_OFF1200"
+      },
+      "generator": {
+        "module": "generator.cache_top4_mask_idxshift_off1200",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "cache_top4_mask_idxshift_off1200.py",
+        "class": "KernelBuilder"
+      }
     }
   ]
 }
