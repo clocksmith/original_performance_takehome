@@ -918,7 +918,9 @@ def main() -> None:
             for row in dataset["test"]:
                 f.write(json.dumps(row) + "\n")
 
-    torch_dtype = torch.float16 if device == "mps" else torch.float32
+    # MPS + fp16 tends to produce NaNs; keep fp32 on MPS.
+    use_fp16 = device == "cuda"
+    torch_dtype = torch.float16 if use_fp16 else torch.float32
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         torch_dtype=torch_dtype,
@@ -956,7 +958,7 @@ def main() -> None:
         report_to="none",
         optim="adamw_torch",
         gradient_checkpointing=False,
-        fp16=True if device == "mps" else False,
+        fp16=use_fp16,
         bf16=False,
         max_steps=max_steps,
         dataset_text_field="text",

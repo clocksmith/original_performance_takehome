@@ -34,7 +34,7 @@ def resolve_model_path(model_path: str | None) -> str:
     )
 
 
-def extract_tool_calls(text: str) -> list[dict[str, Any]]:
+def extract_tool_calls(text: str, first_only: bool = False) -> list[dict[str, Any]]:
     escape_token = "<escape>"
 
     def split_top_level(value: str) -> list[str]:
@@ -112,13 +112,16 @@ def extract_tool_calls(text: str) -> list[dict[str, Any]]:
         return parsed
 
     calls = []
-    for name, args in re.findall(
+    for match in re.finditer(
         r"<start_function_call>call:(\w+)\{(.*?)\}<end_function_call>",
         text,
         re.DOTALL,
     ):
+        name, args = match.groups()
         parsed_args = parse_args(args)
         calls.append({"name": name, "arguments": parsed_args})
+        if first_only:
+            break
     return calls
 
 
@@ -221,7 +224,7 @@ def main() -> None:
         if args.show_raw:
             print("RAW:", output)
 
-        calls = extract_tool_calls(output)
+        calls = extract_tool_calls(output, first_only=True)
         if not calls:
             print(output)
             return
