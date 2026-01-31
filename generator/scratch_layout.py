@@ -137,6 +137,8 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
         # Depth4 bitmask thresholds.
         for v in (17, 19, 21, 23, 25, 27, 29):
             reserve_const(v)
+            if getattr(spec, "idx_shifted", False):
+                reserve_const(v + 1)
 
     return Layout(
         val=val,
