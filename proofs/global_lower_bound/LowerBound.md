@@ -16,6 +16,7 @@ Where we are now
   list length + `ceilDiv`.
 - Output is fixed‑size (`Fin BATCH_SIZE → Nat`) and projected via
   `outputOf (mem[6]) (runMem mem)` (matching the values slice pointer in the problem layout).
+  This is the **values‑slice spec** (identity projection), not the full kernel semantics.
 
 This already formalizes the arithmetic pipeline: required words → load ops → cycles. We now also
 have a full adversarial lemma for the **values‑slice spec** (identity projection from `mem[6]`),
@@ -44,7 +45,14 @@ Remaining optional work
 - Extend the model to bounded control flow (beyond StraightLine).
 - Add a global compute bound and take `max(load, compute)` for a stronger statement.
 
-This yields a fully verifiable global load lower bound, not tied to any specific caching strategy.
+This yields a fully verifiable global load lower bound for the values‑slice spec, not tied to any
+specific caching strategy. We also added a **full‑kernel reference spec** (`spec_kernel`) and now
+prove **BATCH_SIZE** addresses must be read for a single adversarial memory (`memUniform0`), giving
+the same 16‑cycle load bound for the full kernel under ∃mem.
+
+Formal theorems:
+- `global_load_lower_bound` (values‑slice): ∀ mem, `globalLowerBound ≤ loadLowerCycles (readWordCount p mem)`.
+- `global_load_lower_bound_kernel` (full kernel, current): ∃ mem, `globalLowerBoundKernel ≤ loadLowerCycles (readWordCount p mem)`.
 
 Formal theorem added:
 - `global_load_lower_bound`: for any StraightLine program correct for `spec_values`,

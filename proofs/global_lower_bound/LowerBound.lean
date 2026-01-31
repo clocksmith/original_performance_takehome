@@ -19,6 +19,7 @@ in the accompanying markdown.
 -/- 
 
 def MIN_REQUIRED_WORDS : Nat := BATCH_SIZE
+def MIN_REQUIRED_WORDS_KERNEL : Nat := BATCH_SIZE
 
 /-! ## Program model (Phase 1 scaffold) -/
 
@@ -28,6 +29,8 @@ def Memory : Type := Nat → Nat
 def Output : Type := Fin BATCH_SIZE → Nat
 
 def PTR_INP_VAL : Nat := 6
+def PTR_FOREST : Nat := 4
+def PTR_INP_IDX : Nat := 5
 
 def outputOf (base : Nat) (mem : Memory) : Output :=
   fun i => mem (base + i)
@@ -221,20 +224,240 @@ lemma runTraceAux_eq_of_agree :
       simp [runTraceAux, res1, res2, hstep, ih']
 
 lemma run_eq_of_agree (p : Program) (mem1 mem2 : Memory)
+    (hptr : mem1 PTR_INP_VAL = mem2 PTR_INP_VAL)
     (h : AgreeOnList (readWords p mem1) mem1 mem2) :
     run p mem1 = run p mem2 := by
   have htrace : runTrace p mem1 = runTrace p mem2 := by
     have := runTraceAux_eq_of_agree p.program mem1 mem2 (initCore p)
     simpa [runTrace, readWords, readOps] using this h
-  simp [run, runMem, htrace]
+  simp [run, runMem, htrace, hptr]
 
 /-! ### Adversarial input lemma for values-slice spec -/
 
 def spec_values (mem : Memory) : Output :=
   outputOf (mem PTR_INP_VAL) mem
 
+/-! ### Full-kernel spec (reference semantics) -/
+
+def HASH_STAGES : List (AluOp × Nat × AluOp × AluOp × Nat) :=
+  [ (AluOp.add, 0x7ED55D16, AluOp.add, AluOp.shl, 12),
+    (AluOp.xor, 0xC761C23C, AluOp.xor, AluOp.shr, 19),
+    (AluOp.add, 0x165667B1, AluOp.add, AluOp.shl, 5),
+    (AluOp.add, 0xD3A2646C, AluOp.xor, AluOp.shl, 9),
+    (AluOp.add, 0xFD7046C5, AluOp.add, AluOp.shl, 3),
+    (AluOp.xor, 0xB55A4F09, AluOp.xor, AluOp.shr, 16) ]
+
+def hashStage (x : Nat) (stage : AluOp × Nat × AluOp × AluOp × Nat) : Nat :=
+  let (op1, v1, op2, op3, v3) := stage
+  let a := aluEval op1 x v1
+  let b := aluEval op3 x v3
+  aluEval op2 a b
+
+def myhash (x : Nat) : Nat :=
+  HASH_STAGES.foldl hashStage x
+
+def step (tree : Nat → Nat) (idx val : Nat) : Nat × Nat :=
+  let node := tree idx
+  let val' := myhash (aluEval AluOp.xor val node)
+  let idx' := 2 * idx + (if val' % 2 = 0 then 1 else 2)
+  let idx'' := if idx' ≥ N_NODES then 0 else idx'
+  (idx'', val')
+
+def iterRounds (tree : Nat → Nat) : Nat → Nat → Nat → (Nat × Nat)
+  | 0, idx, val => (idx, val)
+  | n+1, idx, val =>
+      let (idx', val') := step tree idx val
+      iterRounds tree n idx' val'
+
+def spec_kernel (mem : Memory) : Output :=
+  let forestPtr := mem PTR_FOREST
+  let idxPtr := mem PTR_INP_IDX
+  let valPtr := mem PTR_INP_VAL
+  let tree := fun i => mem (forestPtr + i)
+  fun i =>
+    let idx0 := mem (idxPtr + i)
+    let val0 := mem (valPtr + i)
+    let (_, valF) := iterRounds tree ROUNDS idx0 val0
+    valF
+
+def iterHash : Nat → Nat → Nat
+  | 0, v => v
+  | n+1, v => iterHash n (myhash v)
+
+def zeroTree : Nat → Nat := fun _ => 0
+
+lemma step_zeroTree_val (idx val : Nat) :
+    (step zeroTree idx val).2 = myhash val := by
+  simp [step, zeroTree, aluEval, natXor]
+
+lemma iterRounds_zeroTree_val :
+    ∀ n idx val, (iterRounds zeroTree n idx val).2 = iterHash n val := by
+  intro n
+  induction n with
+  | zero =>
+      intro idx val
+      simp [iterRounds, iterHash]
+  | succ n ih =>
+      intro idx val
+      simp [iterRounds, iterHash, step_zeroTree_val, ih]
+
+def FOREST_BASE : Nat := 10000
+def IDX_BASE : Nat := 20000
+def VAL_BASE : Nat := 30000
+
+def memUniform0 : Memory :=
+  fun a =>
+    if a = PTR_FOREST then FOREST_BASE
+    else if a = PTR_INP_IDX then IDX_BASE
+    else if a = PTR_INP_VAL then VAL_BASE
+    else if FOREST_BASE ≤ a ∧ a < FOREST_BASE + N_NODES then 0
+    else if IDX_BASE ≤ a ∧ a < IDX_BASE + BATCH_SIZE then 0
+    else if VAL_BASE ≤ a ∧ a < VAL_BASE + BATCH_SIZE then 0
+    else 0
+
 def memUpdate (mem : Memory) (addr val : Nat) : Memory :=
   fun a => if a = addr then val else mem a
+
+def memUniform1 : Memory :=
+  memUpdate memUniform0 VAL_BASE 1
+
+def memUniformVal (j : Fin BATCH_SIZE) : Memory :=
+  memUpdate memUniform0 (VAL_BASE + j) 1
+
+lemma memUniform_ptrs :
+    memUniform0 PTR_FOREST = FOREST_BASE ∧
+    memUniform0 PTR_INP_IDX = IDX_BASE ∧
+    memUniform0 PTR_INP_VAL = VAL_BASE := by
+  simp [memUniform0, PTR_FOREST, PTR_INP_IDX, PTR_INP_VAL]
+
+lemma memUniform_idx (i : Nat) :
+    memUniform0 (IDX_BASE + i) = 0 := by
+  simp [memUniform0, IDX_BASE, PTR_FOREST, PTR_INP_IDX, PTR_INP_VAL]
+
+lemma memUniform_val (i : Nat) :
+    memUniform0 (VAL_BASE + i) = 0 := by
+  simp [memUniform0, VAL_BASE, PTR_FOREST, PTR_INP_IDX, PTR_INP_VAL]
+
+lemma memUniform_forest (i : Nat) :
+    memUniform0 (FOREST_BASE + i) = 0 := by
+  simp [memUniform0, FOREST_BASE, PTR_FOREST, PTR_INP_IDX, PTR_INP_VAL]
+
+lemma memUniform_idx_fin (i : Fin BATCH_SIZE) :
+    memUniform0 (IDX_BASE + i) = 0 := by
+  simpa using memUniform_idx (i := (i : Nat))
+
+lemma memUniform_val_fin (i : Fin BATCH_SIZE) :
+    memUniform0 (VAL_BASE + i) = 0 := by
+  simpa using memUniform_val (i := (i : Nat))
+
+lemma spec_kernel_uniform0 (i : Fin BATCH_SIZE) :
+    spec_kernel memUniform0 i = iterHash ROUNDS 0 := by
+  have hptrs := memUniform_ptrs
+  rcases hptrs with ⟨hforest, hidx, hval⟩
+  simp [spec_kernel, hforest, hidx, hval, memUniform_idx_fin, memUniform_val_fin,
+    memUniform_forest, iterRounds_zeroTree_val, zeroTree]
+
+lemma spec_kernel_uniform1 (i : Fin BATCH_SIZE) :
+    spec_kernel memUniform1 i = iterHash ROUNDS (if i = 0 then 1 else 0) := by
+  have hptrs := memUniform_ptrs
+  rcases hptrs with ⟨hforest, hidx, hval⟩
+  have hval0 : memUniform1 (VAL_BASE + i) = if i = 0 then 1 else 0 := by
+    by_cases hi : i = 0
+    · subst hi
+      simp [memUniform1, memUpdate, VAL_BASE, memUniform_val]
+    ·
+      have hne : (VAL_BASE + (i : Nat)) ≠ VAL_BASE := by
+        intro hEq
+        have h' : (i : Nat) = 0 := by
+          exact Nat.add_left_cancel (by simpa using hEq)
+        exact hi (Fin.ext h')
+      simp [memUniform1, memUpdate, VAL_BASE, hi, memUniform_val, hne]
+  simp [spec_kernel, hforest, hidx, hval, memUniform_idx_fin, memUniform_forest,
+    iterRounds_zeroTree_val, zeroTree, hval0]
+
+lemma memUniformVal_at (j i : Fin BATCH_SIZE) :
+    memUniformVal j (VAL_BASE + i) = if i = j then 1 else 0 := by
+  by_cases h : i = j
+  · subst h
+    simp [memUniformVal, memUpdate, VAL_BASE, memUniform_val]
+  ·
+    have hne : (VAL_BASE + (i : Nat)) ≠ VAL_BASE + (j : Nat) := by
+      intro hEq
+      have h' : (i : Nat) = (j : Nat) := Nat.add_left_cancel hEq
+      exact h (Fin.ext h')
+    simp [memUniformVal, memUpdate, VAL_BASE, h, memUniform_val, hne]
+
+lemma spec_kernel_uniformVal (j i : Fin BATCH_SIZE) :
+    spec_kernel (memUniformVal j) i = iterHash ROUNDS (if i = j then 1 else 0) := by
+  have hptrs := memUniform_ptrs
+  rcases hptrs with ⟨hforest, hidx, hval⟩
+  have hval0 : memUniformVal j (VAL_BASE + i) = if i = j then 1 else 0 :=
+    memUniformVal_at j i
+  simp [spec_kernel, hforest, hidx, hval, memUniform_idx_fin, memUniform_forest,
+    iterRounds_zeroTree_val, zeroTree, hval0]
+
+lemma iterHash_ne : iterHash ROUNDS 0 ≠ iterHash ROUNDS 1 := by
+  native_decide
+
+lemma spec_kernel_diff_uniform0 :
+    spec_kernel memUniform1 0 ≠ spec_kernel memUniform0 0 := by
+  simp [spec_kernel_uniform0, spec_kernel_uniform1, iterHash_ne]
+
+lemma spec_kernel_diff_uniformVal (j : Fin BATCH_SIZE) :
+    spec_kernel (memUniformVal j) j ≠ spec_kernel memUniform0 j := by
+  simp [spec_kernel_uniform0, spec_kernel_uniformVal, iterHash_ne]
+
+lemma must_read_kernel_values (p : Program) (hstraight : StraightLine p)
+    (hcorrect : Correct spec_kernel p) :
+    ∀ i : Fin BATCH_SIZE,
+      (memUniform0 PTR_INP_VAL + i) ∈ readWords p memUniform0 := by
+  intro i
+  by_contra hnot
+  have hagree : AgreeOnList (readWords p memUniform0) memUniform0 (memUniformVal i) := by
+    intro a ha
+    have hne : a ≠ memUniform0 PTR_INP_VAL + i := by
+      intro hEq
+      apply hnot
+      simpa [hEq] using ha
+    simp [memUniformVal, memUpdate, hne]
+  have hptr : memUniform0 PTR_INP_VAL = (memUniformVal i) PTR_INP_VAL := by
+    simp [memUniformVal, memUpdate]
+  have hrun :
+      run p memUniform0 = run p (memUniformVal i) := by
+    exact run_eq_of_agree p memUniform0 (memUniformVal i) hptr hagree
+  have hspec :
+      spec_kernel memUniform0 = spec_kernel (memUniformVal i) := by
+    calc
+      spec_kernel memUniform0 = run p memUniform0 := by symm; exact hcorrect _
+      _ = run p (memUniformVal i) := hrun
+      _ = spec_kernel (memUniformVal i) := by exact hcorrect _
+  have hdiff := spec_kernel_diff_uniformVal i
+  exact hdiff (by simpa using congrArg (fun f => f i) hspec)
+
+lemma outputAddrs_subset_readWords_kernel (p : Program) (hstraight : StraightLine p)
+    (hcorrect : Correct spec_kernel p) :
+    outputAddrs memUniform0 ⊆ (readWords p memUniform0).toFinset := by
+  classical
+  intro a ha
+  rcases Finset.mem_image.mp (by simpa [outputAddrs] using ha) with ⟨i, hi, hEq⟩
+  have hread : (memUniform0 PTR_INP_VAL + i) ∈ readWords p memUniform0 :=
+    must_read_kernel_values p hstraight hcorrect i
+  have : a ∈ readWords p memUniform0 := by simpa [hEq] using hread
+  exact List.mem_toFinset.mpr this
+
+lemma min_required_words_kernel (p : Program) (hstraight : StraightLine p)
+    (hcorrect : Correct spec_kernel p) :
+    BATCH_SIZE ≤ readWordCount p memUniform0 := by
+  have hsubset : outputAddrs memUniform0 ⊆ (readWords p memUniform0).toFinset :=
+    outputAddrs_subset_readWords_kernel p hstraight hcorrect
+  have hcard_le : (outputAddrs memUniform0).card ≤ (readWords p memUniform0).toFinset.card :=
+    Finset.card_le_card hsubset
+  have hlen : (readWords p memUniform0).toFinset.card ≤ (readWords p memUniform0).length :=
+    List.toFinset_card_le
+  have hcard : (outputAddrs memUniform0).card = BATCH_SIZE := outputAddrs_card memUniform0
+  have : BATCH_SIZE ≤ (readWords p memUniform0).length := by
+    exact le_trans (by simpa [hcard] using hcard_le) hlen
+  simpa [readWordCount] using this
 
 lemma spec_values_diff {mem : Memory} {base : Nat} {i : Fin BATCH_SIZE} :
     let addr := base + i
@@ -244,7 +467,7 @@ lemma spec_values_diff {mem : Memory} {base : Nat} {i : Fin BATCH_SIZE} :
 
 lemma must_read_values (p : Program) (hstraight : StraightLine p) (hcorrect : Correct spec_values p) :
     ∀ mem, ∀ i : Fin BATCH_SIZE,
-      (mem (mem PTR_INP_VAL + i)) ∈ readWords p mem := by
+      (mem PTR_INP_VAL + i) ∈ readWords p mem := by
   intro mem i
   by_contra hnot
   have hagree : AgreeOnList (readWords p mem) mem
@@ -255,11 +478,14 @@ lemma must_read_values (p : Program) (hstraight : StraightLine p) (hcorrect : Co
       apply hnot
       simpa [hEq] using ha
     simp [memUpdate, hne]
+  have hptr : mem PTR_INP_VAL =
+      (memUpdate mem (mem PTR_INP_VAL + i) (mem (mem PTR_INP_VAL + i) + 1)) PTR_INP_VAL := by
+    simp [memUpdate]
   have hrun :
       run p mem =
       run p (memUpdate mem (mem PTR_INP_VAL + i) (mem (mem PTR_INP_VAL + i) + 1)) := by
     exact run_eq_of_agree p mem
-      (memUpdate mem (mem PTR_INP_VAL + i) (mem (mem PTR_INP_VAL + i) + 1)) hagree
+      (memUpdate mem (mem PTR_INP_VAL + i) (mem (mem PTR_INP_VAL + i) + 1)) hptr hagree
   have hspec :
       spec_values mem =
       spec_values (memUpdate mem (mem PTR_INP_VAL + i) (mem (mem PTR_INP_VAL + i) + 1)) := by
@@ -289,7 +515,7 @@ lemma outputAddrs_subset_readWords (p : Program) (hstraight : StraightLine p)
   classical
   intro a ha
   rcases Finset.mem_image.mp (by simpa [outputAddrs] using ha) with ⟨i, hi, hEq⟩
-  have hread : mem (mem PTR_INP_VAL + i) ∈ readWords p mem :=
+  have hread : (mem PTR_INP_VAL + i) ∈ readWords p mem :=
     must_read_values p hstraight hcorrect mem i
   have : a ∈ readWords p mem := by simpa [hEq] using hread
   exact List.mem_toFinset.mpr this
@@ -414,6 +640,8 @@ def loadLowerCycles (words : Nat) : Nat := ceilDiv (minLoadOps words) LOAD_CAP
 /-- Global lower bound (currently load-only). -/
 def globalLowerBound : Nat := loadLowerCycles MIN_REQUIRED_WORDS
 
+def globalLowerBoundKernel : Nat := loadLowerCycles MIN_REQUIRED_WORDS_KERNEL
+
 lemma globalLowerBound_eq :
     globalLowerBound = ceilDiv (ceilDiv MIN_REQUIRED_WORDS VLEN) LOAD_CAP := by
   rfl
@@ -424,6 +652,15 @@ theorem global_load_lower_bound (p : Program) (hstraight : StraightLine p)
   intro mem
   have hmin : MIN_REQUIRED_WORDS ≤ readWordCount p mem := by
     simpa [MIN_REQUIRED_WORDS] using min_required_words_values p hstraight hcorrect mem
+  exact loadLowerCycles_mono hmin
+
+theorem global_load_lower_bound_kernel (p : Program) (hstraight : StraightLine p)
+    (hcorrect : Correct spec_kernel p) :
+    ∃ mem, globalLowerBoundKernel ≤ loadLowerCycles (readWordCount p mem) := by
+  refine ⟨memUniform0, ?_⟩
+  have hmin : MIN_REQUIRED_WORDS_KERNEL ≤ readWordCount p memUniform0 := by
+    simpa [MIN_REQUIRED_WORDS_KERNEL] using
+      min_required_words_kernel p hstraight hcorrect memUniform0
   exact loadLowerCycles_mono hmin
 
 end ProofGlobalLowerBound
