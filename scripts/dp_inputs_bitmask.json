@@ -1,0 +1,457 @@
+{
+  "globals": {
+    "selection_mode": "bitmask",
+    "allow_per_round_selection": false,
+    "offload_order_mode": "round_major"
+  },
+  "setup_profiles": {
+    "default": {
+      "alu_base": 32,
+      "valu_raw": 77,
+      "flow": 64,
+      "load": 138,
+      "store": 0,
+      "offloadable": 0,
+      "offload_prefix": 0,
+      "scratch": 1508
+    }
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "choices": [
+        {
+          "name": "cached_r0",
+          "alu_base": 0,
+          "valu_raw": 480,
+          "flow": 0,
+          "load": 0,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "uncached_r0",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "choices": [
+        {
+          "name": "cached_r1",
+          "alu_base": 256,
+          "valu_raw": 480,
+          "flow": 32,
+          "load": 0,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "uncached_r1",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "choices": [
+        {
+          "name": "cached_r2",
+          "alu_base": 512,
+          "valu_raw": 480,
+          "flow": 96,
+          "load": 0,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "uncached_r2",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "choices": [
+        {
+          "name": "cached_r3",
+          "alu_base": 1280,
+          "valu_raw": 480,
+          "flow": 224,
+          "load": 0,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "uncached_r3",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "choices": [
+        {
+          "name": "depth4_r4_x4_0",
+          "alu_base": 0,
+          "valu_raw": 8704,
+          "flow": 0,
+          "load": 4352,
+          "store": 0,
+          "offloadable": 1632,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "depth4_r4_x4_4",
+          "alu_base": 7200,
+          "valu_raw": 8516,
+          "flow": 900,
+          "load": 3808,
+          "store": 0,
+          "offloadable": 1608,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "depth4_r4_x4_8",
+          "alu_base": 14400,
+          "valu_raw": 8328,
+          "flow": 1800,
+          "load": 3264,
+          "store": 0,
+          "offloadable": 1584,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "depth4_r4_x4_12",
+          "alu_base": 21600,
+          "valu_raw": 8140,
+          "flow": 2700,
+          "load": 2720,
+          "store": 0,
+          "offloadable": 1560,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "depth4_r4_x4_16",
+          "alu_base": 28800,
+          "valu_raw": 7952,
+          "flow": 3600,
+          "load": 2176,
+          "store": 0,
+          "offloadable": 1536,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "depth4_r4_x4_20",
+          "alu_base": 36000,
+          "valu_raw": 7764,
+          "flow": 4500,
+          "load": 1632,
+          "store": 0,
+          "offloadable": 1512,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "depth4_r4_x4_24",
+          "alu_base": 43200,
+          "valu_raw": 7576,
+          "flow": 5400,
+          "load": 1088,
+          "store": 0,
+          "offloadable": 1488,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "depth4_r4_x4_28",
+          "alu_base": 50400,
+          "valu_raw": 7388,
+          "flow": 6300,
+          "load": 544,
+          "store": 0,
+          "offloadable": 1464,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "depth4_r4_x4_32",
+          "alu_base": 57600,
+          "valu_raw": 7200,
+          "flow": 7200,
+          "load": 0,
+          "store": 0,
+          "offloadable": 1440,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "uncached_r4",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "choices": [
+        {
+          "name": "uncached_r5",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 6,
+      "choices": [
+        {
+          "name": "uncached_r6",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 7,
+      "choices": [
+        {
+          "name": "uncached_r7",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 8,
+      "choices": [
+        {
+          "name": "uncached_r8",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 9,
+      "choices": [
+        {
+          "name": "uncached_r9",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 10,
+      "choices": [
+        {
+          "name": "uncached_reset_r10",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 11,
+      "choices": [
+        {
+          "name": "cached_r11",
+          "alu_base": 0,
+          "valu_raw": 480,
+          "flow": 0,
+          "load": 0,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "uncached_r11",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 12,
+      "choices": [
+        {
+          "name": "cached_r12",
+          "alu_base": 256,
+          "valu_raw": 480,
+          "flow": 32,
+          "load": 0,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "uncached_r12",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 13,
+      "choices": [
+        {
+          "name": "cached_r13",
+          "alu_base": 512,
+          "valu_raw": 480,
+          "flow": 96,
+          "load": 0,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "uncached_r13",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 14,
+      "choices": [
+        {
+          "name": "cached_r14",
+          "alu_base": 1280,
+          "valu_raw": 480,
+          "flow": 224,
+          "load": 0,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0,
+          "selection_mode": "bitmask"
+        },
+        {
+          "name": "uncached_r14",
+          "alu_base": 0,
+          "valu_raw": 512,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    },
+    {
+      "round": 15,
+      "choices": [
+        {
+          "name": "uncached_final_r15",
+          "alu_base": 0,
+          "valu_raw": 448,
+          "flow": 0,
+          "load": 256,
+          "store": 0,
+          "offloadable": 96,
+          "offload_prefix": 0
+        }
+      ]
+    }
+  ],
+  "caps": {
+    "T": 1013,
+    "alu": 12,
+    "valu": 6,
+    "flow": 1,
+    "load": 2,
+    "store": 2
+  },
+  "scratch_limit": 1536
+}

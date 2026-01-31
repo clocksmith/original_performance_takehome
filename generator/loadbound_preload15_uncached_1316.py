@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import replace
-
-from .build_kernel_1013 import build_1013_instrs
-from .spec_1013 import SPEC_1013
+from .build_kernel_base import build_base_instrs
+from .spec_base import with_offload_defaults
 
 
-SPEC_LOADBOUND_1316 = replace(
-    SPEC_1013,
+SPEC_LOADBOUND_1316 = with_offload_defaults(
     # Top-3 caching only: rounds 0-2 and 11-13.
     base_cached_rounds=(0, 1, 2, 11, 12, 13),
     depth4_rounds=0,
@@ -18,7 +15,6 @@ SPEC_LOADBOUND_1316 = replace(
     offload_op1=1510,
     use_bitmask_selection=False,
     idx_shifted=True,
-    include_setup=False,
     cached_nodes=7,
     ptr_setup_engine="alu",
     total_cycles=1316,
@@ -26,4 +22,4 @@ SPEC_LOADBOUND_1316 = replace(
 
 
 def build_instrs():
-    return build_1013_instrs(spec=SPEC_LOADBOUND_1316)
+    return build_base_instrs(spec=SPEC_LOADBOUND_1316)

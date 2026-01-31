@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 
 
 @dataclass(frozen=True)
-class Spec1013:
+class SpecBase:
     rounds: int = 16
     vectors: int = 32
     vlen: int = 8
@@ -17,7 +17,7 @@ class Spec1013:
     reset_on_valu: bool = True
     shifts_on_valu: bool = True
     # Proof-aligned: equality selection with offload.
-    offload_op1: int = 826
+    offload_op1: int = 0
     # Offload controls
     offload_hash_op1: bool = True
     offload_hash_shift: bool = False
@@ -32,7 +32,9 @@ class Spec1013:
     idx_shifted: bool = False
     # Pointer setup engine ("flow" or "alu").
     ptr_setup_engine: str = "flow"
-    include_setup: bool = False
+    # Setup emission mode: "inline" (op_list), "packed" (builder prelude), or "none".
+    setup_style: str = "inline"
+    include_setup: bool = True
     valu_pad_cycles: int = 0
     # Process vectors in blocks to avoid temp aliasing with static schedule.
     # Round-major ordering to minimize cross-vector temp dependencies.
@@ -40,12 +42,17 @@ class Spec1013:
     extra_vecs: int = 2
     # Override cached node count (e.g., top-3 caching uses 7 nodes).
     cached_nodes: int | None = None
-    # Pointer setup engine ("flow" or "alu").
-    ptr_setup_engine: str = "flow"
 
     # Cached rounds
     base_cached_rounds: tuple[int, ...] = (0, 1, 2, 3, 11, 12, 13, 14)
     depth4_cached_rounds: tuple[int, ...] = (4,)
+    # Optional alias mapping to cache arbitrary rounds using an existing depth pattern.
+    # Example: {10: 2} treats round 10 as depth-2 cached (like round 2).
+    cached_round_aliases: dict[int, int] = field(default_factory=dict)
+    # Optional per-round cache depth and partial caching control.
+    # Example: cached_round_depth={10: 2}, cached_round_x={10: 5} caches first 5 vectors at depth-2 in round 10.
+    cached_round_depth: dict[int, int] = field(default_factory=dict)
+    cached_round_x: dict[int, int] = field(default_factory=dict)
 
     # Static schedule
     valu_cap: int = 6
@@ -53,7 +60,19 @@ class Spec1013:
     flow_cap: int = 1
     load_cap: int = 2
     store_cap: int = 2
-    total_cycles: int = 1174
+    total_cycles: int = 1312
 
 
-SPEC_1013 = Spec1013()
+SPEC_BASE = SpecBase()
+
+OFFLOAD_DEFAULTS: dict[str, object] = {
+    "offload_op1": 826,
+    "include_setup": False,
+    "setup_style": "packed",
+    "total_cycles": 1174,
+}
+
+
+def with_offload_defaults(**overrides) -> SpecBase:
+    merged = {**OFFLOAD_DEFAULTS, **overrides}
+    return replace(SPEC_BASE, **merged)

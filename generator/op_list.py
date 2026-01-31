@@ -197,6 +197,32 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
     selection_mode = _selection_mode(spec)
     mask_mode = selection_mode in {"mask", "mask_precompute"}
     mask_precompute = selection_mode == "mask_precompute" and len(layout.extra) >= 4
+    cached_round_aliases = getattr(spec, "cached_round_aliases", None) or {}
+    cached_round_depths = getattr(spec, "cached_round_depth", None) or {}
+    cached_round_x = getattr(spec, "cached_round_x", None) or {}
+    cached_rounds = (
+        set(getattr(spec, "base_cached_rounds", ()))
+        | set(cached_round_aliases.keys())
+        | set(cached_round_depths.keys())
+    )
+
+    def _depth_from_round(r: int) -> int | None:
+        if r in (0, 11):
+            return 0
+        if r in (1, 12):
+            return 1
+        if r in (2, 13):
+            return 2
+        if r in (3, 14):
+            return 3
+        return None
+
+    def _depth_from_alias(val: int) -> int | None:
+        if val in (0, 11, 1, 12, 2, 13, 3, 14):
+            return _depth_from_round(val)
+        if val in (0, 1, 2, 3):
+            return val
+        return None
 
     if getattr(spec, "include_setup", True):
         # Scalar constants
@@ -345,15 +371,22 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
         bits1 = None
         data1 = None
         data2 = None
+        r_sel = cached_round_aliases.get(r, r)
+        # Resolve per-round cache depth and partial caching (x).
+        cache_depth = None
+        if r in cached_round_depths:
+            cache_depth = cached_round_depths[r]
+        elif r in cached_round_aliases:
+            cache_depth = _depth_from_alias(cached_round_aliases[r])
+        elif r in cached_rounds:
+            cache_depth = _depth_from_round(r)
+        cache_x = cached_round_x.get(r, spec.vectors) if cache_depth is not None else 0
+
         if mask_precompute:
             mask_depth = None
-            if r in (1, 12):
-                mask_depth = 1
-            elif r in (2, 13):
-                mask_depth = 2
-            elif r in (3, 14):
-                mask_depth = 3
-            elif r in spec.depth4_cached_rounds and v < spec.x4:
+            if cache_depth in (1, 2, 3) and v < cache_x:
+                mask_depth = cache_depth
+            if r in spec.depth4_cached_rounds and v < spec.x4:
                 mask_depth = 4
             if mask_depth is not None:
                 bits0, bits1, data1, data2 = layout.extra[:4]
@@ -363,10 +396,12 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     _add_valu(valu_ops, ">>", bits1, idx, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
                     _add_valu(valu_ops, "&", bits1, bits1, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
 
-        if r in spec.base_cached_rounds:
-            if r in (0, 11):
+        r_sel = cache_depth if cache_depth in (0, 1, 2, 3) else None
+
+        if cache_depth is not None and v < cache_x:
+            if r_sel == 0:
                 _node_xor(layout.node_v[0], meta={"round": r, "vec": v})
-            elif r in (1, 12):
+            elif r_sel == 1:
                 if mask_precompute and getattr(spec, "idx_shifted", False):
                     _add_vselect(
                         flow_ops,
@@ -405,7 +440,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     nodes = [(1, layout.node_v[1]), (2, layout.node_v[2])]
                     _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
                     _node_xor(tmp, meta={"round": r, "vec": v})
-            elif r in (2, 13):
+            elif r_sel == 2:
                 if mask_precompute and getattr(spec, "idx_shifted", False):
                     _add_vselect(
                         flow_ops,
@@ -504,7 +539,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     nodes = [(i, layout.node_v[i]) for i in range(3, 7)]
                     _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
                     _node_xor(tmp, meta={"round": r, "vec": v})
-            elif r in (3, 14):
+            elif r_sel == 3:
                 if mask_precompute and getattr(spec, "idx_shifted", False):
                     one_v = layout.const_v[1]
                     _add_vselect(

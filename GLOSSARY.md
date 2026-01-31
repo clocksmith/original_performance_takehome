@@ -4,8 +4,8 @@ Core terms
 - ALU: Arithmetic/logic execution slot for scalar-style operations such as add, shift, or compare. In this project, ALU ops are scheduled into the `alu` slot and appear in schedule summaries and proofs.
 - Autogen: Automatically generated variant derived from a base spec plus overrides. Here it typically comes from `create_variant`, which writes a generator spec in `generator/` and a wrapper module at repo root.
 - Batch: Number of inputs processed together in a run. In this project it maps to `batch_size` in tool calls and is fixed to 256 for the standard frozen benchmark.
-- Base spec: Canonical spec template that defines default parameters and limits. In this repo the base specs live in `generator/spec_1013.py` and `generator/spec_1016.py`.
-- Build: The act of assembling a kernel or instruction sequence from a spec. Here build functions (e.g., `build_1013_instrs`) turn spec fields into concrete op lists.
+- Base spec: Canonical spec template that defines default parameters and limits. In this repo the base spec lives in `generator/spec_base.py` (with offload/full-isa presets via overrides).
+- Build: The act of assembling a kernel or instruction sequence from a spec. Here build functions (e.g., `build_base_instrs`) turn spec fields into concrete op lists.
 - Builder: Code that emits kernels or instruction lists from specs. In this project that includes generator build functions and kernel builder templates/overrides.
 - Cache: Local storage used to reduce repeated memory accesses. Here it also shows up in variant names (e.g., `cache_top4...`) to denote caching strategies.
 - Cap sweep: Search over spec limits to identify feasible configurations. In this project `sweep_caps` explores caps like `setup_valu`, `flow_setup_ops`, and `x_values`.

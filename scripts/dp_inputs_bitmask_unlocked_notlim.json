@@ -1,0 +1,456 @@
+{
+  "caps": {
+    "alu": 12,
+    "flow": 1,
+    "load": 2,
+    "store": 2,
+    "valu": 6
+  },
+  "globals": {
+    "allow_per_round_selection": false,
+    "offload_order_mode": "unlocked",
+    "selection_mode": "bitmask"
+  },
+  "rounds": [
+    {
+      "choices": [
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 0,
+          "name": "cached_r0",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 480
+        },
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r0",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 0
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 256,
+          "flow": 32,
+          "load": 0,
+          "name": "cached_r1",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 480
+        },
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r1",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 1
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 512,
+          "flow": 96,
+          "load": 0,
+          "name": "cached_r2",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 480
+        },
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r2",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 2
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 1280,
+          "flow": 224,
+          "load": 0,
+          "name": "cached_r3",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 480
+        },
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r3",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 3
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 4352,
+          "name": "depth4_r4_x4_0",
+          "offload_prefix": 0,
+          "offloadable": 1632,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 8704
+        },
+        {
+          "alu_base": 7200,
+          "flow": 900,
+          "load": 3808,
+          "name": "depth4_r4_x4_4",
+          "offload_prefix": 0,
+          "offloadable": 1608,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 8516
+        },
+        {
+          "alu_base": 14400,
+          "flow": 1800,
+          "load": 3264,
+          "name": "depth4_r4_x4_8",
+          "offload_prefix": 0,
+          "offloadable": 1584,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 8328
+        },
+        {
+          "alu_base": 21600,
+          "flow": 2700,
+          "load": 2720,
+          "name": "depth4_r4_x4_12",
+          "offload_prefix": 0,
+          "offloadable": 1560,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 8140
+        },
+        {
+          "alu_base": 28800,
+          "flow": 3600,
+          "load": 2176,
+          "name": "depth4_r4_x4_16",
+          "offload_prefix": 0,
+          "offloadable": 1536,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 7952
+        },
+        {
+          "alu_base": 36000,
+          "flow": 4500,
+          "load": 1632,
+          "name": "depth4_r4_x4_20",
+          "offload_prefix": 0,
+          "offloadable": 1512,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 7764
+        },
+        {
+          "alu_base": 43200,
+          "flow": 5400,
+          "load": 1088,
+          "name": "depth4_r4_x4_24",
+          "offload_prefix": 0,
+          "offloadable": 1488,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 7576
+        },
+        {
+          "alu_base": 50400,
+          "flow": 6300,
+          "load": 544,
+          "name": "depth4_r4_x4_28",
+          "offload_prefix": 0,
+          "offloadable": 1464,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 7388
+        },
+        {
+          "alu_base": 57600,
+          "flow": 7200,
+          "load": 0,
+          "name": "depth4_r4_x4_32",
+          "offload_prefix": 0,
+          "offloadable": 1440,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 7200
+        },
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r4",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 4
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r5",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 5
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r6",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 6
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r7",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 7
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r8",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 8
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r9",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 9
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_reset_r10",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 10
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 0,
+          "name": "cached_r11",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 480
+        },
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r11",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 11
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 256,
+          "flow": 32,
+          "load": 0,
+          "name": "cached_r12",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 480
+        },
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r12",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 12
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 512,
+          "flow": 96,
+          "load": 0,
+          "name": "cached_r13",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 480
+        },
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r13",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 13
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 1280,
+          "flow": 224,
+          "load": 0,
+          "name": "cached_r14",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "selection_mode": "bitmask",
+          "store": 0,
+          "valu_raw": 480
+        },
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_r14",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 512
+        }
+      ],
+      "round": 14
+    },
+    {
+      "choices": [
+        {
+          "alu_base": 0,
+          "flow": 0,
+          "load": 256,
+          "name": "uncached_final_r15",
+          "offload_prefix": 0,
+          "offloadable": 96,
+          "store": 0,
+          "valu_raw": 448
+        }
+      ],
+      "round": 15
+    }
+  ],
+  "scratch_limit": 1536,
+  "setup_profiles": {
+    "default": {
+      "alu_base": 32,
+      "flow": 64,
+      "load": 138,
+      "offload_prefix": 0,
+      "offloadable": 0,
+      "scratch": 1508,
+      "store": 0,
+      "valu_raw": 77
+    }
+  }
+}

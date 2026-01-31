@@ -58,6 +58,21 @@ _VARIANTS: dict[str, Path | None] = {
     "loadbound_preload15_uncached_1316": ROOT / "loadbound_preload15_uncached_1316.py",
 }
 
+_BASE_SPEC_PROFILES: dict[str, str] = {
+    "base": "base",
+    "default": "base",
+    "offload_base": "offload",
+    "offload": "offload",
+    "1013": "offload",
+    "full_isa_base": "full_isa",
+    "full_isa": "full_isa",
+    "1016": "full_isa",
+}
+
+
+def _normalize_base_spec(name: str) -> str | None:
+    return _BASE_SPEC_PROFILES.get(name)
+
 
 def _new_env_id() -> int:
     global _NEXT_ID
@@ -357,7 +372,7 @@ def list_variants() -> dict[str, Any]:
 
 _OP_GRAPH_STRATEGIES: dict[str, dict[str, Any]] = {
     "mask_precompute_idxshift": {
-        "base_spec": "1013",
+        "base_spec": "offload",
         "description": "Mask-precompute selection with idx-shifted vectors and extra scratch.",
         "overrides": {
             "selection_mode": "mask_precompute",
@@ -368,7 +383,7 @@ _OP_GRAPH_STRATEGIES: dict[str, dict[str, Any]] = {
         },
     },
     "mask_idxshift": {
-        "base_spec": "1013",
+        "base_spec": "offload",
         "description": "Mask selection with idx-shifted vectors and extra scratch.",
         "overrides": {
             "selection_mode": "mask",
@@ -379,7 +394,7 @@ _OP_GRAPH_STRATEGIES: dict[str, dict[str, Any]] = {
         },
     },
     "bitmask_idxshift": {
-        "base_spec": "1016",
+        "base_spec": "full_isa",
         "description": "Bitmask selection with idx-shifted vectors and no depth4 caching.",
         "overrides": {
             "use_bitmask_selection": True,
@@ -391,7 +406,7 @@ _OP_GRAPH_STRATEGIES: dict[str, dict[str, Any]] = {
         },
     },
     "bitmask_idxshift_resetflow": {
-        "base_spec": "1016",
+        "base_spec": "full_isa",
         "description": "Bitmask selection + idx shift with reset on flow (no depth4 caching).",
         "overrides": {
             "use_bitmask_selection": True,
@@ -404,7 +419,7 @@ _OP_GRAPH_STRATEGIES: dict[str, dict[str, Any]] = {
         },
     },
     "top3_loadbound_ptralu": {
-        "base_spec": "1013",
+        "base_spec": "offload",
         "description": "Top-3 caching, idx-shifted, pointer setup on ALU.",
         "overrides": {
             "cached_nodes": 7,
@@ -417,7 +432,7 @@ _OP_GRAPH_STRATEGIES: dict[str, dict[str, Any]] = {
         },
     },
     "skip_r3_x4_24_parity_off": {
-        "base_spec": "1016",
+        "base_spec": "full_isa",
         "description": "Skip round 3 caching, X4=24, parity offload.",
         "overrides": {
             "base_cached_rounds": (0, 1, 2, 11, 12, 13, 14),
@@ -466,7 +481,7 @@ def create_op_graph_variant(
     Args:
         name: Variant name (alphanumeric + underscore).
         strategy: Strategy key from list_op_graph_strategies().
-        base_spec: Optional override for base spec ("1013" or "1016").
+        base_spec: Optional override for base spec ("base", "offload", or "full_isa").
         overrides: Extra spec overrides to merge on top of the template.
         register: If True, add to in-memory variant registry.
         overwrite: If True, overwrite existing files.
@@ -828,7 +843,7 @@ def compare_variants(
 
 def create_variant(
     name: str,
-    base_spec: str = "1013",
+    base_spec: str = "offload",
     overrides: dict[str, Any] | None = None,
     register: bool = True,
     overwrite: bool = False,
@@ -840,7 +855,7 @@ def create_variant(
 
     Args:
         name: Variant name (alphanumeric + underscore).
-        base_spec: "1013" or "1016".
+        base_spec: "base", "offload", or "full_isa" (legacy 1013/1016 accepted).
         overrides: Spec override dict (e.g. {"offload_op1": 826}).
         register: If True, add to the in-memory variant registry.
         overwrite: If True, overwrite existing files.
@@ -850,8 +865,15 @@ def create_variant(
     _validate_variant_name(name)
     overrides = overrides or {}
 
-    if base_spec not in {"1013", "1016"}:
-        return {"ok": False, "error": f"unknown base_spec '{base_spec}'"}
+    base_spec_norm = _normalize_base_spec(base_spec)
+    if base_spec_norm is None:
+        return {
+            "ok": False,
+            "error": (
+                f"unknown base_spec '{base_spec}' (use base/offload/full_isa; "
+                "legacy 1013/1016 accepted)"
+            ),
+        }
 
     gen_path = ROOT / "generator" / f"{name}.py"
     wrapper_path = ROOT / f"{name}.py"
@@ -868,20 +890,17 @@ def create_variant(
         if create_proof and proof_dir.exists():
             return {"ok": False, "error": f"proof directory already exists for '{name}'"}
 
-    if base_spec == "1013":
-        from generator.spec_1013 import SPEC_1013
+    from generator.spec_base import SPEC_BASE, OFFLOAD_DEFAULTS
+    from generator.build_kernel_base import build_base_instrs
 
-        spec_obj = SPEC_1013
-        spec_import = "from generator.spec_1013 import SPEC_1013"
-        build_import = "from generator.build_kernel_1013 import build_1013_instrs"
-        build_call = "build_1013_instrs"
-    else:
-        from generator.spec_1016 import SPEC_1016
+    spec_obj = SPEC_BASE
+    spec_import = "from generator.spec_base import SPEC_BASE"
+    build_import = "from generator.build_kernel_base import build_base_instrs"
+    build_call = "build_base_instrs"
 
-        spec_obj = SPEC_1016
-        spec_import = "from generator.spec_1016 import SPEC_1016"
-        build_import = "from generator.build_kernel_1016 import build_1016_instrs"
-        build_call = "build_1016_instrs"
+    profile_overrides: dict[str, Any] = {}
+    if base_spec_norm == "offload":
+        profile_overrides = dict(OFFLOAD_DEFAULTS)
 
     field_names = {f.name for f in fields(type(spec_obj))}
     bad_keys = [k for k in overrides.keys() if k not in field_names]
@@ -896,9 +915,11 @@ def create_variant(
         else:
             clean_overrides[key] = value
 
+    merged_overrides = {**profile_overrides, **clean_overrides}
+
     spec_const = f"SPEC_{name.upper()}"
-    if clean_overrides:
-        override_lines = ",\n    ".join(f"{k}={repr(v)}" for k, v in clean_overrides.items())
+    if merged_overrides:
+        override_lines = ",\n    ".join(f"{k}={repr(v)}" for k, v in merged_overrides.items())
         spec_def = (
             f"{spec_const} = replace(\n"
             f"    {spec_import.split()[-1]},\n"
@@ -999,7 +1020,7 @@ def create_variant(
     return {
         "ok": True,
         "name": name,
-        "base_spec": base_spec,
+        "base_spec": base_spec_norm,
         "generator_path": str(gen_path),
         "wrapper_path": str(wrapper_path),
         "proof_dir": str(proof_dir) if create_proof else None,
@@ -1088,17 +1109,23 @@ def _build_final_ops(spec, layout) -> list[Op]:
 
 
 def _resolve_schedule_target(name: str) -> tuple[str, Any, Any]:
-    if name == "1013":
-        from generator.spec_1013 import SPEC_1013
-        from generator.build_kernel_1013 import build_1013_instrs
+    base_spec_norm = _normalize_base_spec(name)
+    if base_spec_norm in {"base", "full_isa"}:
+        from generator.spec_base import SPEC_BASE
+        from generator.build_kernel_base import build_base_instrs
 
-        return name, SPEC_1013, build_1013_instrs
+        return base_spec_norm, SPEC_BASE, build_base_instrs
 
-    if name == "1016":
-        from generator.spec_1016 import SPEC_1016
-        from generator.build_kernel_1016 import build_1016_instrs
+    if base_spec_norm == "offload":
+        from generator.spec_base import with_offload_defaults
+        from generator.build_kernel_base import build_base_instrs
 
-        return name, SPEC_1016, build_1016_instrs
+        spec_obj = with_offload_defaults()
+
+        def _build() -> list[dict[str, list[tuple]]]:
+            return build_base_instrs(spec=spec_obj)
+
+        return "offload", spec_obj, _build
 
     if name == "cache_top4_d4x15_reset_offload_1013":
         from generator.cache_top4_d4x15_reset_offload_1013 import SPEC_PROOF_1013, build_instrs
@@ -1112,10 +1139,10 @@ def _resolve_schedule_target(name: str) -> tuple[str, Any, Any]:
         return name, SPEC_PROOF_1013, build_instrs
 
     if name == "cache_top4_d4x15_reset_offload_1016":
-        from generator.spec_1016 import SPEC_1016
         from generator.cache_top4_d4x15_reset_offload_1016 import build_instrs
+        from generator.spec_base import SPEC_BASE
 
-        return name, SPEC_1016, build_instrs
+        return name, SPEC_BASE, build_instrs
 
     if name == "loadbound_preload15_uncached_1316":
         from generator.loadbound_preload15_uncached_1316 import SPEC_LOADBOUND_1316, build_instrs
@@ -1139,7 +1166,7 @@ def _resolve_schedule_target(name: str) -> tuple[str, Any, Any]:
         return name, spec_obj, build_fn
 
     raise ValueError(
-        f"Unknown spec '{name}' (expected proof/variant name or 1013/1016)."
+        f"Unknown spec '{name}' (expected proof/variant name or base/offload/full_isa)."
     )
 
 
@@ -1148,7 +1175,7 @@ def schedule_summary(spec: str = "cache_top4_d4x15_reset_offload_1013") -> dict[
     Build generator schedule and return cycle utilization stats.
 
     Args:
-        spec: Proof/variant name (e.g. cache_top4_d4x15_reset_offload_1013) or "1013"/"1016".
+        spec: Proof/variant name (e.g. cache_top4_d4x15_reset_offload_1013) or "base"/\"offload\"/\"full_isa\".
     """
     display, spec_obj, build_fn = _resolve_schedule_target(spec)
     instrs = build_fn()
@@ -1185,7 +1212,7 @@ def find_schedule_mismatch(
     Compare sequential op order vs dependency schedule, return first mismatch.
 
     Args:
-        spec: Proof/variant name (e.g. cache_top4_d4x15_reset_offload_1016) or "1013"/"1016".
+        spec: Proof/variant name (e.g. cache_top4_d4x15_reset_offload_1016) or "base"/\"offload\"/\"full_isa\".
         forest_height: Tree height.
         rounds: Number of rounds.
         batch_size: Number of inputs.
@@ -1208,8 +1235,8 @@ def find_schedule_mismatch(
     scratch = ScratchAlloc()
     layout = build_layout(spec_obj, scratch)
 
-    include_setup = getattr(spec_obj, "include_setup", True)
-    setup_instrs = [] if include_setup else _build_setup_instrs_1013(spec_obj, layout)
+    setup_style = getattr(spec_obj, "setup_style", "inline")
+    setup_instrs = _build_setup_instrs_1013(spec_obj, layout) if setup_style == "packed" else []
 
     final_ops = _build_final_ops(spec_obj, layout)
     if max_ops is not None:

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from generator.spec_1016 import SPEC_1016
-from generator.build_kernel_1016 import build_1016_instrs
+from generator.spec_base import SPEC_BASE
+from generator.build_kernel_base import build_base_instrs
 
 SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_RESETFLOW_OFF1109_1084 = replace(
-    SPEC_1016,
+    SPEC_BASE,
     use_bitmask_selection=True,
     selection_mode='bitmask',
     idx_shifted=True,
@@ -19,4 +19,4 @@ SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_RESETFLOW_OFF1109_1084 = replace(
 )
 
 def build_instrs():
-    return build_1016_instrs(spec=SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_RESETFLOW_OFF1109_1084)
+    return build_base_instrs(spec=SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_RESETFLOW_OFF1109_1084)

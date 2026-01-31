@@ -91,7 +91,7 @@ def _strategy_names() -> list[str]:
 def _proof_like_overrides() -> list[dict[str, Any]]:
     return [
         {
-            "base_spec": "1013",
+            "base_spec": "offload",
             "name_hint": "top4_d4x15_eq_idxshift_off826",
             "overrides": {
                 "depth4_rounds": 1,
@@ -104,7 +104,7 @@ def _proof_like_overrides() -> list[dict[str, Any]]:
             },
         },
         {
-            "base_spec": "1013",
+            "base_spec": "offload",
             "name_hint": "top4_d4x15_eq_off911",
             "overrides": {
                 "depth4_rounds": 1,
@@ -116,7 +116,7 @@ def _proof_like_overrides() -> list[dict[str, Any]]:
             },
         },
         {
-            "base_spec": "1013",
+            "base_spec": "offload",
             "name_hint": "top3_loadbound_idxshift_ptralu",
             "overrides": {
                 "depth4_rounds": 0,
@@ -131,7 +131,7 @@ def _proof_like_overrides() -> list[dict[str, Any]]:
             },
         },
         {
-            "base_spec": "1013",
+            "base_spec": "offload",
             "name_hint": "mask_idxshift_1012",
             "overrides": {
                 "selection_mode": "mask",
@@ -144,7 +144,7 @@ def _proof_like_overrides() -> list[dict[str, Any]]:
             },
         },
         {
-            "base_spec": "1013",
+            "base_spec": "offload",
             "name_hint": "mask_precompute_idxshift",
             "overrides": {
                 "selection_mode": "mask_precompute",
@@ -155,7 +155,7 @@ def _proof_like_overrides() -> list[dict[str, Any]]:
             },
         },
         {
-            "base_spec": "1016",
+            "base_spec": "full_isa",
             "name_hint": "parity_off_off448",
             "overrides": {
                 "offload_hash_op1": False,
@@ -164,7 +164,7 @@ def _proof_like_overrides() -> list[dict[str, Any]]:
             },
         },
         {
-            "base_spec": "1016",
+            "base_spec": "full_isa",
             "name_hint": "bitmask_idxshift_off1117",
             "overrides": {
                 "use_bitmask_selection": True,
@@ -178,7 +178,7 @@ def _proof_like_overrides() -> list[dict[str, Any]]:
             },
         },
         {
-            "base_spec": "1016",
+            "base_spec": "full_isa",
             "name_hint": "bitmask_idxshift_resetflow_off1109",
             "overrides": {
                 "use_bitmask_selection": True,
@@ -193,7 +193,7 @@ def _proof_like_overrides() -> list[dict[str, Any]]:
             },
         },
         {
-            "base_spec": "1016",
+            "base_spec": "full_isa",
             "name_hint": "skip_r3_x4_24_parity_off",
             "overrides": {
                 "base_cached_rounds": (0, 1, 2, 11, 12, 13, 14),
@@ -282,7 +282,7 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
         "cache_top4_d4x15_reset_offload_1016",
         "loadbound_preload15_uncached_1316",
     ]
-    schedule_specs = sorted(set(schedule_specs + ["1013", "1016"]))
+    schedule_specs = sorted(set(schedule_specs + ["base", "offload", "full_isa"]))
     strategy_names = _strategy_names() or schedule_specs
     proof_overrides = _proof_like_overrides()
     prompts_schedule_summary = [
@@ -488,9 +488,9 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
                 overrides = dict(tmpl["overrides"])
                 user = rng.choice(prompts_create_variant_opt).format(name=name, base=base)
             else:
-                base = rng.choice(["1013", "1016"])
+                base = rng.choice(["offload", "full_isa"])
                 name = f"autogen_{base}_{rng.randint(0, 9999)}"
-                if base == "1013":
+                if base == "offload":
                     overrides = {
                         "depth4_rounds": rng.choice([0, 1, 2]),
                         "x4": rng.choice([0, 8, 15, 24, 32]),
@@ -760,7 +760,7 @@ def build_synthetic_examples(count: int, seed: int) -> list[dict[str, Any]]:
                     name = f"autogen_{tmpl['name_hint']}_{rng.randint(0, 9999)}"
                     overrides = dict(tmpl["overrides"])
                 else:
-                    base = rng.choice(["1013", "1016"])
+                    base = rng.choice(["offload", "full_isa"])
                     name = f"autogen_{base}_{rng.randint(0, 9999)}"
                     overrides = {}
                 if rng.random() < 0.5:

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from .spec_1013 import SPEC_1013, Spec1013
+from dataclasses import replace
+
+from .spec_base import SPEC_BASE, SpecBase
 from .scratch_layout import ScratchAlloc, build_layout
 from .op_list import build_ops
 from .ops import Op
@@ -9,12 +11,7 @@ from problem import SLOT_LIMITS, VLEN
 from .schedule_dep import schedule_ops_dep
 
 
-def build_1013_instrs(spec: Spec1013 | None = None):
-    if spec is None:
-        spec = SPEC_1013
-    scratch = ScratchAlloc()
-    layout = build_layout(spec, scratch)
-
+def _build_setup_prelude(spec: SpecBase, layout) -> list[dict[str, list[tuple]]]:
     setup_instrs: list[dict[str, list[tuple]]] = []
 
     def _pack(engine: str, slots: list[tuple]) -> None:
@@ -67,10 +64,23 @@ def build_1013_instrs(spec: Spec1013 | None = None):
         raise ValueError(f"unknown ptr_setup_engine {ptr_engine!r}")
 
     # Cached node loads + broadcasts (sequential to preserve node_tmp dependency).
-    for i, vaddr in enumerate(layout.node_v):
-        setup_instrs.append({"alu": [("+", layout.node_tmp, layout.forest_values_p, layout.const_s[i])]})
-        setup_instrs.append({"load": [("load", layout.node_tmp, layout.node_tmp)]})
-        setup_instrs.append({"valu": [("vbroadcast", vaddr, layout.node_tmp)]})
+    if getattr(spec, "node_ptr_incremental", False):
+        zero = layout.const_s[0]
+        one = layout.const_s[1]
+        node_ptr = layout.inp_indices_p
+        setup_instrs.append({"alu": [("+", node_ptr, layout.forest_values_p, zero)]})
+        for i, vaddr in enumerate(layout.node_v):
+            setup_instrs.append({"load": [("load", layout.node_tmp, node_ptr)]})
+            setup_instrs.append({"valu": [("vbroadcast", vaddr, layout.node_tmp)]})
+            if i + 1 < len(layout.node_v):
+                setup_instrs.append({"alu": [("+", node_ptr, node_ptr, one)]})
+    else:
+        for i, vaddr in enumerate(layout.node_v):
+            setup_instrs.append(
+                {"alu": [("+", layout.node_tmp, layout.forest_values_p, layout.const_s[i])]}
+            )
+            setup_instrs.append({"load": [("load", layout.node_tmp, layout.node_tmp)]})
+            setup_instrs.append({"valu": [("vbroadcast", vaddr, layout.node_tmp)]})
 
     # Broadcast constants into vectors.
     const_v_broadcasts = [
@@ -85,14 +95,30 @@ def build_1013_instrs(spec: Spec1013 | None = None):
         vloads.append(("vload", layout.val[v], layout.val_ptr[v]))
     _pack("load", vloads)
     if getattr(spec, "idx_shifted", False):
-        shift_ops = [
-            ("+", layout.idx[v], layout.idx[v], layout.const_v[1]) for v in range(spec.vectors)
-        ]
+        shift_ops = [("+", layout.idx[v], layout.idx[v], layout.const_v[1]) for v in range(spec.vectors)]
         _pack("valu", shift_ops)
 
-    # --- Main scheduled phase ---
+    return setup_instrs
+
+
+def build_base_instrs(spec: SpecBase | None = None):
+    if spec is None:
+        spec = SPEC_BASE
+    scratch = ScratchAlloc()
+    layout = build_layout(spec, scratch)
+
+    setup_style = getattr(spec, "setup_style", "inline")
+    setup_instrs: list[dict[str, list[tuple]]] = []
+
+    if setup_style == "packed":
+        setup_instrs = _build_setup_prelude(spec, layout)
+
+    spec_for_ops = spec
+    if setup_style in {"packed", "none"} and getattr(spec, "include_setup", True):
+        spec_for_ops = replace(spec, include_setup=False)
+
     ordered_ops: list[Op] = []
-    build_ops(spec, layout, ordered_ops=ordered_ops)
+    build_ops(spec_for_ops, layout, ordered_ops=ordered_ops)
 
     # Apply offload in-order to build the final op stream.
     final_ops: list[Op] = []
@@ -120,4 +146,6 @@ def build_1013_instrs(spec: Spec1013 | None = None):
             final_ops.insert(0, Op(engine="valu", slot=("^", pad_dest, pad_dest, pad_dest)))
 
     instrs = schedule_ops_dep(final_ops)
-    return setup_instrs + instrs
+    if setup_style == "packed":
+        return setup_instrs + instrs
+    return instrs
