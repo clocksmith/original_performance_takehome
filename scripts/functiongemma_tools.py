@@ -52,9 +52,9 @@ _NEXT_ID = 0
 _VARIANTS: dict[str, Path | None] = {
     "default": None,
     "kernel_builder_override": ROOT / "kernel_builder_override.py",
-    "cache_top4_d4x15_reset_offload_1013": ROOT / "cache_top4_d4x15_reset_offload_1013.py",
-    "cache_top4_d4x15_reset_offload_1015_full_window": ROOT / "cache_top4_d4x15_reset_offload_1015_full_window.py",
-    "cache_top4_d4x15_reset_offload_1016": ROOT / "cache_top4_d4x15_reset_offload_1016.py",
+    "cache_top4_d4x15_reset_offload_1013": ROOT / "wrappers" / "_autogen_cache" / "cache_top4_d4x15_reset_offload_1013.py",
+    "cache_top4_d4x15_reset_offload_1015_full_window": ROOT / "wrappers" / "_autogen_cache" / "cache_top4_d4x15_reset_offload_1015_full_window.py",
+    "cache_top4_d4x15_reset_offload_1016": ROOT / "wrappers" / "_autogen_cache" / "cache_top4_d4x15_reset_offload_1016.py",
     "loadbound_preload15_uncached_1316": ROOT / "loadbound_preload15_uncached_1316.py",
 }
 

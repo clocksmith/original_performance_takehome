@@ -1,0 +1,32 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["a15415df6fa0b0a1.olean"],
+  "i": "456640377f4bf590.ilean",
+  "c": "c1c815a1afd2d0f9.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/xyz/deco/original_performance_takehome/.lake/packages/Cli/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/batteries/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/Qq/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/aesop/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/importGraph/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/plausible/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/mathlib/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean /Users/xyz/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/xyz/deco/original_performance_takehome/proofs/common/Base.lean -o /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/common/Base.olean -i /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/common/Base.ilean -c /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/common/Base.c --setup /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/common/Base.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["proofs.common.Base:deps",
+   [["deps",
+     [["original_performance_takehome/TakehomeProofs:extraDep",
+       [["@original_performance_takehome:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["Mathlib transitive imports (legacy)", "d697f54177d13833"],
+        ["Mathlib:importAllArts", "3b45a1c152ecceb5"],
+        ["proofs.common.ISA transitive imports (legacy)", "9382f9ba7849d050"],
+        ["proofs.common.ISA:importAllArts", "3e65a2f777b307a4"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/xyz/deco/original_performance_takehome/proofs/common/Base.lean",
+   "04545185f0ba453e"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "c69c446859e4eaa5"}

@@ -46,9 +46,32 @@ structure Core where
   trace_buf : List Nat
   pc : Int
   state : CoreState
-  deriving Repr
 
-abbrev Mem := Nat → Nat
+structure Mem where
+  data : Nat → Nat
+  size : Nat
+
+def memRead (m : Mem) (addr : Nat) : Option Nat :=
+  if addr < m.size then some (m.data addr) else none
+
+def memWrite (m : Mem) (addr val : Nat) : Option Mem :=
+  if addr < m.size then
+    some { m with data := fun a => if a = addr then val else m.data a }
+  else
+    none
+
+def memWriteMany (m : Mem) (ws : List (Nat × Nat)) : Option Mem :=
+  ws.foldl
+    (fun acc w =>
+      match acc with
+      | none => none
+      | some m' => memWrite m' w.1 w.2)
+    (some m)
+
+def listGet? {α : Type} : List α → Nat → Option α
+  | [], _ => none
+  | x :: _, 0 => some x
+  | _ :: xs, n + 1 => listGet? xs n
 
 /-! ### Instruction slots -/
 
@@ -111,12 +134,99 @@ structure Instruction where
 
 /-! ### Well-formedness -/
 
+def vecInScratch (base : Nat) : Prop :=
+  base + (VLEN - 1) < SCRATCH_SIZE
+
+def aluSlotBounded (s : AluSlot) : Prop :=
+  s.dest < SCRATCH_SIZE ∧ s.a1 < SCRATCH_SIZE ∧ s.a2 < SCRATCH_SIZE
+
+def valuSlotBounded : ValuSlot → Prop
+  | .vbroadcast dest src =>
+      vecInScratch dest ∧ src < SCRATCH_SIZE
+  | .multiply_add dest a b c =>
+      vecInScratch dest ∧ vecInScratch a ∧ vecInScratch b ∧ vecInScratch c
+  | .alu _ dest a1 a2 =>
+      vecInScratch dest ∧ vecInScratch a1 ∧ vecInScratch a2
+
+def loadSlotBounded : LoadSlot → Prop
+  | .load dest addr =>
+      dest < SCRATCH_SIZE ∧ addr < SCRATCH_SIZE
+  | .load_offset dest addr offset =>
+      dest + offset < SCRATCH_SIZE ∧ addr + offset < SCRATCH_SIZE
+  | .vload dest addr =>
+      vecInScratch dest ∧ addr < SCRATCH_SIZE
+  | .const dest _ =>
+      dest < SCRATCH_SIZE
+
+def storeSlotBounded : StoreSlot → Prop
+  | .store addr src =>
+      addr < SCRATCH_SIZE ∧ src < SCRATCH_SIZE
+  | .vstore addr src =>
+      addr < SCRATCH_SIZE ∧ vecInScratch src
+
+def flowSlotBounded : FlowSlot → Prop
+  | .select dest cond a b =>
+      dest < SCRATCH_SIZE ∧ cond < SCRATCH_SIZE ∧ a < SCRATCH_SIZE ∧ b < SCRATCH_SIZE
+  | .add_imm dest a _ =>
+      dest < SCRATCH_SIZE ∧ a < SCRATCH_SIZE
+  | .vselect dest cond a b =>
+      vecInScratch dest ∧ vecInScratch cond ∧ vecInScratch a ∧ vecInScratch b
+  | .trace_write val =>
+      val < SCRATCH_SIZE
+  | .cond_jump cond _ =>
+      cond < SCRATCH_SIZE
+  | .cond_jump_rel cond _ =>
+      cond < SCRATCH_SIZE
+  | .jump _ =>
+      True
+  | .jump_indirect addr =>
+      addr < SCRATCH_SIZE
+  | .coreid dest =>
+      dest < SCRATCH_SIZE
+  | .halt => True
+  | .pause => True
+
+def debugSlotBounded : DebugSlot → Prop
+  | .compare loc _ =>
+      loc < SCRATCH_SIZE
+  | .vcompare loc _ =>
+      vecInScratch loc
+
+def instrScratchBounded (i : Instruction) : Prop :=
+  (∀ s ∈ i.alu, aluSlotBounded s) ∧
+  (∀ s ∈ i.valu, valuSlotBounded s) ∧
+  (∀ s ∈ i.load, loadSlotBounded s) ∧
+  (∀ s ∈ i.store, storeSlotBounded s) ∧
+  (∀ s ∈ i.flow, flowSlotBounded s) ∧
+  (∀ s ∈ i.debug, debugSlotBounded s)
+
+def flowSlotPcBoundedAt (progLen pc : Nat) : FlowSlot → Prop
+  | .cond_jump _ addr =>
+      0 ≤ addr ∧ addr < Int.ofNat progLen
+  | .cond_jump_rel _ offset =>
+      let pc' := (Int.ofNat pc) + offset
+      0 ≤ pc' ∧ pc' < Int.ofNat progLen
+  | .jump addr =>
+      0 ≤ addr ∧ addr < Int.ofNat progLen
+  | _ => True
+
+def instrPcBoundedAt (progLen pc : Nat) (i : Instruction) : Prop :=
+  List.Forall (flowSlotPcBoundedAt progLen pc) i.flow
+
+def instrPcBounded (progLen : Nat) (i : Instruction) : Prop :=
+  instrPcBoundedAt progLen 0 i
+
 def instrWellFormed (i : Instruction) : Prop :=
   i.alu.length ≤ ALU_CAP ∧
   i.valu.length ≤ VALU_CAP ∧
   i.load.length ≤ LOAD_CAP ∧
   i.store.length ≤ STORE_CAP ∧
-  i.flow.length ≤ FLOW_CAP
+  i.flow.length ≤ FLOW_CAP ∧
+  instrScratchBounded i
+
+noncomputable instance (i : Instruction) : Decidable (instrWellFormed i) := by
+  classical
+  infer_instance
 
 def instrHasNonDebug (i : Instruction) : Bool :=
   (!i.alu.isEmpty) || (!i.valu.isEmpty) || (!i.load.isEmpty) || (!i.store.isEmpty) || (!i.flow.isEmpty)
@@ -124,7 +234,7 @@ def instrHasNonDebug (i : Instruction) : Bool :=
 /-! ### Write helpers -/
 
 def write (m : Nat → Nat) (addr : Nat) (val : Nat) : Nat → Nat :=
-  fun a => if a = addr then mod32 val else m a
+  fun a => if a = addr then val else m a
 
 def writeMany (m : Nat → Nat) (ws : List (Nat × Nat)) : Nat → Nat :=
   ws.foldl (fun acc w => write acc w.1 w.2) m
@@ -202,17 +312,28 @@ def execValuSlots (s : Nat → Nat) (slots : List ValuSlot) : Option (List (Nat 
           | some ws' => some (ws ++ ws'))
     (some [])
 
-def execLoadSlot (s : Nat → Nat) (m : Mem) (slot : LoadSlot) : List (Nat × Nat) :=
+def execLoadSlot (s : Nat → Nat) (m : Mem) (slot : LoadSlot) :
+    Option (List (Nat × Nat)) :=
   match slot with
   | .load dest addr =>
-      [(dest, m (s addr))]
+      match memRead m (s addr) with
+      | none => none
+      | some v => some [(dest, v)]
   | .load_offset dest addr offset =>
-      [(dest + offset, m (s (addr + offset)))]
+      match memRead m (s (addr + offset)) with
+      | none => none
+      | some v => some [(dest + offset, v)]
   | .vload dest addr =>
       let base := s addr
-      vecWrites dest (fun i => m (base + i))
+      let vals := (List.range VLEN).map (fun i => memRead m (base + i))
+      if vals.all (fun v => v.isSome) then
+        let reads := (List.range VLEN).map (fun i =>
+          (dest + i, (memRead m (base + i)).get!))
+        some reads
+      else
+        none
   | .const dest val =>
-      [(dest, mod32 val)]
+      some [(dest, mod32 val)]
 
 def execStoreSlot (s : Nat → Nat) (slot : StoreSlot) : List (Nat × Nat) :=
   match slot with
@@ -256,7 +377,7 @@ def execDebugSlot (s : Nat → Nat) (valueTrace : Nat → Nat) (slot : DebugSlot
       s loc = valueTrace key
   | .vcompare loc keys =>
       (List.range VLEN).all (fun i =>
-        match keys.get? i with
+        match listGet? keys i with
         | some key => s (loc + i) = valueTrace key
         | none => False)
 
@@ -269,11 +390,11 @@ structure ExecResult where
   debug_ok : Bool
   has_non_debug : Bool
 
-def execInstruction (enablePause : Bool) (enableDebug : Bool) (valueTrace : Nat → Nat) (mem : Mem)
+noncomputable def execInstruction (enablePause : Bool) (enableDebug : Bool) (valueTrace : Nat → Nat) (mem : Mem)
     (core : Core) (instr : Instruction) : ExecResult :=
   let s0 := core.scratch
   let has_non_debug := instrHasNonDebug instr
-  if !instrWellFormed instr then
+  if !decide (instrWellFormed instr) then
     { core := core, mem := mem, ok := false, debug_ok := false, has_non_debug := has_non_debug }
   else
     -- debug checks
@@ -294,21 +415,36 @@ def execInstruction (enablePause : Bool) (enableDebug : Bool) (valueTrace : Nat 
           | none =>
               { core := core, mem := mem, ok := false, debug_ok := dbg_ok, has_non_debug := has_non_debug }
           | some alu_writes =>
-              let load_writes := instr.load.bind (execLoadSlot s0 mem)
-              let store_writes := instr.store.bind (execStoreSlot s0)
-              -- flow (sequential)
-              let (core', flow_writes) :=
-                instr.flow.foldl
+              let load_writes? :=
+                instr.load.foldl
                   (fun acc slot =>
-                    let (c, ws) := acc
-                    let (c', ws') := execFlowSlot enablePause c s0 slot
-                    (c', ws ++ ws'))
-                  (core, [])
-              let scratch' := writeMany s0 (valu_writes ++ alu_writes ++ flow_writes ++ load_writes)
-              let mem' := writeMany mem store_writes
-              let core'' := { core' with scratch := scratch' }
-              { core := core'', mem := mem', ok := true, debug_ok := dbg_ok,
-                has_non_debug := has_non_debug }
+                    match acc, execLoadSlot s0 mem slot with
+                    | some ws, some ws' => some (ws ++ ws')
+                    | _, _ => none)
+                  (some [])
+              match load_writes? with
+              | none =>
+                  { core := core, mem := mem, ok := false, debug_ok := dbg_ok,
+                    has_non_debug := has_non_debug }
+              | some load_writes =>
+                  let store_writes := instr.store.flatMap (execStoreSlot s0)
+                  match memWriteMany mem store_writes with
+                  | none =>
+                      { core := core, mem := mem, ok := false, debug_ok := dbg_ok,
+                        has_non_debug := has_non_debug }
+                  | some mem' =>
+                      -- flow (sequential)
+                      let (core', flow_writes) :=
+                        instr.flow.foldl
+                          (fun acc slot =>
+                            let (c, ws) := acc
+                            let (c', ws') := execFlowSlot enablePause c s0 slot
+                            (c', ws ++ ws'))
+                          (core, [])
+                      let scratch' := writeMany s0 (valu_writes ++ alu_writes ++ flow_writes ++ load_writes)
+                      let core'' := { core' with scratch := scratch' }
+                      { core := core'', mem := mem', ok := true, debug_ok := dbg_ok,
+                        has_non_debug := has_non_debug }
 
 /-! ### Machine-level stepping -/
 
@@ -323,12 +459,12 @@ structure Machine where
   aborted : Bool := false
 
 def fetch (prog : List Instruction) (pc : Int) : Option Instruction :=
-  if h : 0 ≤ pc then
-    prog.get? (Int.toNat pc)
+  if 0 ≤ pc then
+    listGet? prog (Int.toNat pc)
   else
     none
 
-def stepCore (m : Machine) (core : Core) : Core × Mem × Bool × Bool :=
+noncomputable def stepCore (m : Machine) (core : Core) : Core × Mem × Bool × Bool :=
   match core.state with
   | .running =>
       match fetch m.program core.pc with
@@ -343,7 +479,7 @@ def stepCore (m : Machine) (core : Core) : Core × Mem × Bool × Bool :=
   | _ =>
       (core, m.mem, false, true)
 
-def stepMachine (m : Machine) : Machine :=
+noncomputable def stepMachine (m : Machine) : Machine :=
   if m.aborted then
     m
   else

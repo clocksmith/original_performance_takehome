@@ -11,6 +11,7 @@ def ALU_CAP : Nat := 12
 def LOAD_CAP : Nat := 2
 def STORE_CAP : Nat := 2
 def FLOW_CAP : Nat := 1
+def SCRATCH_SIZE : Nat := 1536
 
 /-! ### Problem instance constants -/
 

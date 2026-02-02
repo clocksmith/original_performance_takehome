@@ -1,0 +1,32 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["57a8b1e919646a18.olean"],
+  "i": "64678b5acf75d6fe.ilean",
+  "c": "cae23ce3272ce9e1.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/xyz/deco/original_performance_takehome/.lake/packages/Cli/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/batteries/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/Qq/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/aesop/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/importGraph/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/plausible/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/mathlib/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean /Users/xyz/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/xyz/deco/original_performance_takehome/proofs/common/Machine.lean -o /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/common/Machine.olean -i /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/common/Machine.ilean -c /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/common/Machine.c --setup /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/common/Machine.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["proofs.common.Machine:deps",
+   [["deps",
+     [["original_performance_takehome/TakehomeProofs:extraDep",
+       [["@original_performance_takehome:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["Mathlib transitive imports (legacy)", "d697f54177d13833"],
+        ["Mathlib:importAllArts", "3b45a1c152ecceb5"],
+        ["proofs.common.ISA transitive imports (legacy)", "9382f9ba7849d050"],
+        ["proofs.common.ISA:importAllArts", "3e65a2f777b307a4"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/xyz/deco/original_performance_takehome/proofs/common/Machine.lean",
+   "2b63262db35af536"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "6a5ea888ccb0c8e2"}

@@ -11,6 +11,7 @@ lean_lib TakehomeProofs where
     `proofs.common.ISA,
     `proofs.common.Base,
     `proofs.common.Machine,
+    `proofs.global_lower_bound.LowerBound,
     `proofs.cache_top4_d4x15_reset_offload_1013.LowerBound,
     `proofs.cache_top4_d4x15_reset_offload_1015_full_window.LowerBound,
     `proofs.cache_top4_d4x15_reset_offload_1016.LowerBound,

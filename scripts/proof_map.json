@@ -12,7 +12,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_reset_offload_1013.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_reset_offload_1013.py",
         "class": "KernelBuilder"
       }
     },
@@ -28,7 +28,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_reset_offload_1015_full_window.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_reset_offload_1015_full_window.py",
         "class": "KernelBuilder"
       }
     },
@@ -43,7 +43,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_reset_offload_1016.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_reset_offload_1016.py",
         "class": "KernelBuilder"
       }
     },
@@ -74,7 +74,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_reset_offload_1013_override.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_reset_offload_1013_override.py",
         "class": "KernelBuilder"
       }
     },
@@ -89,7 +89,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_reset_offload_1227.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_reset_offload_1227.py",
         "class": "KernelBuilder"
       }
     },
@@ -104,7 +104,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_reset_offload_1016_parity_off.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_reset_offload_1016_parity_off.py",
         "class": "KernelBuilder"
       }
     },
@@ -119,7 +119,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_reset_offload_1016_parity_off_idxshift_ptralu.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_reset_offload_1016_parity_off_idxshift_ptralu.py",
         "class": "KernelBuilder"
       }
     },
@@ -134,7 +134,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_skip_r3_r13_1509.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_skip_r3_r13_1509.py",
         "class": "KernelBuilder"
       }
     },
@@ -149,7 +149,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_skip_r3_x4_24_1456.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_skip_r3_x4_24_1456.py",
         "class": "KernelBuilder"
       }
     },
@@ -164,7 +164,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_reset_offload_1016_bitmask.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_reset_offload_1016_bitmask.py",
         "class": "KernelBuilder"
       }
     },
@@ -179,7 +179,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_reset_offload_1016_parity_off_bitmask.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_reset_offload_1016_parity_off_bitmask.py",
         "class": "KernelBuilder"
       }
     },
@@ -194,7 +194,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_reset_offload_1016_off128.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_reset_offload_1016_off128.py",
         "class": "KernelBuilder"
       }
     },
@@ -209,7 +209,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_reset_offload_1016_off1024.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_reset_offload_1016_off1024.py",
         "class": "KernelBuilder"
       }
     },
@@ -224,7 +224,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_bitmask_idxshift_off1117_1088.py",
+        "path": "wrappers/_autogen_cache/cache_top4_bitmask_idxshift_off1117_1088.py",
         "class": "KernelBuilder"
       }
     },
@@ -240,7 +240,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_mask_idxshift_1012.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_mask_idxshift_1012.py",
         "class": "KernelBuilder"
       }
     },
@@ -255,7 +255,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_bitmask_idxshift_resetflow_off1109_1084.py",
+        "path": "wrappers/_autogen_cache/cache_top4_bitmask_idxshift_resetflow_off1109_1084.py",
         "class": "KernelBuilder"
       }
     },
@@ -271,7 +271,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_bitmask_idxshift_resetflow_parity_1118.py",
+        "path": "wrappers/_autogen_cache/cache_top4_bitmask_idxshift_resetflow_parity_1118.py",
         "class": "KernelBuilder"
       }
     },
@@ -286,7 +286,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_skip_r3_x4_24_offhash_900.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_skip_r3_x4_24_offhash_900.py",
         "class": "KernelBuilder"
       }
     },
@@ -301,7 +301,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_bitmask_idxshift_extra8_off1109.py",
+        "path": "wrappers/_autogen_cache/cache_top4_bitmask_idxshift_extra8_off1109.py",
         "class": "KernelBuilder"
       }
     },
@@ -316,7 +316,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_skip_r3_x4_24_offhash_1200.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_skip_r3_x4_24_offhash_1200.py",
         "class": "KernelBuilder"
       }
     },
@@ -331,7 +331,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_bitmask_idxshift_extra16_off1109.py",
+        "path": "wrappers/_autogen_cache/cache_top4_bitmask_idxshift_extra16_off1109.py",
         "class": "KernelBuilder"
       }
     },
@@ -346,7 +346,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_skip_r3_x4_24_block16.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_skip_r3_x4_24_block16.py",
         "class": "KernelBuilder"
       }
     },
@@ -361,7 +361,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_bitmask_idxshift_extra20_off1109.py",
+        "path": "wrappers/_autogen_cache/cache_top4_bitmask_idxshift_extra20_off1109.py",
         "class": "KernelBuilder"
       }
     },
@@ -376,7 +376,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_bitmask_idxshift_off1150.py",
+        "path": "wrappers/_autogen_cache/cache_top4_bitmask_idxshift_off1150.py",
         "class": "KernelBuilder"
       }
     },
@@ -391,7 +391,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_bitmask_idxshift_extra1_off1155.py",
+        "path": "wrappers/_autogen_cache/cache_top4_bitmask_idxshift_extra1_off1155.py",
         "class": "KernelBuilder"
       }
     },
@@ -406,7 +406,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_bitmask_idxshift_ptrinc_off1150.py",
+        "path": "wrappers/_autogen_cache/cache_top4_bitmask_idxshift_ptrinc_off1150.py",
         "class": "KernelBuilder"
       }
     },
@@ -421,7 +421,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_mask_idxshift_off1200.py",
+        "path": "wrappers/_autogen_cache/cache_top4_mask_idxshift_off1200.py",
         "class": "KernelBuilder"
       }
     },
@@ -436,7 +436,7 @@
         "function": "build_instrs"
       },
       "kernel_wrapper": {
-        "path": "cache_top4_d4x15_skip_r3_x4_24_block8.py",
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_skip_r3_x4_24_block8.py",
         "class": "KernelBuilder"
       }
     }
