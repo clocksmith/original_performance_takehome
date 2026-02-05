@@ -26,6 +26,10 @@ class SpecBase:
     offload_node_xor: bool = False
     use_bitmask_selection: bool = False
     selection_mode: str = "eq"
+    # Optional per-round selection override (e.g. {4: "mask_precompute"}).
+    selection_mode_by_round: dict[int, str] = field(default_factory=dict)
+    # Use VALU arithmetic to emulate vselect (reduces flow ops).
+    valu_select: bool = False
     # Use incremental pointer for cached node preload to reduce const loads.
     node_ptr_incremental: bool = False
     # Use 1-based idx representation to drop the +1 in update.
@@ -35,6 +39,10 @@ class SpecBase:
     # Setup emission mode: "inline" (op_list), "packed" (builder prelude), or "none".
     setup_style: str = "inline"
     include_setup: bool = True
+    # Proof-model flags (used to align codegen with Lean counting assumptions).
+    proof_assume_shifted_input: bool = False
+    proof_reset_single_op: bool = False
+    proof_skip_const_zero: bool = False
     valu_pad_cycles: int = 0
     # Process vectors in blocks to avoid temp aliasing with static schedule.
     # Round-major ordering to minimize cross-vector temp dependencies.
@@ -61,6 +69,9 @@ class SpecBase:
     load_cap: int = 2
     store_cap: int = 2
     total_cycles: int = 1312
+    sched_seed: int = 0
+    sched_jitter: float = 0.0
+    sched_restarts: int = 1
 
 
 SPEC_BASE = SpecBase()

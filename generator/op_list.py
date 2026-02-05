@@ -8,6 +8,8 @@ from .ops import Op, OpLists
 
 _ORDERED_OPS: list[Op] | None = None
 _SEQ = 0
+_USE_VALU_SELECT = False
+_VALU_OPS_REF: list[Op] | None = None
 
 
 def _record(op: Op) -> None:
@@ -79,6 +81,11 @@ def _add_vmuladd(ops: list[Op], dest: int, a: int, b: int, c: int, meta=None):
 
 
 def _add_vselect(ops: list[Op], dest: int, cond: int, a: int, b: int, meta=None):
+    if _USE_VALU_SELECT and _VALU_OPS_REF is not None and dest != b:
+        # dest = b + cond * (a - b)
+        _add_valu(_VALU_OPS_REF, "-", dest, a, b, meta=meta)
+        _add_vmuladd(_VALU_OPS_REF, dest, cond, dest, b, meta=meta)
+        return
     new_op = Op(engine="flow", slot=("vselect", dest, cond, a, b), meta=meta)
     _record(new_op)
     ops.append(new_op)
@@ -132,7 +139,12 @@ def _add_vselect_parity(spec, ops: list[Op], dest: int, cond: int, a: int, b: in
     _add_vselect(ops, dest, cond, a, b, meta=meta)
 
 
-def _selection_mode(spec) -> str:
+def _selection_mode(spec, round_idx: int | None = None) -> str:
+    per_round = getattr(spec, "selection_mode_by_round", None)
+    if per_round is not None and round_idx is not None:
+        mode = per_round.get(round_idx)
+        if mode:
+            return mode
     mode = getattr(spec, "selection_mode", None)
     if mode:
         return mode
@@ -184,19 +196,22 @@ def _add_vstore(ops: list[Op], addr: int, src: int, meta=None):
 
 
 def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
-    global _ORDERED_OPS, _SEQ
+    global _ORDERED_OPS, _SEQ, _USE_VALU_SELECT, _VALU_OPS_REF
     _ORDERED_OPS = ordered_ops
     _SEQ = 0
+    _USE_VALU_SELECT = bool(getattr(spec, "valu_select", False))
     valu_ops: list[Op] = []
+    _VALU_OPS_REF = valu_ops
     alu_ops: list[Op] = []
     flow_ops: list[Op] = []
     load_ops: list[Op] = []
     store_ops: list[Op] = []
 
     linear, bitwise = _split_hash_stages()
-    selection_mode = _selection_mode(spec)
-    mask_mode = selection_mode in {"mask", "mask_precompute"}
-    mask_precompute = selection_mode == "mask_precompute" and len(layout.extra) >= 4
+    selection_modes_per_round = [_selection_mode(spec, r) for r in range(spec.rounds)]
+    use_vector_major = any(
+        mode in {"bitmask", "mask", "mask_precompute"} for mode in selection_modes_per_round
+    )
     cached_round_aliases = getattr(spec, "cached_round_aliases", None) or {}
     cached_round_depths = getattr(spec, "cached_round_depth", None) or {}
     cached_round_x = getattr(spec, "cached_round_x", None) or {}
@@ -227,6 +242,8 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
     if getattr(spec, "include_setup", True):
         # Scalar constants
         for val, addr in sorted(layout.const_s.items()):
+            if val == 0 and getattr(spec, "proof_skip_const_zero", False):
+                continue
             _add_const(load_ops, addr, val, meta={"setup": True, "const": val})
 
         # Load base pointers from mem[4], mem[5], mem[6]
@@ -308,7 +325,9 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
         # Initial vloads
         for v in range(spec.vectors):
             _add_vload(load_ops, layout.idx[v], layout.idx_ptr[v], meta={"vec": v})
-            if getattr(spec, "idx_shifted", False):
+            if getattr(spec, "idx_shifted", False) and not getattr(
+                spec, "proof_assume_shifted_input", False
+            ):
                 _add_valu(
                     valu_ops,
                     "+",
@@ -328,12 +347,15 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
             for r in range(spec.rounds):
                 for v in range(block_start, block_end):
                     vec_round_pairs.append((v, r))
-    elif selection_mode in {"bitmask", "mask", "mask_precompute"}:
+    elif use_vector_major:
         vec_round_pairs = [(v, r) for v in range(spec.vectors) for r in range(spec.rounds)]
     else:
         vec_round_pairs = [(v, r) for r in range(spec.rounds) for v in range(spec.vectors)]
 
     for v, r in vec_round_pairs:
+        selection_mode = selection_modes_per_round[r]
+        mask_mode = selection_mode in {"mask", "mask_precompute"}
+        mask_precompute = selection_mode == "mask_precompute" and len(layout.extra) >= 4
         tmp = layout.tmp[v]
         sel = layout.sel[v]
         extra = None
@@ -1361,7 +1383,9 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
         if r == 10:
             if spec.reset_on_valu:
                 _add_valu(valu_ops, "^", idx, idx, idx, meta={"round": r, "vec": v})
-                if getattr(spec, "idx_shifted", False):
+                if getattr(spec, "idx_shifted", False) and not getattr(
+                    spec, "proof_reset_single_op", False
+                ):
                     _add_valu(valu_ops, "+", idx, idx, one_v, meta={"round": r, "vec": v})
             else:
                 reset_v = one_v if getattr(spec, "idx_shifted", False) else layout.const_v[0]
@@ -1392,4 +1416,6 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
         _add_vstore(store_ops, layout.val_ptr[v], layout.val[v], meta={"vec": v})
 
     _ORDERED_OPS = None
+    _USE_VALU_SELECT = False
+    _VALU_OPS_REF = None
     return OpLists(valu_ops=valu_ops, alu_ops=alu_ops, flow_ops=flow_ops, load_ops=load_ops, store_ops=store_ops)

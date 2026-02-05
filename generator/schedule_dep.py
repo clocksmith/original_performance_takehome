@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 import heapq
+import random
 from typing import Any
 
 from problem import SLOT_LIMITS, VLEN
@@ -67,9 +68,22 @@ def _reads_writes(op: Op) -> tuple[list[int], list[int]]:
     raise NotImplementedError(f"Unknown engine {engine}")
 
 
-def schedule_ops_dep(
+def _count_cycles(instrs: list[dict[str, list[Any]]]) -> int:
+    cycles = 0
+    for bundle in instrs:
+        for engine, slots in bundle.items():
+            if engine != "debug" and slots:
+                cycles += 1
+                break
+    return cycles
+
+
+def _schedule_ops_dep_once(
     ops: list[Op],
     return_ops: bool = False,
+    *,
+    seed: int = 0,
+    jitter: float = 0.0,
 ) -> list[dict[str, list[Any]]]:
     n_ops = len(ops)
     reads_list: list[list[int]] = []
@@ -129,13 +143,21 @@ def schedule_ops_dep(
 
     earliest = [0] * n_ops
     scheduled = [-1] * n_ops
-    ready: dict[str, list[tuple[int, int, int]]] = defaultdict(list)
+    ready: dict[str, list[tuple[int, int, float, int]]] = defaultdict(list)
+
+    rng = random.Random(seed) if jitter > 0 else None
+
+    def _jitter_key() -> float:
+        if rng is None:
+            return 0.0
+        return rng.random() * jitter
 
     for i, op in enumerate(ops):
         if indegree[i] == 0:
-            heapq.heappush(ready[op.engine], (0, -priority[i], i))
+            heapq.heappush(ready[op.engine], (0, -priority[i], _jitter_key(), i))
 
-    engine_order = ("valu", "alu", "flow", "load", "store", "debug")
+    engine_order_base = ("valu", "alu", "flow", "load", "store", "debug")
+    engine_index = {eng: idx for idx, eng in enumerate(engine_order_base)}
     instrs: list[dict[str, list[tuple[Any, ...]]]] = []
 
     cycle = 0
@@ -154,11 +176,32 @@ def schedule_ops_dep(
                 earliest[child] = max(earliest[child], scheduled[idx] + latency)
                 if indegree[child] == 0:
                     child_engine = ops[child].engine
-                    heapq.heappush(ready[child_engine], (earliest[child], -priority[child], child))
+                    heapq.heappush(
+                        ready[child_engine],
+                        (earliest[child], -priority[child], _jitter_key(), child),
+                    )
 
         made_progress = True
         while made_progress:
             made_progress = False
+            def engine_key(engine: str) -> tuple[int, int, int]:
+                cap = SLOT_LIMITS[engine]
+                if cap <= 0 or engine_counts.get(engine, 0) >= cap:
+                    return (0, -1, -engine_index[engine])
+                heap = ready.get(engine)
+                if not heap:
+                    return (0, -1, -engine_index[engine])
+                ready_cycle, neg_pri, _j, _ = heap[0]
+                if ready_cycle > cycle:
+                    return (0, -1, -engine_index[engine])
+                return (1, -neg_pri, -engine_index[engine])
+
+            engine_order = sorted(
+                engine_order_base,
+                key=engine_key,
+                reverse=True,
+            )
+
             for engine in engine_order:
                 cap = SLOT_LIMITS[engine]
                 if cap <= 0:
@@ -169,14 +212,14 @@ def schedule_ops_dep(
                 heap = ready.get(engine)
                 if not heap:
                     continue
-                skipped: list[tuple[int, int, int]] = []
+                skipped: list[tuple[int, int, float, int]] = []
                 while heap and count < cap:
-                    ready_cycle, neg_pri, idx = heapq.heappop(heap)
+                    ready_cycle, neg_pri, _j, idx = heapq.heappop(heap)
                     if ready_cycle > cycle:
-                        skipped.append((ready_cycle, neg_pri, idx))
+                        skipped.append((ready_cycle, neg_pri, _j, idx))
                         break
                     if any(w in writes_cycle for w in writes_list[idx]):
-                        skipped.append((ready_cycle, neg_pri, idx))
+                        skipped.append((ready_cycle, neg_pri, _j, idx))
                         continue
                     op = ops[idx]
                     if return_ops:
@@ -210,3 +253,26 @@ def schedule_ops_dep(
         cycle += 1
 
     return instrs
+
+
+def schedule_ops_dep(
+    ops: list[Op],
+    return_ops: bool = False,
+    *,
+    seed: int = 0,
+    jitter: float = 0.0,
+    restarts: int = 1,
+) -> list[dict[str, list[Any]]]:
+    restarts = max(1, int(restarts))
+    if restarts == 1 or jitter <= 0.0:
+        return _schedule_ops_dep_once(ops, return_ops=return_ops, seed=seed, jitter=jitter)
+
+    best_instrs: list[dict[str, list[Any]]] | None = None
+    best_cycles: int | None = None
+    for k in range(restarts):
+        instrs = _schedule_ops_dep_once(ops, return_ops=return_ops, seed=seed + k, jitter=jitter)
+        cycles = _count_cycles(instrs)
+        if best_cycles is None or cycles < best_cycles:
+            best_cycles = cycles
+            best_instrs = instrs
+    return best_instrs or []

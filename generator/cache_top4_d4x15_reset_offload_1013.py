@@ -10,6 +10,10 @@ SPEC_PROOF_1013 = with_offload_defaults(
     depth4_cached_rounds=(4,),
     use_bitmask_selection=False,
     idx_shifted=True,
+    # Align codegen counts with the Lean proof model.
+    proof_assume_shifted_input=True,
+    proof_reset_single_op=True,
+    proof_skip_const_zero=True,
 )
 
 

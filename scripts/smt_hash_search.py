@@ -98,7 +98,7 @@ def _known_program_fullhash(ops, consts, shifts, muladds, bits: int):
     return program
 
 
-def synth_fullhash(cfg: SearchConfig, timeout_ms: int = 10000, fixed_program=None):
+def synth_fullhash(cfg: SearchConfig, timeout_ms: int = 10000, fixed_program=None, dump_model: bool = False):
     bits = cfg.bits
     mask = (1 << bits) - 1
     consts, shifts, muladds = build_consts(bits)
@@ -208,6 +208,24 @@ def synth_fullhash(cfg: SearchConfig, timeout_ms: int = 10000, fixed_program=Non
         solver.add(vals[-1] == z3.BitVecVal(_hash(x_val, bits), bits))
 
     res = solver.check()
+    if res == z3.sat and dump_model:
+        model = solver.model()
+        op_vals = [model.eval(v).as_long() for v in op]
+        a_vals = [model.eval(v).as_long() for v in a]
+        b_vals = [model.eval(v).as_long() for v in b]
+        c_vals = [model.eval(v).as_long() for v in c]
+        d_vals = [model.eval(v).as_long() for v in d]
+        inv_ops = {v: k for k, v in op_codes.items()}
+        program = []
+        for i in range(cfg.length):
+            name = inv_ops[op_vals[i]]
+            program.append((name, a_vals[i], b_vals[i], c_vals[i], d_vals[i]))
+        print("model program:")
+        for i, instr in enumerate(program):
+            print(f"  {i:02d}: {instr}")
+        print("consts:", consts)
+        print("shifts:", shifts)
+        print("muladds:", muladds)
     return res
 
 
@@ -218,6 +236,7 @@ def main() -> None:
     parser.add_argument("--allow-extra-ops", action="store_true")
     parser.add_argument("--timeout-ms", type=int, default=10000)
     parser.add_argument("--fix-known", action="store_true", help="Constrain to known 12-op hash program.")
+    parser.add_argument("--dump-model", action="store_true", help="Print a model program when SAT.")
     args = parser.parse_args()
 
     cfg = SearchConfig(bits=args.bits, length=args.length, allow_extra_ops=args.allow_extra_ops)
@@ -228,7 +247,7 @@ def main() -> None:
         if not cfg.allow_extra_ops:
             ops = ["+", "^", "*"]
         fixed = _known_program_fullhash(ops, consts, shifts, muladds, cfg.bits)
-    res = synth_fullhash(cfg, timeout_ms=args.timeout_ms, fixed_program=fixed)
+    res = synth_fullhash(cfg, timeout_ms=args.timeout_ms, fixed_program=fixed, dump_model=args.dump_model)
     print(f"smt fullhash bits={cfg.bits} length={cfg.length} extra_ops={cfg.allow_extra_ops} res={res}")
 
 

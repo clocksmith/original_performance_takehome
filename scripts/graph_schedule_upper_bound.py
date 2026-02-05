@@ -13,6 +13,7 @@ from collections import defaultdict, deque
 import argparse
 import heapq
 import math
+import random
 from typing import Iterable
 
 import os
@@ -197,40 +198,73 @@ def longest_path_lengths(succ: list[list[int]], indeg: list[int]) -> tuple[list[
 
 
 def schedule(tasks: list[Task], succ: list[list[int]], indeg: list[int],
-             earliest: list[int], height: list[int], mode: str) -> int:
+             earliest: list[int], height: list[int], mode: str, *, seed: int, jitter: float) -> int:
     n = len(tasks)
     indeg_work = indeg[:]
     # slack based on critical path estimate
     cp = max(earliest[u] + height[u] - 1 for u in range(n)) if n else 0
     slack = [cp - (earliest[u] + height[u] - 1) for u in range(n)]
     outdeg = [len(succ[u]) for u in range(n)]
+    rnd = random.Random(seed)
 
     def prio_tuple(tid: int):
+        jitter_val = rnd.random() * jitter
         if mode == "height":
-            return (-height[tid], tid)
+            return (-height[tid], jitter_val, tid)
         if mode == "slack":
-            return (slack[tid], -height[tid], tid)
+            return (slack[tid], -height[tid], jitter_val, tid)
         if mode == "mix":
-            return (slack[tid], -height[tid], -outdeg[tid], tid)
+            return (slack[tid], -height[tid], -outdeg[tid], jitter_val, tid)
+        if mode == "global":
+            return (slack[tid], -height[tid], -outdeg[tid], jitter_val, tid)
         raise ValueError(f"unknown mode {mode}")
 
     ready = {e: [] for e in ENGINES}
+    ready_all: set[int] = set()
     for tid, d in enumerate(indeg_work):
         if d == 0:
-            heapq.heappush(ready[tasks[tid].engine], (prio_tuple(tid), tid))
+            if mode == "global":
+                ready_all.add(tid)
+            else:
+                heapq.heappush(ready[tasks[tid].engine], (prio_tuple(tid), tid))
 
     t = 0
     scheduled = 0
     while scheduled < n:
         cycle_tasks = []
-        for eng in ENGINES:
-            cap = CAPS[eng]
-            q = ready[eng]
-            for _ in range(cap):
-                if not q:
-                    break
-                _, tid = heapq.heappop(q)
+        if mode == "global":
+            writes_cycle: set[int] = set()
+            engine_counts = {e: 0 for e in ENGINES}
+            ready_now = [tid for tid in ready_all if earliest[tid] <= t]
+            ready_now.sort(key=prio_tuple)
+            for tid in ready_now:
+                eng = tasks[tid].engine
+                if engine_counts[eng] >= CAPS[eng]:
+                    continue
+                if any(w in writes_cycle for w in tasks[tid].writes):
+                    continue
                 cycle_tasks.append(tid)
+                engine_counts[eng] += 1
+                for w in tasks[tid].writes:
+                    writes_cycle.add(w)
+            if not cycle_tasks:
+                # advance to next earliest ready task
+                next_t = None
+                for tid in ready_all:
+                    rt = earliest[tid]
+                    if next_t is None or rt < next_t:
+                        next_t = rt
+                t = t + 1 if next_t is None else max(t + 1, next_t)
+                continue
+        else:
+            for eng in ENGINES:
+                cap = CAPS[eng]
+                q = ready[eng]
+                for _ in range(cap):
+                    if not q:
+                        break
+                    _, tid = heapq.heappop(q)
+                    cycle_tasks.append(tid)
 
         if not cycle_tasks:
             raise RuntimeError("Deadlock: no ready tasks but schedule incomplete")
@@ -241,8 +275,14 @@ def schedule(tasks: list[Task], succ: list[list[int]], indeg: list[int],
             for v in succ[tid]:
                 indeg_work[v] -= 1
                 if indeg_work[v] == 0:
-                    heapq.heappush(ready[tasks[v].engine], (prio_tuple(v), v))
+                    if mode == "global":
+                        ready_all.add(v)
+                    else:
+                        heapq.heappush(ready[tasks[v].engine], (prio_tuple(v), v))
 
+        if mode == "global":
+            for tid in cycle_tasks:
+                ready_all.discard(tid)
         t += 1
 
     return t
@@ -278,7 +318,10 @@ def main():
     ap.add_argument("--kernel-builder-path", type=str, default="",
                     help="Path to a Python file that defines KernelBuilder (same as tests override)")
     ap.add_argument("--conservative-mem", action="store_true", help="keep all mem ops in program order")
-    ap.add_argument("--mode", choices=["height", "slack", "mix", "all"], default="all")
+    ap.add_argument("--mode", choices=["height", "slack", "mix", "global", "all"], default="all")
+    ap.add_argument("--restarts", type=int, default=1, help="randomized restarts per mode")
+    ap.add_argument("--seed", type=int, default=0, help="base RNG seed")
+    ap.add_argument("--jitter", type=float, default=0.0, help="priority jitter for tie-breaking")
     args = ap.parse_args()
 
     if args.kernel_builder_path:
@@ -323,9 +366,22 @@ def main():
     modes = [args.mode] if args.mode != "all" else ["slack", "mix", "height"]
     best = None
     for mode in modes:
-        sched_cycles = schedule(tasks, succ, indeg, earliest, height, mode)
-        print(f"scheduled_cycles_{mode}: {sched_cycles}")
-        best = sched_cycles if best is None else min(best, sched_cycles)
+        best_mode = None
+        for k in range(max(1, args.restarts)):
+            sched_cycles = schedule(
+                tasks,
+                succ,
+                indeg,
+                earliest,
+                height,
+                mode,
+                seed=args.seed + k,
+                jitter=args.jitter,
+            )
+            if best_mode is None or sched_cycles < best_mode:
+                best_mode = sched_cycles
+        print(f"scheduled_cycles_{mode}: {best_mode}")
+        best = best_mode if best is None else min(best, best_mode)
     if args.mode == "all":
         print(f"best_scheduled_cycles: {best}")
 

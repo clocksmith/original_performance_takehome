@@ -145,7 +145,7 @@ def _load_prompt(prompt_arg: str | None, prompt_file: str | None) -> str:
         if not path.exists():
             raise FileNotFoundError(f"Prompt file not found: {path}")
         return path.read_text(encoding="utf-8")
-    default_path = Path(__file__).resolve().parent / "agent_prompt.txt"
+    default_path = Path(__file__).resolve().parent.parent / "prompts" / "agent_prompt.txt"
     if default_path.exists():
         return default_path.read_text(encoding="utf-8")
     raise ValueError("Provide --prompt or --prompt-file (no default prompt found).")

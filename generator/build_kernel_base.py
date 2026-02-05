@@ -21,7 +21,11 @@ def _build_setup_prelude(spec: SpecBase, layout) -> list[dict[str, list[tuple]]]
 
     # --- Setup phase (dependency-safe, packed per engine) ---
     # Load scalar constants.
-    const_loads = [("const", addr, val) for val, addr in sorted(layout.const_s.items())]
+    const_loads = []
+    for val, addr in sorted(layout.const_s.items()):
+        if val == 0 and getattr(spec, "proof_skip_const_zero", False):
+            continue
+        const_loads.append(("const", addr, val))
     _pack("load", const_loads)
 
     # Load base pointers from mem[4], mem[5], mem[6].
@@ -94,7 +98,7 @@ def _build_setup_prelude(spec: SpecBase, layout) -> list[dict[str, list[tuple]]]
         vloads.append(("vload", layout.idx[v], layout.idx_ptr[v]))
         vloads.append(("vload", layout.val[v], layout.val_ptr[v]))
     _pack("load", vloads)
-    if getattr(spec, "idx_shifted", False):
+    if getattr(spec, "idx_shifted", False) and not getattr(spec, "proof_assume_shifted_input", False):
         shift_ops = [("+", layout.idx[v], layout.idx[v], layout.const_v[1]) for v in range(spec.vectors)]
         _pack("valu", shift_ops)
 
@@ -145,7 +149,15 @@ def build_base_instrs(spec: SpecBase | None = None):
         for _ in range(pad_count):
             final_ops.insert(0, Op(engine="valu", slot=("^", pad_dest, pad_dest, pad_dest)))
 
-    instrs = schedule_ops_dep(final_ops)
+    sched_seed = getattr(spec, "sched_seed", 0)
+    sched_jitter = getattr(spec, "sched_jitter", 0.0)
+    sched_restarts = getattr(spec, "sched_restarts", 1)
+    instrs = schedule_ops_dep(
+        final_ops,
+        seed=sched_seed,
+        jitter=sched_jitter,
+        restarts=sched_restarts,
+    )
     if setup_style == "packed":
         return setup_instrs + instrs
     return instrs

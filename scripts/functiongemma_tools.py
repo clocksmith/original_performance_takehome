@@ -1015,7 +1015,7 @@ def create_variant(
         proof_map_updated = True
 
     if register:
-        _VARIANTS[name] = str(wrapper_path)
+        _VARIANTS[name] = wrapper_path
 
     return {
         "ok": True,

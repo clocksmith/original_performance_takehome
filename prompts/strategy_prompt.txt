@@ -5,14 +5,23 @@ Objectives
 2) Extend sweep_caps.py formulas when a new strategy shape appears.
 3) Maintain a clean mapping: proof name → spec override → generator build wrapper → kernel wrapper.
 
+Autonomy
+- Proceed without asking for permission or offering multiple options.
+- Choose a single best path and execute it; document assumptions.
+- Avoid “if you want” or “pick between…” language.
+- Think creatively and radically; prefer bold, cross-family hybrids and non-obvious combinations.
+ - Never ask the user to choose; decide and act.
+
 Ground Rules
 - Keep proof ↔ generator ↔ kernel names 1:1 and consistent with existing naming style.
 - Every new strategy must have a proof directory, a generator wrapper, and a kernel wrapper.
 - Any scheduling or spec edits must preserve correctness gates and be justified by updated proofs.
 - Prefer explicit, auditable counts (flow/load/valu/alu/store) in proofs.
-- Do not modify `tests/`, `perf_takehome.py`, `problem.py`, or `frozen_problem.py`.
+- Do not modify `problem.py`, `frozen_problem.py`, or `tests/submission_tests.py`.
 - Use `create_variant` for new variants; do not hand-write wrappers unless explicitly requested.
 - Proof mapping must point at the proof’s own generator module + SPEC_PROOF_* object (no base spec modules for proof-named variants).
+- Cycle count equals the number of non-debug instruction bundles in the program.
+- Correctness only requires final output values after the last round; indices and intermediate values are irrelevant.
 
 Loop (repeat for each strategy)
 
@@ -30,6 +39,7 @@ Step 0.5: Observe + hypothesize before proofing
 - Aim for the lowest cycle count, not just local fixes—consider new strategy families even if they diverge from prior proofs.
 - **Radical** changes are encouraged. You may change the op graph itself (e.g., flow-free selection, alternative index math, static schedules, or precomputed transforms) as long as semantics remain correct and ISA constraints are respected.
 - Sanity-check the hypothesis with sweep_caps counts before writing a proof.
+ - When stuck, deliberately pivot to a different strategy family or hybridize two families.
 
 Radical feasibility via Pareto DP (scripts/pareto_dp.py)
 - Use the Pareto DP as a feasibility gate for *new* op-graph families, not just existing configs.
@@ -40,7 +50,7 @@ Radical feasibility via Pareto DP (scripts/pareto_dp.py)
 
 Radical change menu (beyond op-graph tweaks)
 - These are examples only — do not limit yourself to them. Radical thinking is encouraged; any idea is allowed.
-- Hard constraints: do NOT change the machine/ISA, tests, or any code in perf_takehome.py outside build_kernel.
+- Hard constraints: do NOT change problem.py, frozen_problem.py, or tests/submission_tests.py.
 
 Caps-Driven Strategy Checklist (1008/1012 targets)
 1) Think in rounds × vectors × engines.
@@ -160,6 +170,7 @@ Step 7: Correctness gates
 Step 8: Measure cycles
 - Use schedule_summary(spec=<strategy_name>) and submission_tests cycle output.
 - Compare to current best; if higher, revisit Step 0 or Step 1.
+ - Report bundle count (non-debug instruction list length) as the cycle count.
 
 Notes
 - sweep_caps.py is a feasibility filter only; it does not model scheduling hazards.

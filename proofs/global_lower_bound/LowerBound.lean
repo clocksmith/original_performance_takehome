@@ -51,9 +51,6 @@ lemma outputAddrs_card (mem : Memory) : (outputAddrs mem).card = BATCH_SIZE := b
   simpa [outputAddrs] using
     (Finset.card_image_of_injective (s:=Finset.univ) hinj)
 
-def WritesOutput (p : Program) (mem : Memory) : Prop :=
-  outputAddrs mem ⊆ (writeWords p mem).toFinset
-
 def AgreeOnList (xs : List Nat) (m1 m2 : Memory) : Prop :=
   m1.size = m2.size ∧
   ∀ a, a ∈ xs → memAt m1 a = memAt m2 a
@@ -506,62 +503,68 @@ noncomputable def writeWords (p : Program) (mem : Memory) : List Nat :=
 noncomputable def writePairs (p : Program) (mem : Memory) : List (Nat × Nat) :=
   listJoin (writeOps p mem)
 
+def WritesOutput (p : Program) (mem : Memory) : Prop :=
+  outputAddrs mem ⊆ (writeWords p mem).toFinset
+
 lemma runTraceAuxRW_fst_eq (prog : List Instruction) (mem : Memory) (core : Core) :
     (runTraceAuxRW prog mem core).1 = (runTraceAux prog mem core).1 := by
   induction prog generalizing mem core with
   | nil =>
       simp [runTraceAuxRW, runTraceAux]
   | cons instr rest ih =>
-      simp [runTraceAuxRW, runTraceAux, ih]
+      by_cases hok : (execInstructionTrace mem core instr).1.ok
+      · simp [runTraceAuxRW, runTraceAux, hok, ih]
+      · simp [runTraceAuxRW, runTraceAux, hok]
 
 lemma execInstructionTrace_mem_eq_of_not_written (mem : Memory) (core : Core) (instr : Instruction)
     (addr : Nat)
-    (hnot : addr ∉ listJoin (instr.store.map (storeWrites core.scratch))) :
+    (hnot : addr ∉ listJoin (instr.store.map (storeWriteAddrs core.scratch))) :
     memAt (execInstructionTrace mem core instr).1.mem addr = memAt mem addr := by
-  -- unfold execInstructionTrace/execInstruction and split on the execution path
-  simp [execInstructionTrace, execInstruction] at *
-  -- If instrWellFormed fails or debug/load fails, mem is unchanged.
-  -- In the successful case, memWriteMany applies store writes; use memWriteMany_eq_of_not_written.
+  unfold execInstructionTrace
+  -- If instrWellFormed fails, mem is unchanged.
   by_cases hform : decide (instrWellFormed instr) = true
-  · simp [hform] at *
-    by_cases hdbg : (if false then instr.debug.all (fun slot => execDebugSlot core.scratch (fun _ => 0) slot) else true) = true
-    · simp [hdbg] at *
-      -- execValuSlots/execAluSlots might fail; if so, mem is unchanged.
-      cases hvalu : execValuSlots core.scratch instr.valu with
-      | none =>
-          simp [hvalu] at *
-      | some valu_writes =>
-          cases halu : execAluSlots core.scratch instr.alu with
-          | none =>
-              simp [halu] at *
-          | some alu_writes =>
-              -- loads
-              cases hload : instr.load.foldl
-                  (fun acc slot =>
-                    match acc, execLoadSlot core.scratch mem slot with
-                    | some ws, some ws' => some (ws ++ ws')
-                    | _, _ => none)
-                  (some []) with
-              | none =>
-                  simp [hload] at *
-              | some load_writes =>
-                  -- memWriteMany with store_writes
-                  cases hmw : memWriteMany mem (instr.store.flatMap (execStoreSlot core.scratch)) with
-                  | none =>
-                      simp [hmw] at *
-                  | some mem' =>
-                      have hnot' : addr ∉ (instr.store.flatMap (execStoreSlot core.scratch)).map Prod.fst := by
-                        -- listJoin of storeWrites is flatMap execStoreSlot
-                        simpa [storeWrites, listJoin] using hnot
-                      have hmem : memAt mem' addr = memAt mem addr :=
-                        memWriteMany_eq_of_not_written mem mem' _ addr hmw hnot'
-                      simp [hmw, hmem]
-    · simp [hdbg] at *
-  · simp [hform] at *
+  · -- execValuSlots/execAluSlots might fail; if so, mem is unchanged.
+    cases hvalu : execValuSlots core.scratch instr.valu with
+    | none =>
+        simp [execInstruction, hform, hvalu]
+    | some valu_writes =>
+        cases halu : execAluSlots core.scratch instr.alu with
+        | none =>
+            simp [execInstruction, hform, hvalu, halu]
+        | some alu_writes =>
+            cases hload : instr.load.foldl
+                (fun acc slot =>
+                  match acc, execLoadSlot core.scratch mem slot with
+                  | some ws, some ws' => some (ws ++ ws')
+                  | _, _ => none)
+                (some []) with
+            | none =>
+                simp [execInstruction, hform, hvalu, halu, hload]
+            | some load_writes =>
+                cases hmw : memWriteMany mem (instr.store.flatMap (execStoreSlot core.scratch)) with
+                | none =>
+                    simp [execInstruction, hform, hvalu, halu, hload, hmw]
+                | some mem' =>
+                    have hnot' : addr ∉ (instr.store.flatMap (execStoreSlot core.scratch)).map Prod.fst := by
+                      intro hmem
+                      apply hnot
+                      rcases List.mem_map.1 hmem with ⟨pair, hpairs, haddr⟩
+                      rcases List.mem_flatMap.1 hpairs with ⟨slot, hslot, hpairs'⟩
+                      have haddr' : addr ∈ storeWriteAddrs core.scratch slot := by
+                        apply List.mem_map.2
+                        refine ⟨pair, hpairs', ?_⟩
+                        simpa [haddr]
+                      apply List.mem_flatMap.2
+                      refine ⟨storeWriteAddrs core.scratch slot, ?_, haddr'⟩
+                      exact List.mem_map.2 ⟨slot, hslot, rfl⟩
+                    have hmem : memAt mem' addr = memAt mem addr :=
+                      memWriteMany_eq_of_not_written mem mem' _ addr hmw hnot'
+                    simp [execInstruction, hform, hvalu, halu, hload, hmw, hmem]
+  · simp [execInstruction, hform]
 
 lemma runTraceAuxRW_eq_of_not_written :
     ∀ prog mem core addr,
-      addr ∉ listJoin (runTraceAuxRW prog mem core).2.2 →
+      addr ∉ listJoin ((runTraceAuxRW prog mem core).2.2.map (fun ws => ws.map Prod.fst)) →
       memAt (runTraceAuxRW prog mem core).1 addr = memAt mem addr := by
   intro prog mem core addr hnot
   induction prog generalizing mem core with
@@ -572,17 +575,28 @@ lemma runTraceAuxRW_eq_of_not_written :
       -- split on execInstructionTrace ok flag
       by_cases hok : (execInstructionTrace mem core instr).1.ok
       · simp [hok] at hnot ⊢
-        have hnot_head : addr ∉ listJoin (instr.store.map (storeWrites core.scratch)) := by
+        have hnot' :
+            addr ∉
+              listJoin (instr.store.map (storeWriteAddrs core.scratch)) ++
+                listJoin
+                  ((runTraceAuxRW rest (execInstructionTrace mem core instr).1.mem
+                        (execInstructionTrace mem core instr).1.core).2.2.map
+                    (fun ws => ws.map Prod.fst)) := by
+          simpa [listJoin_append, List.map_append, storeWriteAddrs, storeWrites, listJoin] using hnot
+        have hnot_head : addr ∉ listJoin (instr.store.map (storeWriteAddrs core.scratch)) := by
           intro hmem
-          apply hnot
-          simp [hmem]
+          apply hnot'
+          exact List.mem_append.2 (Or.inl hmem)
         have hmem1 := execInstructionTrace_mem_eq_of_not_written mem core instr addr hnot_head
         -- use IH on rest
-        have hnot_tail : addr ∉ listJoin (runTraceAuxRW rest (execInstructionTrace mem core instr).1.mem
-            (execInstructionTrace mem core instr).1.core).2.2 := by
+        have hnot_tail :
+            addr ∉
+              listJoin
+                ((runTraceAuxRW rest (execInstructionTrace mem core instr).1.mem
+                      (execInstructionTrace mem core instr).1.core).2.2.map (fun ws => ws.map Prod.fst)) := by
           intro hmem
-          apply hnot
-          simp [hmem]
+          apply hnot'
+          exact List.mem_append.2 (Or.inr hmem)
         have hmem2 := ih (mem := (execInstructionTrace mem core instr).1.mem)
           (core := (execInstructionTrace mem core instr).1.core) hnot_tail
         -- combine
@@ -590,7 +604,7 @@ lemma runTraceAuxRW_eq_of_not_written :
       · -- aborted: mem is res.mem
         simp [hok] at hnot ⊢
         -- store writes not applied; mem equality from execInstructionTrace_mem_eq_of_not_written
-        have hnot_head : addr ∉ listJoin (instr.store.map (storeWrites core.scratch)) := by
+        have hnot_head : addr ∉ listJoin (instr.store.map (storeWriteAddrs core.scratch)) := by
           intro hmem
           apply hnot
           simp [hmem]
@@ -606,6 +620,28 @@ lemma runMem_eq_of_not_written (p : Program) (mem : Memory) (addr : Nat)
   have hfst := runTraceAuxRW_fst_eq p.program mem (initCore p)
   simp [runMem, runTrace, hfst] at htrace
   exact htrace
+
+noncomputable def run (p : Program) (mem : Memory) : Output :=
+  outputOf (memAt mem PTR_INP_VAL) (runMem p mem)
+
+noncomputable def runMachine (p : Program) (mem : Memory) : Output :=
+  outputOf (memAt mem PTR_INP_VAL) (runMemMachine p mem)
+
+noncomputable def runMachineFuel (p : Program) (fuel : Nat) (mem : Memory) : Output :=
+  outputOf (memAt mem PTR_INP_VAL) (runMemMachineFuel p fuel mem)
+
+def CorrectOn (spec : Memory → Output) (p : Program) (memOk : Memory → Prop) : Prop :=
+  ∀ mem, memOk mem → run p mem = spec mem
+
+def CorrectOnMachine (spec : Memory → Output) (p : Program) (memOk : Memory → Prop) : Prop :=
+  ∀ mem, memOk mem → runMachine p mem = spec mem
+
+def CorrectOnMachineFuel (spec : Memory → Output) (p : Program) (memOk : Memory → Prop)
+    (fuel : Nat) : Prop :=
+  ∀ mem, memOk mem → runMachineFuel p fuel mem = spec mem
+
+def Correct (spec : Memory → Output) (p : Program) : Prop :=
+  CorrectOn spec p (fun _ => True)
 
 lemma writes_output_of_correct (p : Program) (mem : Memory)
     (hcorrect : CorrectOn spec_kernel p MemSafeKernel)
@@ -636,28 +672,6 @@ noncomputable def readWordCount (p : Program) (mem : Memory) : Nat :=
 
 noncomputable def loadOpCount (p : Program) (mem : Memory) : Nat :=
   (readOps p mem).length
-
-noncomputable def run (p : Program) (mem : Memory) : Output :=
-  outputOf (memAt mem PTR_INP_VAL) (runMem p mem)
-
-noncomputable def runMachine (p : Program) (mem : Memory) : Output :=
-  outputOf (memAt mem PTR_INP_VAL) (runMemMachine p mem)
-
-noncomputable def runMachineFuel (p : Program) (fuel : Nat) (mem : Memory) : Output :=
-  outputOf (memAt mem PTR_INP_VAL) (runMemMachineFuel p fuel mem)
-
-def CorrectOn (spec : Memory → Output) (p : Program) (memOk : Memory → Prop) : Prop :=
-  ∀ mem, memOk mem → run p mem = spec mem
-
-def CorrectOnMachine (spec : Memory → Output) (p : Program) (memOk : Memory → Prop) : Prop :=
-  ∀ mem, memOk mem → runMachine p mem = spec mem
-
-def CorrectOnMachineFuel (spec : Memory → Output) (p : Program) (memOk : Memory → Prop)
-    (fuel : Nat) : Prop :=
-  ∀ mem, memOk mem → runMachineFuel p fuel mem = spec mem
-
-def Correct (spec : Memory → Output) (p : Program) : Prop :=
-  CorrectOn spec p (fun _ => True)
 
 def HEADER_SIZE : Nat := 7
 def FOREST_BASE : Nat := HEADER_SIZE
