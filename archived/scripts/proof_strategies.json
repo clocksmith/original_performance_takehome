@@ -1,0 +1,82 @@
+{
+  "strategies": [
+    {
+      "name": "cache_top4_d4x15_reset_offload_1013",
+      "T": 1174,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [
+        4
+      ],
+      "depth5_rounds": [],
+      "x4": 15,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": true,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": false,
+      "cached_nodes": null
+    },
+    {
+      "name": "loadbound_preload15_uncached_1316",
+      "T": 1316,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        11,
+        12,
+        13
+      ],
+      "depth4_rounds": [],
+      "depth5_rounds": [],
+      "x4": 0,
+      "x5": 0,
+      "selection_mode": "eq",
+      "idx_shifted": true,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "alu",
+      "include_setup": false,
+      "cached_nodes": 7
+    },
+    {
+      "name": "cache_top4_bitmask_idxshift_off1117_1088",
+      "T": 1088,
+      "base_cached_rounds": [
+        0,
+        1,
+        2,
+        3,
+        11,
+        12,
+        13,
+        14
+      ],
+      "depth4_rounds": [],
+      "depth5_rounds": [],
+      "x4": 0,
+      "x5": 0,
+      "selection_mode": "bitmask",
+      "idx_shifted": true,
+      "shift_on_alu": false,
+      "parity_on_alu": false,
+      "reset_on_flow": false,
+      "ptr_setup_engine": "flow",
+      "include_setup": true,
+      "cached_nodes": null
+    }
+  ]
+}

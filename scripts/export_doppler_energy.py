@@ -10,6 +10,16 @@ from importlib import util
 from pathlib import Path
 from typing import Any
 
+def dependency_model_for_spec(spec) -> dict[str, Any]:
+    return {
+        "includes_raw": True,
+        "includes_waw": True,
+        "includes_war": True,
+        "temp_hazard_tags": bool(getattr(spec, "use_temp_deps", True)),
+        "read_after_read": False,
+        "latency": {"raw": 1, "waw": 1, "war": 0, "temp": 1, "default": 1},
+    }
+
 
 def _load_spec_from_json(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as f:
@@ -112,10 +122,16 @@ def _build_deps(ops):
     return reads_list, writes_list, deps
 
 
-def _build_baseline_bundles(ops):
+def _build_baseline_bundles(ops, *, seed: int = 0, jitter: float = 0.0, restarts: int = 1):
     from generator.schedule_dep import schedule_ops_dep
 
-    instrs = schedule_ops_dep(ops, return_ops=True)
+    instrs = schedule_ops_dep(
+        ops,
+        return_ops=True,
+        seed=seed,
+        jitter=jitter,
+        restarts=restarts,
+    )
     bundle_map: dict[int, int] = {}
     for cycle, bundle in enumerate(instrs):
         for op_list in bundle.values():
@@ -173,7 +189,15 @@ def main() -> int:
 
     ops = build_final_ops(spec)
     reads_list, writes_list, deps = _build_deps(ops)
-    instrs, bundle_map = _build_baseline_bundles(ops)
+    sched_seed = int(getattr(spec, "sched_seed", 0))
+    sched_jitter = float(getattr(spec, "sched_jitter", 0.0))
+    sched_restarts = int(getattr(spec, "sched_restarts", 1))
+    instrs, bundle_map = _build_baseline_bundles(
+        ops,
+        seed=sched_seed,
+        jitter=sched_jitter,
+        restarts=sched_restarts,
+    )
     op_index_map = {id(op): idx for idx, op in enumerate(ops)}
 
     tasks = []
@@ -181,23 +205,48 @@ def main() -> int:
         bundle = bundle_map.get(id(op))
         if bundle is None:
             raise RuntimeError(f"Op {i} not scheduled in baseline bundles")
+        reads_sorted = sorted(reads_list[i])
+        writes_sorted = sorted(writes_list[i])
+        deps_sorted = sorted(deps[i])
         tasks.append(
             {
                 "id": i,
                 "engine": op.engine,
-                "reads": reads_list[i],
-                "writes": writes_list[i],
-                "deps": deps[i],
+                "reads": reads_sorted,
+                "writes": writes_sorted,
+                "deps": deps_sorted,
                 "bundle": bundle,
             }
         )
 
     caps = {k: v for k, v in SLOT_LIMITS.items() if k != "debug"}
     bundle_count = len(instrs)
+    baseline_cycles = sum(
+        1
+        for bundle in instrs
+        if any(engine != "debug" and slots for engine, slots in bundle.items())
+    )
+    tasks_for_hash = [
+        {
+            "engine": task["engine"],
+            "reads": task["reads"],
+            "writes": task["writes"],
+            "deps": task["deps"],
+        }
+        for task in tasks
+    ]
+    caps_sorted = {k: caps[k] for k in sorted(caps)}
+    dependency_model = dependency_model_for_spec(spec)
+    hash_payload = {
+        "caps": caps_sorted,
+        "tasks": tasks_for_hash,
+        "dependencyModel": dependency_model,
+        "bundleCount": bundle_count,
+    }
     task_hash = hashlib.sha256(
-        json.dumps(tasks, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        json.dumps(hash_payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
     ).hexdigest()
-    engine_order = ("valu", "alu", "flow", "load", "store", "debug")
+    engine_order = tuple(SLOT_LIMITS.keys())
     baseline_schedule = []
     for bundle in instrs:
         cycle_tasks = []
@@ -207,15 +256,6 @@ def main() -> int:
                 if idx is not None:
                     cycle_tasks.append(idx)
         baseline_schedule.append(cycle_tasks)
-
-    dependency_model = {
-        "includes_raw": True,
-        "includes_waw": True,
-        "includes_war": True,
-        "temp_hazard_tags": True,
-        "read_after_read": False,
-        "latency": {"default": 1},
-    }
 
     payload = {
         "version": 2,
@@ -230,7 +270,7 @@ def main() -> int:
         "dependencyModel": dependency_model,
         "bundleCount": bundle_count,
         "taskCount": len(tasks),
-        "baselineCycles": bundle_count,
+        "baselineCycles": baseline_cycles,
         "caps": caps,
         "tasks": tasks,
         "baselineSchedule": baseline_schedule,

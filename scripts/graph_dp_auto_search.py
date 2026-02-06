@@ -32,6 +32,28 @@ import scripts.pareto_dp as pareto
 
 CAPS = {k: v for k, v in SLOT_LIMITS.items() if k != "debug"}
 CAPS_KEY = tuple(sorted(CAPS.items()))
+_DEFAULT_DEP_MODEL = {
+    "includes_raw": True,
+    "includes_waw": True,
+    "includes_war": True,
+    "temp_hazard_tags": True,
+    "latency": {"raw": 1, "waw": 1, "war": 0, "temp": 1, "default": 1},
+}
+
+
+def _normalize_dep_model(dep_model: dict[str, Any] | None) -> dict[str, Any]:
+    if dep_model is None:
+        return _DEFAULT_DEP_MODEL
+    merged = dict(_DEFAULT_DEP_MODEL)
+    merged.update({k: v for k, v in dep_model.items() if k != "latency"})
+    latency = dict(_DEFAULT_DEP_MODEL["latency"])
+    latency.update(dep_model.get("latency", {}) if isinstance(dep_model, dict) else {})
+    merged["latency"] = latency
+    return merged
+
+
+def _caps_or_default(caps: dict[str, int] | None) -> dict[str, int]:
+    return CAPS if caps is None else caps
 
 
 def _cache_path(cache_dir: Path, name: str) -> Path:
@@ -349,7 +371,19 @@ def _reads_writes(op: Op) -> tuple[list[int], list[int]]:
     raise NotImplementedError(f"Unknown engine {engine}")
 
 
-def _build_dep_graph(ops: list[Op]):
+def _build_dep_graph(ops: list[Op], *, dep_model: dict[str, Any] | None = None):
+    dep_model = _normalize_dep_model(dep_model)
+    include_raw = bool(dep_model.get("includes_raw", True))
+    include_waw = bool(dep_model.get("includes_waw", True))
+    include_war = bool(dep_model.get("includes_war", True))
+    include_temp = bool(dep_model.get("temp_hazard_tags", True))
+    latency = dep_model.get("latency", {}) or {}
+    default_latency = latency.get("default", 1)
+    lat_raw = latency.get("raw", default_latency)
+    lat_waw = latency.get("waw", default_latency)
+    lat_war = latency.get("war", default_latency)
+    lat_temp = latency.get("temp", default_latency)
+
     n_ops = len(ops)
     reads_list: list[list[int]] = []
     writes_list: list[list[int]] = []
@@ -367,13 +401,13 @@ def _build_dep_graph(ops: list[Op]):
         reads = reads_list[i]
         writes = writes_list[i]
         for addr in reads:
-            if addr in last_write:
-                deps[i].append((last_write[addr], 1))
+            if include_raw and addr in last_write:
+                deps[i].append((last_write[addr], lat_raw))
         for addr in writes:
-            if addr in last_write:
-                deps[i].append((last_write[addr], 1))
-            if addr in last_read:
-                deps[i].append((last_read[addr], 0))
+            if include_waw and addr in last_write:
+                deps[i].append((last_write[addr], lat_waw))
+            if include_war and addr in last_read:
+                deps[i].append((last_read[addr], lat_war))
         temps: list[str] = []
         if ops[i].meta is not None:
             temp_meta = ops[i].meta.get("temp")
@@ -382,9 +416,10 @@ def _build_dep_graph(ops: list[Op]):
                     temps = [temp_meta]
                 else:
                     temps = list(temp_meta)
-        for key in temps:
-            if key in last_temp:
-                deps[i].append((last_temp[key], 1))
+        if include_temp:
+            for key in temps:
+                if key in last_temp:
+                    deps[i].append((last_temp[key], lat_temp))
 
         for addr in reads:
             last_read[addr] = i
@@ -410,12 +445,20 @@ def _build_dep_graph(ops: list[Op]):
     return children, indegree, priority, writes_list
 
 
-def _schedule_ops_custom(ops: list[Op], *, seed: int, jitter: float) -> int:
+def _schedule_ops_custom(
+    ops: list[Op],
+    *,
+    seed: int,
+    jitter: float,
+    dep_model: dict[str, Any] | None = None,
+    caps: dict[str, int] | None = None,
+) -> int:
     import random
 
     rnd = random.Random(seed)
     n_ops = len(ops)
-    children, indegree, priority, writes_list = _build_dep_graph(ops)
+    caps = _caps_or_default(caps)
+    children, indegree, priority, writes_list = _build_dep_graph(ops, dep_model=dep_model)
 
     earliest = [0] * n_ops
     scheduled = [-1] * n_ops
@@ -436,7 +479,7 @@ def _schedule_ops_custom(ops: list[Op], *, seed: int, jitter: float) -> int:
             continue
 
         writes_cycle: set[int] = set()
-        engine_counts = {e: 0 for e in CAPS}
+        engine_counts = {e: 0 for e in caps}
 
         def key(i: int):
             # prioritize critical path; break ties with jitter
@@ -455,7 +498,7 @@ def _schedule_ops_custom(ops: list[Op], *, seed: int, jitter: float) -> int:
                 eng = ops[i].engine
                 if eng == "debug":
                     continue
-                if engine_counts[eng] >= CAPS[eng]:
+                if engine_counts[eng] >= caps[eng]:
                     continue
                 if any(w in writes_cycle for w in writes_list[i]):
                     continue
@@ -491,16 +534,43 @@ def _schedule_ops_custom(ops: list[Op], *, seed: int, jitter: float) -> int:
     return cycle
 
 
-def schedule_with_restarts(ops: list[Op], *, restarts: int, seed: int, jitter: float) -> int:
+def schedule_with_restarts(
+    ops: list[Op],
+    *,
+    restarts: int,
+    seed: int,
+    jitter: float,
+    dep_model: dict[str, Any] | None = None,
+    caps: dict[str, int] | None = None,
+) -> int:
     best = None
+    caps = _caps_or_default(caps)
     for k in range(restarts):
-        c = _schedule_ops_custom(ops, seed=seed + k, jitter=jitter)
+        c = _schedule_ops_custom(
+            ops,
+            seed=seed + k,
+            jitter=jitter,
+            dep_model=dep_model,
+            caps=caps,
+        )
         if best is None or c < best:
             best = c
     return best if best is not None else 0
 
 
-def _build_dep_graph_full(ops: list[Op]):
+def _build_dep_graph_full(ops: list[Op], *, dep_model: dict[str, Any] | None = None):
+    dep_model = _normalize_dep_model(dep_model)
+    include_raw = bool(dep_model.get("includes_raw", True))
+    include_waw = bool(dep_model.get("includes_waw", True))
+    include_war = bool(dep_model.get("includes_war", True))
+    include_temp = bool(dep_model.get("temp_hazard_tags", True))
+    latency = dep_model.get("latency", {}) or {}
+    default_latency = latency.get("default", 1)
+    lat_raw = latency.get("raw", default_latency)
+    lat_waw = latency.get("waw", default_latency)
+    lat_war = latency.get("war", default_latency)
+    lat_temp = latency.get("temp", default_latency)
+
     n_ops = len(ops)
     reads_list: list[list[int]] = []
     writes_list: list[list[int]] = []
@@ -518,13 +588,13 @@ def _build_dep_graph_full(ops: list[Op]):
         reads = reads_list[i]
         writes = writes_list[i]
         for addr in reads:
-            if addr in last_write:
-                deps[i].append((last_write[addr], 1))
+            if include_raw and addr in last_write:
+                deps[i].append((last_write[addr], lat_raw))
         for addr in writes:
-            if addr in last_write:
-                deps[i].append((last_write[addr], 1))
-            if addr in last_read:
-                deps[i].append((last_read[addr], 0))
+            if include_waw and addr in last_write:
+                deps[i].append((last_write[addr], lat_waw))
+            if include_war and addr in last_read:
+                deps[i].append((last_read[addr], lat_war))
         temps: list[str] = []
         if ops[i].meta is not None:
             temp_meta = ops[i].meta.get("temp")
@@ -533,9 +603,10 @@ def _build_dep_graph_full(ops: list[Op]):
                     temps = [temp_meta]
                 else:
                     temps = list(temp_meta)
-        for key in temps:
-            if key in last_temp:
-                deps[i].append((last_temp[key], 1))
+        if include_temp:
+            for key in temps:
+                if key in last_temp:
+                    deps[i].append((last_temp[key], lat_temp))
 
         for addr in reads:
             last_read[addr] = i
@@ -583,12 +654,17 @@ def _schedule_ops_graph(
     seed: int,
     jitter: float,
     policy: str,
+    dep_model: dict[str, Any] | None = None,
+    caps: dict[str, int] | None = None,
 ) -> int:
     import random
 
     rnd = random.Random(seed)
+    caps = _caps_or_default(caps)
     n_ops = len(ops)
-    children, indegree, writes_list, earliest_static, height = _build_dep_graph_full(ops)
+    children, indegree, writes_list, earliest_static, height = _build_dep_graph_full(
+        ops, dep_model=dep_model
+    )
     if n_ops == 0:
         return 0
 
@@ -615,12 +691,12 @@ def _schedule_ops_graph(
 
     while remaining > 0:
         writes_cycle: set[int] = set()
-        engine_counts = {e: 0 for e in CAPS}
+        engine_counts = {e: 0 for e in caps}
         scheduled_now: list[int] = []
 
         # Schedule per engine.
-        for engine in CAPS:
-            cap = CAPS[engine]
+        for engine in caps:
+            cap = caps[engine]
             if cap <= 0:
                 continue
             candidates = [
@@ -669,11 +745,26 @@ def _schedule_ops_graph(
 
 
 def schedule_graph_with_restarts(
-    ops: list[Op], *, restarts: int, seed: int, jitter: float, policy: str
+    ops: list[Op],
+    *,
+    restarts: int,
+    seed: int,
+    jitter: float,
+    policy: str,
+    dep_model: dict[str, Any] | None = None,
+    caps: dict[str, int] | None = None,
 ) -> int:
     best = None
+    caps = _caps_or_default(caps)
     for k in range(restarts):
-        c = _schedule_ops_graph(ops, seed=seed + k, jitter=jitter, policy=policy)
+        c = _schedule_ops_graph(
+            ops,
+            seed=seed + k,
+            jitter=jitter,
+            policy=policy,
+            dep_model=dep_model,
+            caps=caps,
+        )
         if best is None or c < best:
             best = c
     return best if best is not None else 0

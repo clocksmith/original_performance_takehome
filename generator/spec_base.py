@@ -72,6 +72,7 @@ class SpecBase:
     sched_seed: int = 0
     sched_jitter: float = 0.0
     sched_restarts: int = 1
+    use_temp_deps: bool = True
 
 
 SPEC_BASE = SpecBase()

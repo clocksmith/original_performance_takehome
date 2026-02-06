@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "mappings": [
+    {
+      "proof_name": "cache_top4_d4x15_reset_offload_1013",
+      "spec": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1013",
+        "object": "SPEC_PROOF_1013"
+      },
+      "generator": {
+        "module": "generator.cache_top4_d4x15_reset_offload_1013",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "wrappers/_autogen_cache/cache_top4_d4x15_reset_offload_1013.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "loadbound_preload15_uncached_1316",
+      "spec": {
+        "module": "generator.loadbound_preload15_uncached_1316",
+        "object": "SPEC_LOADBOUND_1316"
+      },
+      "generator": {
+        "module": "generator.loadbound_preload15_uncached_1316",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "loadbound_preload15_uncached_1316.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "cache_top4_bitmask_idxshift_off1117_1088",
+      "spec": {
+        "module": "generator.cache_top4_bitmask_idxshift_off1117_1088",
+        "object": "SPEC_CACHE_TOP4_BITMASK_IDXSHIFT_OFF1117_1088"
+      },
+      "generator": {
+        "module": "generator.cache_top4_bitmask_idxshift_off1117_1088",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "wrappers/_autogen_cache/cache_top4_bitmask_idxshift_off1117_1088.py",
+        "class": "KernelBuilder"
+      }
+    },
+    {
+      "proof_name": "ub_energy_bundle_1385",
+      "spec": {
+        "module": "generator.ub_energy_bundle_1385",
+        "object": "SPEC_UB_ENERGY_BUNDLE_1385"
+      },
+      "generator": {
+        "module": "generator.ub_energy_bundle_1385",
+        "function": "build_instrs"
+      },
+      "kernel_wrapper": {
+        "path": "ub_energy_bundle_1385.py",
+        "class": "KernelBuilder"
+      }
+    }
+  ]
+}

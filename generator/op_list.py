@@ -9,6 +9,7 @@ from .ops import Op, OpLists
 _ORDERED_OPS: list[Op] | None = None
 _SEQ = 0
 _USE_VALU_SELECT = False
+_USE_TEMP_DEPS = True
 _VALU_OPS_REF: list[Op] | None = None
 
 
@@ -24,6 +25,8 @@ def _record(op: Op) -> None:
 
 
 def _tag_temp(meta: dict | None, key: str) -> dict:
+    if not _USE_TEMP_DEPS:
+        return meta if meta is not None else {}
     new_meta = {} if meta is None else dict(meta)
     temps = new_meta.get("temp")
     if temps is None:
@@ -196,10 +199,11 @@ def _add_vstore(ops: list[Op], addr: int, src: int, meta=None):
 
 
 def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
-    global _ORDERED_OPS, _SEQ, _USE_VALU_SELECT, _VALU_OPS_REF
+    global _ORDERED_OPS, _SEQ, _USE_VALU_SELECT, _USE_TEMP_DEPS, _VALU_OPS_REF
     _ORDERED_OPS = ordered_ops
     _SEQ = 0
     _USE_VALU_SELECT = bool(getattr(spec, "valu_select", False))
+    _USE_TEMP_DEPS = bool(getattr(spec, "use_temp_deps", True))
     valu_ops: list[Op] = []
     _VALU_OPS_REF = valu_ops
     alu_ops: list[Op] = []
