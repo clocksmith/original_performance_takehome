@@ -1,0 +1,87 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["0e9c15266928c9d2.olean"],
+  "i": "cb5faa5ca25ee2c0.ilean",
+  "c": "3cb97283c75980dd.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/xyz/deco/original_performance_takehome/.lake/packages/Cli/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/batteries/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/Qq/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/aesop/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/importGraph/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/plausible/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/mathlib/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean /Users/xyz/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/xyz/deco/original_performance_takehome/proofs/global_lower_bound/LowerBound/Adversary.lean -o /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/global_lower_bound/LowerBound/Adversary.olean -i /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/global_lower_bound/LowerBound/Adversary.ilean -c /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/global_lower_bound/LowerBound/Adversary.c --setup /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/global_lower_bound/LowerBound/Adversary.setup.json --json",
+   "level": "trace"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:59:44: This simp argument is unused:\n  Nat.mul_left_comm\n\nHint: Omit it from the simp argument list.\n  simp [triples, rounds, Nat.mul_assoc, N̵a̵t̵.̵m̵u̵l̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵Nat.mul_comm]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:67:49: This simp argument is unused:\n  Nat.mul_left_comm\n\nHint: Omit it from the simp argument list.\n  simp [rounds, Nat.mul_assoc, Nat.mul_comm,̵ ̵N̵a̵t̵.̵m̵u̵l̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:503:25: This simp argument is unused:\n  Nat.mul_one\n\nHint: Omit it from the simp argument list.\n  simp [Nat.mul_add, Nat.m̵u̵l̵_̵o̵n̵e̵,̵ ̵N̵at̵.̵a̵dd_comm, Nat.add_left_comm, Nat.add_assoc]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:503:52: This simp argument is unused:\n  Nat.add_left_comm\n\nHint: Omit it from the simp argument list.\n  simp [Nat.mul_add, Nat.mul_one, Nat.add_comm, N̵a̵t̵.̵a̵d̵d̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵Nat.add_assoc]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:503:71: This simp argument is unused:\n  Nat.add_assoc\n\nHint: Omit it from the simp argument list.\n  simp [Nat.mul_add, Nat.mul_one, Nat.add_comm, Nat.add_left_comm,̵ ̵N̵a̵t̵.̵a̵d̵d̵_̵a̵s̵s̵o̵c̵]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:770:4: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:773:6: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:777:6: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:779:31: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:836:4: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:877:6: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:1027:6: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:1032:8: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:1035:8: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:1064:2: Try this: intro mem hsafe hdiff a ha",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:1088:55: unused variable `hstraight`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/Adversary.lean:1276:2: Try this: intro mem hsafe hlayout hks hdiff a ha",
+   "level": "warning"}],
+ "inputs":
+ [["proofs.global_lower_bound.LowerBound.Adversary:deps",
+   [["deps",
+     [["original_performance_takehome/TakehomeProofs:extraDep",
+       [["@original_performance_takehome:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["proofs.global_lower_bound.LowerBound.MachineTraceEq transitive imports (legacy)",
+         "7f8f902e48d62ec5"],
+        ["proofs.global_lower_bound.LowerBound.MachineTraceEq:importAllArts",
+         "d362a1e8c8ac3d61"],
+        ["proofs.global_lower_bound.LowerBound.Specs transitive imports (legacy)",
+         "bcb73b77d27d197a"],
+        ["proofs.global_lower_bound.LowerBound.Specs:importAllArts",
+         "be9e72a1734754c2"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/xyz/deco/original_performance_takehome/proofs/global_lower_bound/LowerBound/Adversary.lean",
+   "719273203298f742"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "4069199fe2770e70"}

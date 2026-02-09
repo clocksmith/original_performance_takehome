@@ -31,6 +31,8 @@ class Layout:
     idx_ptr: list[int]
     val_ptr: list[int]
     node_v: list[int]
+    node_diff_v: dict[tuple[int, int], int] # (a_addr, b_addr) -> diff_addr
+    node_fused_v: list[int] # node_v[i] ^ C5
     forest_values_p: int
     forest_values_v: int
     inp_indices_p: int
@@ -52,7 +54,11 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
     selection_mode = getattr(spec, "selection_mode", None)
     if selection_mode is None:
         selection_mode = "bitmask" if getattr(spec, "use_bitmask_selection", False) else "eq"
-    if selection_mode in {"bitmask", "mask", "mask_precompute"}:
+    per_round_modes = getattr(spec, "selection_mode_by_round", None) or {}
+    needs_extra = selection_mode in {"bitmask", "bitmask_valu", "mask", "mask_precompute"}
+    if any(m in {"bitmask", "bitmask_valu", "mask", "mask_precompute"} for m in per_round_modes.values()):
+        needs_extra = True
+    if needs_extra:
         extra_vecs = getattr(spec, "extra_vecs", 1)
         extra = [scratch.alloc(f"extra_{i}", VLEN) for i in range(extra_vecs)]
 
@@ -73,6 +79,24 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
         if getattr(spec, "depth4_rounds", 0) == 0 and getattr(spec, "x5", 0) == 0:
             node_cache = 15
     node_v = [scratch.alloc(f"node_v_{i}", VLEN) for i in range(node_cache)]
+    
+    # Node differences for fast VALU selection
+    node_diff_v = {}
+    if getattr(spec, "valu_select", False):
+        # We only need diffs for the pairs used in vselect_parity (Level 1-4)
+        # Pairs are (2,1), (4,3), (6,5), (8,7), (10,9), (12,11), (14,13), etc.
+        for i in range(2, node_cache + 1, 2):
+            if i < len(node_v):
+                addr_a = node_v[i]
+                addr_b = node_v[i-1]
+                diff_addr = scratch.alloc(f"node_diff_{i}_{i-1}", VLEN)
+                node_diff_v[(addr_a, addr_b)] = diff_addr
+
+    # Node fused with Stage 5 constant
+    node_fused_v = []
+    if getattr(spec, "fuse_stages", False):
+        for i in range(node_cache):
+            node_fused_v.append(scratch.alloc(f"node_fused_{i}", VLEN))
 
     # Constants (scalar + vector)
     const_s: dict[int, int] = {}
@@ -100,8 +124,20 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
     vec_consts = {1, 2}
     if not getattr(spec, "reset_on_valu", True) and not getattr(spec, "idx_shifted", False):
         vec_consts.add(0)
-    if selection_mode in {"mask", "mask_precompute"}:
+    if selection_mode in {"mask", "mask_precompute", "bitmask_valu"} or any(
+        m in {"mask", "mask_precompute", "bitmask_valu"} for m in per_round_modes.values()
+    ):
         vec_consts.add(3)
+    hash_variant = getattr(spec, "hash_variant", "direct")
+    if hash_variant == "prog":
+        # Ensure const-0 is available for mov-style ops and collect program constants.
+        vec_consts.add(0)
+        prog = getattr(spec, "hash_prog", None) or []
+        for inst in prog:
+            for key in ("a", "b", "c"):
+                val = inst.get(key)
+                if isinstance(val, int):
+                    vec_consts.add(val)
     for op1, val1, op2, op3, val3 in HASH_STAGES:
         if op1 == "+" and op2 == "+":
             mult = (1 + (1 << val3)) % (2**32)
@@ -150,6 +186,8 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
         idx_ptr=idx_ptr,
         val_ptr=val_ptr,
         node_v=node_v,
+        node_diff_v=node_diff_v,
+        node_fused_v=node_fused_v,
         forest_values_p=forest_values_p,
         forest_values_v=forest_values_v,
         inp_indices_p=inp_indices_p,

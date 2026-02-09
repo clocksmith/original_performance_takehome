@@ -19,17 +19,50 @@ class SpecBase:
     # Proof-aligned: equality selection with offload.
     offload_op1: int = 0
     # Offload controls
+    # offload_mode:
+    #   - "prefix": offload the first `offload_op1` offloadable ops in program order (legacy behavior)
+    #   - "budgeted": offload up to per-category budgets (see offload_budget_* fields)
+    offload_mode: str = "prefix"
+    offload_budget_hash_shift: int = 0
+    offload_budget_hash_op1: int = 0
+    offload_budget_hash_op2: int = 0
+    offload_budget_parity: int = 0
+    offload_budget_node_xor: int = 0
     offload_hash_op1: bool = True
     offload_hash_shift: bool = False
     offload_hash_op2: bool = False
     offload_parity: bool = False
     offload_node_xor: bool = False
     use_bitmask_selection: bool = False
+    # Selection modes: "eq", "bitmask", "bitmask_valu", "mask", "mask_precompute".
     selection_mode: str = "eq"
+    # Use binary search tree for selection to reduce flow ops from N-1 to log2(N).
+    binsearch_select: bool = False
     # Optional per-round selection override (e.g. {4: "mask_precompute"}).
     selection_mode_by_round: dict[int, str] = field(default_factory=dict)
     # Use VALU arithmetic to emulate vselect (reduces flow ops).
     valu_select: bool = False
+    # Fuse last hash stage XOR with next node XOR.
+    fuse_stages: bool = False
+    # Hash lowering options (affects how we emit ops for the fixed myhash circuit).
+    # Hash implementation variant:
+    # - "direct": current hand-written lowering in generator/op_list.py
+    # - "ir": build/rewrite a tiny myhash IR, then emit ops (should be semantically identical)
+    hash_variant: str = "direct"
+    # XOR-stage lowering (only affects stages where op1=op2="^" in HASH_STAGES).
+    # - "baseline": tmp=shift(a_pre); a = a ^ C; a = a ^ tmp
+    # - "swap":     tmp=shift(a_pre); a = a ^ tmp; a = a ^ C  (also swaps op1/op2 tags)
+    # - "tmp_xor_const": tmp=shift(a_pre); tmp = tmp ^ C; a = a ^ tmp
+    hash_xor_style: str = "baseline"
+    # - "inplace": baseline emission (stage op1 updates val in-place).
+    # - "tmp_op1": compute stage op1 into a temp vector, then combine with shift into val.
+    #   This preserves semantics but changes WAR/WAW dependencies, which can improve scheduling.
+    hash_bitwise_style: str = "inplace"
+    # Custom hash program (only used when hash_variant="prog").
+    # Each op is a dict: {"op": "+|^|<<|>>|muladd|mov", "dst": "val|tmp|tmp2",
+    #   "a": src, "b": src, "c": src (muladd only), "stage": "shift|op1|op2" (optional)}.
+    # Sources can be "val|tmp|tmp2" or integer constants (vector consts).
+    hash_prog: list[dict] | None = None
     # Use incremental pointer for cached node preload to reduce const loads.
     node_ptr_incremental: bool = False
     # Use 1-based idx representation to drop the +1 in update.

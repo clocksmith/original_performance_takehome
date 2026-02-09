@@ -1,0 +1,65 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["4d478b9edb7eca9e.olean"],
+  "i": "9f4701e8e399fbf6.ilean",
+  "c": "266711ca2832a072.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/xyz/deco/original_performance_takehome/.lake/packages/Cli/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/batteries/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/Qq/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/aesop/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/importGraph/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/plausible/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/mathlib/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean /Users/xyz/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/xyz/deco/original_performance_takehome/proofs/global_lower_bound/LowerBound/MachineTraceEq.lean -o /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/global_lower_bound/LowerBound/MachineTraceEq.olean -i /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/global_lower_bound/LowerBound/MachineTraceEq.ilean -c /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/global_lower_bound/LowerBound/MachineTraceEq.c --setup /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/global_lower_bound/LowerBound/MachineTraceEq.setup.json --json",
+   "level": "trace"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/MachineTraceEq.lean:90:4: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/MachineTraceEq.lean:342:22: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/MachineTraceEq.lean:630:10: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/MachineTraceEq.lean:634:59: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/MachineTraceEq.lean:636:14: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/MachineTraceEq.lean:694:14: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/MachineTraceEq.lean:721:20: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/MachineTraceEq.lean:724:12: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/MachineTraceEq.lean:679:12: This simp argument is unused:\n  execInstructionTrace\n\nHint: Omit it from the simp argument list.\n  simp [stepMachineTrace, stepCoreTrace, hrun, hfetch, execInstructionTraceMachine, core1,̵\n  ̵ ̵ ̵ ̵ ̵ ̵ ̵ ̵ ̵ ̵ ̵ ̵ ̵e̵x̵e̵c̵I̵n̵s̵t̵r̵u̵c̵t̵i̵o̵n̵T̵r̵a̵c̵e̵]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/MachineTraceEq.lean:693:34: This simp argument is unused:\n  int_ofNat_add_one\n\nHint: Omit it from the simp argument list.\n  simp [core1, hpc,̵ ̵i̵n̵t̵_̵o̵f̵N̵a̵t̵_̵a̵d̵d̵_̵o̵n̵e̵]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/MachineTraceEq.lean:737:54: This simp argument is unused:\n  hlen\n\nHint: Omit it from the simp argument list.\n  simp [runMachineTraceAux, anyRunning,̵ ̵h̵l̵e̵n̵]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"}],
+ "inputs":
+ [["proofs.global_lower_bound.LowerBound.MachineTraceEq:deps",
+   [["deps",
+     [["original_performance_takehome/TakehomeProofs:extraDep",
+       [["@original_performance_takehome:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["proofs.global_lower_bound.LowerBound.TraceEq transitive imports (legacy)",
+         "bcb73b77d27d197a"],
+        ["proofs.global_lower_bound.LowerBound.TraceEq:importAllArts",
+         "c5e229bc9420e8d2"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/xyz/deco/original_performance_takehome/proofs/global_lower_bound/LowerBound/MachineTraceEq.lean",
+   "ef63ac837431dcc4"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "be01d943ec309838"}

@@ -347,9 +347,15 @@ def _constraint_energy(spec) -> tuple[float, list[str]]:
     if depth4_rounds == 0 and depth4_cached_rounds:
         violations.append("depth4_cached_rounds must be empty when depth4_rounds == 0")
         return float("inf"), violations
-    if depth4_rounds > 0 and depth4_cached_rounds != (4,):
-        violations.append("depth4_cached_rounds must be (4,) in safe mode")
-        return float("inf"), violations
+    if depth4_rounds > 0:
+        # For the frozen 16-round workload (height=10, reset at r=10), the only
+        # depth-4 rounds are r=4 (pre-reset) and r=15 (post-reset).
+        allowed = {4, 15}
+        if any(r not in allowed for r in depth4_cached_rounds):
+            violations.append(
+                f"depth4_cached_rounds must be subset of {tuple(sorted(allowed))} in safe mode"
+            )
+            return float("inf"), violations
     if depth4_rounds == 0 and getattr(spec, "x4", 0) != 0:
         violations.append("x4 must be 0 when depth4_rounds == 0")
         return float("inf"), violations
@@ -430,7 +436,7 @@ def _constraint_energy(spec) -> tuple[float, list[str]]:
     if selection_mode == "mask_precompute" and not getattr(spec, "idx_shifted", False):
         penalty += 1.0
         violations.append("soft: mask_precompute with idx_shifted=0")
-    if selection_mode == "bitmask" and extra_vecs < 3:
+    if selection_mode in {"bitmask", "bitmask_valu"} and extra_vecs < 3:
         penalty += 1.0
         violations.append("soft: bitmask with extra_vecs < 3")
 
@@ -440,15 +446,15 @@ def _constraint_energy(spec) -> tuple[float, list[str]]:
         violations.append("soft: vector_block does not divide vectors")
 
     for round_id, mode in getattr(spec, "selection_mode_by_round", {}).items():
-        if mode not in {"eq", "mask", "bitmask", "mask_precompute"}:
+        if mode not in {"eq", "mask", "bitmask", "bitmask_valu", "mask_precompute"}:
             penalty += 1.0
             violations.append(f"soft: selection_mode_by_round invalid mode {mode} at round {round_id}")
             break
-        if mode in {"mask", "bitmask", "mask_precompute"} and selection_mode == "eq":
+        if mode in {"mask", "bitmask", "bitmask_valu", "mask_precompute"} and selection_mode == "eq":
             penalty += 1.0
             violations.append("soft: selection_mode_by_round requires extras but global selection_mode=eq")
             break
-        if mode == "bitmask" and extra_vecs < 3:
+        if mode in {"bitmask", "bitmask_valu"} and extra_vecs < 3:
             penalty += 1.0
             violations.append("soft: selection_mode_by_round bitmask with extra_vecs < 3")
             break
@@ -687,7 +693,7 @@ def main() -> None:
     ap.add_argument("--target", type=int, default=0,
                     help="target cycles; adds penalty if per-engine LB exceeds this")
     ap.add_argument("--penalty", type=float, default=100.0)
-    ap.add_argument("--constraint-threshold", type=float, default=0.0,
+    ap.add_argument("--constraint-threshold", type=float, default=10.0,
                     help="skip DAG/schedule when constraint penalty exceeds this")
     ap.add_argument("--lambda-cycles", type=float, default=1.0,
                     help="weight for cycles term in total energy")
@@ -699,7 +705,7 @@ def main() -> None:
     ap.add_argument("--seed-spec", type=str, default="",
                     help="JSON path for a seed spec (accepts {spec: {...}} or spec dict).")
 
-    ap.add_argument("--selection", type=str, default="eq,bitmask,mask,mask_precompute")
+    ap.add_argument("--selection", type=str, default="eq,bitmask,bitmask_valu,mask,mask_precompute")
     ap.add_argument("--idx-shifted", type=str, default="0,1")
     ap.add_argument("--vector-block", type=str, default="0,4,8,16,32")
     ap.add_argument("--extra-vecs", type=str, default="0,1,2,3,4")
@@ -718,6 +724,18 @@ def main() -> None:
     ap.add_argument("--partial-cache", type=str, default="none,x8,x16,x24,x32",
                     help="partial cache choices: none|x8|x16|x24|x32 (applies to rounds 11-14)")
     ap.add_argument("--offload-op1", type=str, default="0,200,400,800,1200,1600")
+    ap.add_argument("--offload-mode", type=str, default="prefix",
+                    help="offload mode: prefix|budgeted (comma-separated domain)")
+    ap.add_argument("--offload-budget-hash-shift", type=str, default="0",
+                    help="budgeted offload cap for hash shift ops (vector ops count)")
+    ap.add_argument("--offload-budget-hash-op1", type=str, default="0",
+                    help="budgeted offload cap for hash op1 ops (vector ops count)")
+    ap.add_argument("--offload-budget-hash-op2", type=str, default="0",
+                    help="budgeted offload cap for hash op2 ops (vector ops count)")
+    ap.add_argument("--offload-budget-parity", type=str, default="0",
+                    help="budgeted offload cap for parity ops (vector ops count)")
+    ap.add_argument("--offload-budget-node-xor", type=str, default="0",
+                    help="budgeted offload cap for node_xor ops (vector ops count)")
     ap.add_argument("--offload-hash-op1", type=str, default="0,1")
     ap.add_argument("--offload-hash-shift", type=str, default="0,1")
     ap.add_argument("--offload-hash-op2", type=str, default="0,1")
@@ -727,6 +745,12 @@ def main() -> None:
     ap.add_argument("--valu-select", type=str, default="0,1")
     ap.add_argument("--ptr-setup-engine", type=str, default="flow,alu")
     ap.add_argument("--setup-style", type=str, default="packed,inline")
+    ap.add_argument("--hash-variant", type=str, default="direct,ir",
+                    help="hash implementation variant: direct|ir (comma-separated domain)")
+    ap.add_argument("--hash-bitwise-style", type=str, default="inplace,tmp_op1",
+                    help="hash lowering for bitwise stages: inplace|tmp_op1 (comma-separated domain)")
+    ap.add_argument("--hash-xor-style", type=str, default="baseline",
+                    help="xor-stage lowering: baseline|swap|tmp_xor_const (comma-separated domain)")
 
     ap.add_argument("--sched-restarts", type=int, default=10)
     ap.add_argument("--sched-jitter", type=float, default=0.4)
@@ -811,7 +835,8 @@ def main() -> None:
         if not sched_jitter_domain:
             sched_jitter_domain = [0.0, 0.05, 0.1]
         if not sched_restarts_domain:
-            sched_restarts_domain = [1, 2, 4, 8, 16, 32]
+            # Keep default search fast; widen explicitly via --sched-restarts-domain.
+            sched_restarts_domain = [1, 2, 4, 8]
 
     def sched_params_for(spec, *, seed_offset: int = 0) -> tuple[int, int, float]:
         if args.mode == "parity" or mutate_sched:
@@ -835,6 +860,9 @@ def main() -> None:
     extra_vecs_list = parse_int_list(args.extra_vecs)
     reset_on_valu_list = parse_bool_list(args.reset_on_valu)
     shifts_on_valu_list = parse_bool_list(args.shifts_on_valu)
+    hash_variant_list = parse_list(args.hash_variant)
+    hash_bitwise_style_list = parse_list(args.hash_bitwise_style)
+    hash_xor_style_list = parse_list(args.hash_xor_style)
 
     cached_nodes_list: list[int | None] = []
     for item in parse_list(args.cached_nodes):
@@ -872,6 +900,12 @@ def main() -> None:
         "cached_round_depth": cached_round_depth_list,
         "partial_cache": partial_cache_list,
         "offload_op1": parse_int_list(args.offload_op1),
+        "offload_mode": parse_list(args.offload_mode),
+        "offload_budget_hash_shift": parse_int_list(args.offload_budget_hash_shift),
+        "offload_budget_hash_op1": parse_int_list(args.offload_budget_hash_op1),
+        "offload_budget_hash_op2": parse_int_list(args.offload_budget_hash_op2),
+        "offload_budget_parity": parse_int_list(args.offload_budget_parity),
+        "offload_budget_node_xor": parse_int_list(args.offload_budget_node_xor),
         "offload_hash_op1": parse_bool_list(args.offload_hash_op1),
         "offload_hash_shift": parse_bool_list(args.offload_hash_shift),
         "offload_hash_op2": parse_bool_list(args.offload_hash_op2),
@@ -881,6 +915,9 @@ def main() -> None:
         "valu_select": parse_bool_list(args.valu_select),
         "ptr_setup_engine": parse_list(args.ptr_setup_engine),
         "setup_style": parse_list(args.setup_style),
+        "hash_variant": hash_variant_list,
+        "hash_bitwise_style": hash_bitwise_style_list,
+        "hash_xor_style": hash_xor_style_list,
     }
     if mutate_sched:
         if sched_seed_domain:
@@ -889,6 +926,9 @@ def main() -> None:
             domains["sched_jitter"] = sched_jitter_domain
         if sched_restarts_domain:
             domains["sched_restarts"] = sched_restarts_domain
+
+    # Avoid wasting mutations on knobs that are effectively frozen (0/1 choice).
+    domains = {k: v for k, v in domains.items() if v and len(v) > 1}
 
     spec = SPEC_BASE
     if args.seed_spec:
@@ -922,6 +962,7 @@ def main() -> None:
     log(f"  mode={args.mode} score_mode={args.score_mode} steps={args.steps} seed={args.seed}")
     log(f"  schedule_every={args.schedule_every} unscheduled_score={unscheduled_score}")
     log(f"  mutate_count={args.mutate_count} mutate_sched={mutate_sched}")
+    log(f"  mutate_keys={sorted(domains.keys())}")
     if mutate_sched:
         log(f"  sched_seed_domain={sched_seed_domain}")
         log(f"  sched_jitter_domain={sched_jitter_domain}")

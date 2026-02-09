@@ -1,0 +1,323 @@
+// Lean compiler output
+// Module: proofs.global_lower_bound.LowerBound.LowerBounds
+// Imports: public import Init public import proofs.global_lower_bound.LowerBound.MachineTraceEq public import proofs.global_lower_bound.LowerBound.Adversary
+#include <lean/lean.h>
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#pragma clang diagnostic ignored "-Wunused-label"
+#elif defined(__GNUC__) && !defined(__CLANG__)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-label"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+LEAN_EXPORT uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel__eq__16___nativeDecide__1__1;
+static uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound__eq__16___nativeDecide__1__1___closed__0;
+LEAN_EXPORT uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1;
+LEAN_EXPORT uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1;
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel;
+static uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel__eq__16___nativeDecide__1__1___closed__0;
+LEAN_EXPORT uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus__eq__272___nativeDecide__1__1;
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal;
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_loadLowerCycles(lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus;
+lean_object* lp_original__performance__takehome_ProofCommon_ceilDiv(lean_object*, lean_object*);
+static uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1___closed__1;
+static uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus__eq__272___nativeDecide__1__1___closed__0;
+lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_minLoadOps(lean_object*);
+static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus___closed__0;
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_computeLowerBoundKernel;
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound;
+static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound___closed__0;
+LEAN_EXPORT uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound__eq__16___nativeDecide__1__1;
+uint8_t lean_nat_dec_eq(lean_object*, lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK___boxed(lean_object*);
+lean_object* lean_nat_mul(lean_object*, lean_object*);
+static uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1___closed__1;
+static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1___closed__0;
+static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1___closed__0;
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK(lean_object*);
+uint8_t lean_nat_dec_le(lean_object*, lean_object*);
+static uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal___closed__0;
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_loadLowerCycles___boxed(lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_loadLowerCycles(lean_object* x_1) {
+_start:
+{
+lean_object* x_2; lean_object* x_3; lean_object* x_4; 
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_minLoadOps(x_1);
+x_3 = lean_unsigned_to_nat(2u);
+x_4 = lp_original__performance__takehome_ProofCommon_ceilDiv(x_2, x_3);
+lean_dec(x_2);
+return x_4;
+}
+}
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_loadLowerCycles___boxed(lean_object* x_1) {
+_start:
+{
+lean_object* x_2; 
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_loadLowerCycles(x_1);
+lean_dec(x_1);
+return x_2;
+}
+}
+static lean_object* _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound___closed__0() {
+_start:
+{
+lean_object* x_1; lean_object* x_2; 
+x_1 = lean_unsigned_to_nat(256u);
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_loadLowerCycles(x_1);
+return x_2;
+}
+}
+static lean_object* _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound() {
+_start:
+{
+lean_object* x_1; 
+x_1 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound___closed__0;
+return x_1;
+}
+}
+static lean_object* _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel() {
+_start:
+{
+lean_object* x_1; 
+x_1 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound___closed__0;
+return x_1;
+}
+}
+static uint8_t _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound__eq__16___nativeDecide__1__1___closed__0() {
+_start:
+{
+lean_object* x_1; lean_object* x_2; uint8_t x_3; 
+x_1 = lean_unsigned_to_nat(16u);
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound;
+x_3 = lean_nat_dec_eq(x_2, x_1);
+return x_3;
+}
+}
+static uint8_t _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound__eq__16___nativeDecide__1__1() {
+_start:
+{
+uint8_t x_1; 
+x_1 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound__eq__16___nativeDecide__1__1___closed__0;
+return x_1;
+}
+}
+static uint8_t _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel__eq__16___nativeDecide__1__1___closed__0() {
+_start:
+{
+lean_object* x_1; lean_object* x_2; uint8_t x_3; 
+x_1 = lean_unsigned_to_nat(16u);
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel;
+x_3 = lean_nat_dec_eq(x_2, x_1);
+return x_3;
+}
+}
+static uint8_t _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel__eq__16___nativeDecide__1__1() {
+_start:
+{
+uint8_t x_1; 
+x_1 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel__eq__16___nativeDecide__1__1___closed__0;
+return x_1;
+}
+}
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK(lean_object* x_1) {
+_start:
+{
+lean_object* x_2; lean_object* x_3; lean_object* x_4; lean_object* x_5; lean_object* x_6; 
+x_2 = lean_unsigned_to_nat(256u);
+x_3 = lean_nat_mul(x_1, x_2);
+x_4 = lean_unsigned_to_nat(16u);
+x_5 = lean_nat_mul(x_3, x_4);
+lean_dec(x_3);
+x_6 = lp_original__performance__takehome_ProofGlobalLowerBound_loadLowerCycles(x_5);
+lean_dec(x_5);
+return x_6;
+}
+}
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK___boxed(lean_object* x_1) {
+_start:
+{
+lean_object* x_2; 
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK(x_1);
+lean_dec(x_1);
+return x_2;
+}
+}
+static lean_object* _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1___closed__0() {
+_start:
+{
+lean_object* x_1; lean_object* x_2; 
+x_1 = lean_unsigned_to_nat(1u);
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK(x_1);
+return x_2;
+}
+}
+static uint8_t _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1___closed__1() {
+_start:
+{
+lean_object* x_1; lean_object* x_2; uint8_t x_3; 
+x_1 = lean_unsigned_to_nat(256u);
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1___closed__0;
+x_3 = lean_nat_dec_eq(x_2, x_1);
+return x_3;
+}
+}
+static uint8_t _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1() {
+_start:
+{
+uint8_t x_1; 
+x_1 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1___closed__1;
+return x_1;
+}
+}
+static lean_object* _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1___closed__0() {
+_start:
+{
+lean_object* x_1; lean_object* x_2; 
+x_1 = lean_unsigned_to_nat(2u);
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK(x_1);
+return x_2;
+}
+}
+static uint8_t _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1___closed__1() {
+_start:
+{
+lean_object* x_1; lean_object* x_2; uint8_t x_3; 
+x_1 = lean_unsigned_to_nat(512u);
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1___closed__0;
+x_3 = lean_nat_dec_eq(x_2, x_1);
+return x_3;
+}
+}
+static uint8_t _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1() {
+_start:
+{
+uint8_t x_1; 
+x_1 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1___closed__1;
+return x_1;
+}
+}
+static lean_object* _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus___closed__0() {
+_start:
+{
+lean_object* x_1; lean_object* x_2; 
+x_1 = lean_unsigned_to_nat(4352u);
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_loadLowerCycles(x_1);
+return x_2;
+}
+}
+static lean_object* _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus() {
+_start:
+{
+lean_object* x_1; 
+x_1 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus___closed__0;
+return x_1;
+}
+}
+static uint8_t _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus__eq__272___nativeDecide__1__1___closed__0() {
+_start:
+{
+lean_object* x_1; lean_object* x_2; uint8_t x_3; 
+x_1 = lean_unsigned_to_nat(272u);
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus;
+x_3 = lean_nat_dec_eq(x_2, x_1);
+return x_3;
+}
+}
+static uint8_t _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus__eq__272___nativeDecide__1__1() {
+_start:
+{
+uint8_t x_1; 
+x_1 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus__eq__272___nativeDecide__1__1___closed__0;
+return x_1;
+}
+}
+static lean_object* _init_lp_original__performance__takehome_ProofGlobalLowerBound_computeLowerBoundKernel() {
+_start:
+{
+lean_object* x_1; 
+x_1 = lean_unsigned_to_nat(1u);
+return x_1;
+}
+}
+static uint8_t _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal___closed__0() {
+_start:
+{
+lean_object* x_1; lean_object* x_2; uint8_t x_3; 
+x_1 = lean_unsigned_to_nat(1u);
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel;
+x_3 = lean_nat_dec_le(x_2, x_1);
+return x_3;
+}
+}
+static lean_object* _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal() {
+_start:
+{
+lean_object* x_1; lean_object* x_2; uint8_t x_3; 
+x_1 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel;
+x_2 = lean_unsigned_to_nat(1u);
+x_3 = lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal___closed__0;
+if (x_3 == 0)
+{
+return x_1;
+}
+else
+{
+return x_2;
+}
+}
+}
+lean_object* initialize_Init(uint8_t builtin);
+lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_MachineTraceEq(uint8_t builtin);
+lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_Adversary(uint8_t builtin);
+static bool _G_initialized = false;
+LEAN_EXPORT lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_LowerBounds(uint8_t builtin) {
+lean_object * res;
+if (_G_initialized) return lean_io_result_mk_ok(lean_box(0));
+_G_initialized = true;
+res = initialize_Init(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_MachineTraceEq(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_Adversary(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound___closed__0 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound___closed__0();
+lean_mark_persistent(lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound___closed__0);
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound();
+lean_mark_persistent(lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound);
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel();
+lean_mark_persistent(lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel);
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound__eq__16___nativeDecide__1__1___closed__0 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound__eq__16___nativeDecide__1__1___closed__0();
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound__eq__16___nativeDecide__1__1 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound__eq__16___nativeDecide__1__1();
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel__eq__16___nativeDecide__1__1___closed__0 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel__eq__16___nativeDecide__1__1___closed__0();
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel__eq__16___nativeDecide__1__1 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel__eq__16___nativeDecide__1__1();
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1___closed__0 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1___closed__0();
+lean_mark_persistent(lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1___closed__0);
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1___closed__1 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1___closed__1();
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1();
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1___closed__0 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1___closed__0();
+lean_mark_persistent(lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1___closed__0);
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1___closed__1 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1___closed__1();
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1();
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus___closed__0 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus___closed__0();
+lean_mark_persistent(lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus___closed__0);
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus();
+lean_mark_persistent(lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus);
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus__eq__272___nativeDecide__1__1___closed__0 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus__eq__272___nativeDecide__1__1___closed__0();
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus__eq__272___nativeDecide__1__1 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus__eq__272___nativeDecide__1__1();
+lp_original__performance__takehome_ProofGlobalLowerBound_computeLowerBoundKernel = _init_lp_original__performance__takehome_ProofGlobalLowerBound_computeLowerBoundKernel();
+lean_mark_persistent(lp_original__performance__takehome_ProofGlobalLowerBound_computeLowerBoundKernel);
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal___closed__0 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal___closed__0();
+lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal();
+lean_mark_persistent(lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal);
+return lean_io_result_mk_ok(lean_box(0));
+}
+#ifdef __cplusplus
+}
+#endif

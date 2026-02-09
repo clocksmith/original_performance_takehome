@@ -9,6 +9,7 @@ from .ops import Op
 from problem import SLOT_LIMITS, VLEN
 
 from .schedule_dep import schedule_ops_dep
+from .offload import apply_offload_stream
 
 
 def _build_setup_prelude(spec: SpecBase, layout) -> list[dict[str, list[tuple]]]:
@@ -125,22 +126,7 @@ def build_base_instrs(spec: SpecBase | None = None):
     build_ops(spec_for_ops, layout, ordered_ops=ordered_ops)
 
     # Apply offload in-order to build the final op stream.
-    final_ops: list[Op] = []
-    offloaded = 0
-    for op in ordered_ops:
-        if op.offloadable and offloaded < spec.offload_op1:
-            op_name, dest, a, b = op.slot
-            for lane in range(VLEN):
-                final_ops.append(
-                    Op(
-                        engine="alu",
-                        slot=(op_name, dest + lane, a + lane, b + lane),
-                        meta=op.meta,
-                    )
-                )
-            offloaded += 1
-        else:
-            final_ops.append(op)
+    final_ops = apply_offload_stream(spec, ordered_ops)
 
     pad_cycles = getattr(spec, "valu_pad_cycles", 0)
     if pad_cycles:

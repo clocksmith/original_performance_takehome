@@ -146,7 +146,7 @@ def main() -> int:
     ap.add_argument(
         "--spec-module",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "generator" / "ub_energy_bundle_1385.py",
+        default=Path(__file__).resolve().parents[1] / "generator" / "ub_energy_bundle_1299.py",
     )
     ap.add_argument(
         "--output",

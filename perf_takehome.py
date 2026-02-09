@@ -108,7 +108,7 @@ class KernelBuilder:
             and batch_size == 256
             and n_nodes == 2 ** (forest_height + 1) - 1
         ):
-            from generator.ub_energy_bundle_1299 import build_instrs
+            from generator.ub_energy_bundle_1291 import build_instrs
 
             self.instrs = build_instrs()
             return

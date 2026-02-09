@@ -14,6 +14,11 @@ open ProofISA
 def mod32 (x : Nat) : Nat :=
   x % MOD32
 
+-- `mod32` expands into `% MOD32` where `MOD32 = 2^32`. Letting the kernel unfold it
+-- during definitional equality checking can lead to deep reductions inside `Nat.mod`.
+-- Keep it opaque unless we explicitly `simp [mod32]` / `unfold mod32`.
+attribute [irreducible] mod32
+
 def cdiv (a b : Nat) : Nat :=
   if b = 0 then 0 else (a + b - 1) / b
 

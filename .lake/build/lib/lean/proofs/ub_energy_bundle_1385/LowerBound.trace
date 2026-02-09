@@ -1,0 +1,33 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["933b88f621f624f5.olean"],
+  "i": "5bd8890cf7e3641e.ilean",
+  "c": "6af866bf6d8c95ad.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/xyz/deco/original_performance_takehome/.lake/packages/Cli/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/batteries/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/Qq/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/aesop/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/importGraph/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/plausible/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/mathlib/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean /Users/xyz/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/xyz/deco/original_performance_takehome/proofs/ub_energy_bundle_1385/LowerBound.lean -o /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/ub_energy_bundle_1385/LowerBound.olean -i /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/ub_energy_bundle_1385/LowerBound.ilean -c /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/ub_energy_bundle_1385/LowerBound.c --setup /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/ub_energy_bundle_1385/LowerBound.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["proofs.ub_energy_bundle_1385.LowerBound:deps",
+   [["deps",
+     [["original_performance_takehome/TakehomeProofs:extraDep",
+       [["@original_performance_takehome:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["proofs.common.ISA transitive imports (legacy)", "9382f9ba7849d050"],
+        ["proofs.common.ISA:importAllArts", "3e65a2f777b307a4"],
+        ["proofs.common.Machine transitive imports (legacy)",
+         "adba362536352c51"],
+        ["proofs.common.Machine:importAllArts", "41d9f7d72f9cc3bd"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/xyz/deco/original_performance_takehome/proofs/ub_energy_bundle_1385/LowerBound.lean",
+   "c0a6e9d03bfda6b6"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "a7ff283fdda2b8c7"}

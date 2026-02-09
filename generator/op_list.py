@@ -11,6 +11,7 @@ _SEQ = 0
 _USE_VALU_SELECT = False
 _USE_TEMP_DEPS = True
 _VALU_OPS_REF: list[Op] | None = None
+_LAYOUT_REF: Layout | None = None
 
 
 def _record(op: Op) -> None:
@@ -86,6 +87,12 @@ def _add_vmuladd(ops: list[Op], dest: int, a: int, b: int, c: int, meta=None):
 def _add_vselect(ops: list[Op], dest: int, cond: int, a: int, b: int, meta=None):
     if _USE_VALU_SELECT and _VALU_OPS_REF is not None and dest != b:
         # dest = b + cond * (a - b)
+        # Check if we have a precomputed difference for (a, b)
+        if _LAYOUT_REF is not None and (a, b) in _LAYOUT_REF.node_diff_v:
+            diff_addr = _LAYOUT_REF.node_diff_v[(a, b)]
+            _add_vmuladd(_VALU_OPS_REF, dest, cond, diff_addr, b, meta=meta)
+            return
+        # Fallback to 2-op selection
         _add_valu(_VALU_OPS_REF, "-", dest, a, b, meta=meta)
         _add_vmuladd(_VALU_OPS_REF, dest, cond, dest, b, meta=meta)
         return
@@ -199,11 +206,12 @@ def _add_vstore(ops: list[Op], addr: int, src: int, meta=None):
 
 
 def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
-    global _ORDERED_OPS, _SEQ, _USE_VALU_SELECT, _USE_TEMP_DEPS, _VALU_OPS_REF
+    global _ORDERED_OPS, _SEQ, _USE_VALU_SELECT, _USE_TEMP_DEPS, _VALU_OPS_REF, _LAYOUT_REF
     _ORDERED_OPS = ordered_ops
     _SEQ = 0
     _USE_VALU_SELECT = bool(getattr(spec, "valu_select", False))
     _USE_TEMP_DEPS = bool(getattr(spec, "use_temp_deps", True))
+    _LAYOUT_REF = layout
     valu_ops: list[Op] = []
     _VALU_OPS_REF = valu_ops
     alu_ops: list[Op] = []
@@ -211,10 +219,28 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
     load_ops: list[Op] = []
     store_ops: list[Op] = []
 
+    hash_variant = getattr(spec, "hash_variant", "direct")
+    if hash_variant not in {"direct", "ir", "prog"}:
+        raise ValueError(f"unknown hash_variant {hash_variant!r}")
     linear, bitwise = _split_hash_stages()
+    hash_ir_prog = None
+    _HashLinear = None
+    _HashBitwise = None
+    if hash_variant == "ir":
+        from . import hash_ir as _hash_ir
+
+        hash_ir_prog = _hash_ir.build_myhash_ir()
+        _HashLinear = _hash_ir.LinearStageIR
+        _HashBitwise = _hash_ir.BitwiseStageIR
+    hash_prog = None
+    if hash_variant == "prog":
+        hash_prog = getattr(spec, "hash_prog", None)
+        if not hash_prog:
+            raise ValueError("hash_variant='prog' requires spec.hash_prog")
     selection_modes_per_round = [_selection_mode(spec, r) for r in range(spec.rounds)]
     use_vector_major = any(
-        mode in {"bitmask", "mask", "mask_precompute"} for mode in selection_modes_per_round
+        mode in {"bitmask", "bitmask_valu", "mask", "mask_precompute"}
+        for mode in selection_modes_per_round
     )
     cached_round_aliases = getattr(spec, "cached_round_aliases", None) or {}
     cached_round_depths = getattr(spec, "cached_round_depth", None) or {}
@@ -302,6 +328,17 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                 _add_load(load_ops, layout.node_tmp, layout.node_tmp, meta={"setup": True, "node": i})
                 _add_vbroadcast(valu_ops, vaddr, layout.node_tmp, meta={"setup": True, "node": i})
 
+        # Precompute node differences for fast VALU selection
+        if _USE_VALU_SELECT:
+            for (addr_a, addr_b), diff_addr in layout.node_diff_v.items():
+                _add_valu(valu_ops, "-", diff_addr, addr_a, addr_b, meta={"setup": True, "diff": True})
+
+        # Precompute fused node constants for Stage 5 fusion
+        if getattr(spec, "fuse_stages", False):
+            const_C5 = layout.const_v[HASH_STAGES[5][1]]
+            for i, vaddr in enumerate(layout.node_v):
+                _add_valu(valu_ops, "^", layout.node_fused_v[i], vaddr, const_C5, meta={"setup": True, "fuse": True})
+
         # Broadcast forest_values pointer for uncached address compute (shifted if needed).
         if getattr(spec, "idx_shifted", False):
             _add_alu(
@@ -358,8 +395,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
 
     for v, r in vec_round_pairs:
         selection_mode = selection_modes_per_round[r]
-        mask_mode = selection_mode in {"mask", "mask_precompute"}
-        mask_precompute = selection_mode == "mask_precompute" and len(layout.extra) >= 4
+        mask_mode = selection_mode == "mask"
         tmp = layout.tmp[v]
         sel = layout.sel[v]
         extra = None
@@ -392,11 +428,6 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                 meta=meta,
                 offloadable=offload_node_xor,
             )
-
-        bits0 = None
-        bits1 = None
-        data1 = None
-        data2 = None
         r_sel = cached_round_aliases.get(r, r)
         # Resolve per-round cache depth and partial caching (x).
         cache_depth = None
@@ -408,37 +439,13 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
             cache_depth = _depth_from_round(r)
         cache_x = cached_round_x.get(r, spec.vectors) if cache_depth is not None else 0
 
-        if mask_precompute:
-            mask_depth = None
-            if cache_depth in (1, 2, 3) and v < cache_x:
-                mask_depth = cache_depth
-            if r in spec.depth4_cached_rounds and v < spec.x4:
-                mask_depth = 4
-            if mask_depth is not None:
-                bits0, bits1, data1, data2 = layout.extra[:4]
-                one_v = layout.const_v[1]
-                _add_valu(valu_ops, "&", bits0, idx, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
-                if mask_depth >= 2:
-                    _add_valu(valu_ops, ">>", bits1, idx, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
-                    _add_valu(valu_ops, "&", bits1, bits1, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
-
         r_sel = cache_depth if cache_depth in (0, 1, 2, 3) else None
 
         if cache_depth is not None and v < cache_x:
             if r_sel == 0:
                 _node_xor(layout.node_v[0], meta={"round": r, "vec": v})
             elif r_sel == 1:
-                if mask_precompute and getattr(spec, "idx_shifted", False):
-                    _add_vselect(
-                        flow_ops,
-                        sel,
-                        bits0,
-                        layout.node_v[2],
-                        layout.node_v[1],
-                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                    )
-                    _node_xor(sel, meta={"round": r, "vec": v})
-                elif selection_mode == "mask" and getattr(spec, "idx_shifted", False):
+                if mask_mode and getattr(spec, "idx_shifted", False):
                     one_v = layout.const_v[1]
                     _add_valu(valu_ops, "&", tmp, idx, one_v, meta={"round": r, "vec": v, "sel": "mask"})
                     _add_vselect(
@@ -450,7 +457,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, tmp_read_key),
                     )
                     _node_xor(sel, meta={"round": r, "vec": v})
-                elif selection_mode == "bitmask" and extra is not None:
+                elif selection_mode in {"bitmask", "bitmask_valu"} and extra is not None:
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
                     _add_vselect_parity(
                         spec,
@@ -467,33 +474,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
                     _node_xor(tmp, meta={"round": r, "vec": v})
             elif r_sel == 2:
-                if mask_precompute and getattr(spec, "idx_shifted", False):
-                    _add_vselect(
-                        flow_ops,
-                        sel,
-                        bits0,
-                        layout.node_v[4],
-                        layout.node_v[3],
-                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                    )
-                    _add_vselect(
-                        flow_ops,
-                        data1,
-                        bits0,
-                        layout.node_v[6],
-                        layout.node_v[5],
-                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                    )
-                    _add_vselect(
-                        flow_ops,
-                        sel,
-                        bits1,
-                        data1,
-                        sel,
-                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                    )
-                    _node_xor(sel, meta={"round": r, "vec": v})
-                elif selection_mode == "mask" and getattr(spec, "idx_shifted", False) and extra is not None:
+                if mask_mode and getattr(spec, "idx_shifted", False) and extra is not None:
                     one_v = layout.const_v[1]
                     shift1 = layout.const_v[1]
                     _add_valu(valu_ops, "&", tmp, idx, one_v, meta={"round": r, "vec": v, "sel": "mask"})
@@ -524,7 +505,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key),
                     )
                     _node_xor(sel, meta={"round": r, "vec": v})
-                elif selection_mode == "bitmask" and extra is not None:
+                elif selection_mode in {"bitmask", "bitmask_valu"} and extra is not None:
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
                     _add_vselect_parity(
                         spec,
@@ -566,69 +547,8 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     _select_by_eq_alu(spec, alu_ops, flow_ops, tmp, sel, idx, nodes, layout.const_s, layout.const_v, meta={"round": r, "vec": v})
                     _node_xor(tmp, meta={"round": r, "vec": v})
             elif r_sel == 3:
-                if mask_precompute and getattr(spec, "idx_shifted", False):
-                    one_v = layout.const_v[1]
-                    _add_vselect(
-                        flow_ops,
-                        sel,
-                        bits0,
-                        layout.node_v[8],
-                        layout.node_v[7],
-                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                    )
-                    _add_vselect(
-                        flow_ops,
-                        data1,
-                        bits0,
-                        layout.node_v[10],
-                        layout.node_v[9],
-                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                    )
-                    _add_vselect(
-                        flow_ops,
-                        sel,
-                        bits1,
-                        data1,
-                        sel,
-                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                    )
-                    _add_vselect(
-                        flow_ops,
-                        data1,
-                        bits0,
-                        layout.node_v[12],
-                        layout.node_v[11],
-                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                    )
-                    _add_vselect(
-                        flow_ops,
-                        data2,
-                        bits0,
-                        layout.node_v[14],
-                        layout.node_v[13],
-                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                    )
-                    _add_vselect(
-                        flow_ops,
-                        data1,
-                        bits1,
-                        data2,
-                        data1,
-                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                    )
-                    _add_valu(valu_ops, ">>", tmp, idx, layout.const_v[2], meta={"round": r, "vec": v, "sel": "mask_pre"})
-                    _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
-                    _add_vselect(
-                        flow_ops,
-                        sel,
-                        tmp,
-                        data1,
-                        sel,
-                        meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                    )
-                    _node_xor(sel, meta={"round": r, "vec": v})
-                elif (
-                    selection_mode == "mask"
+                if (
+                    mask_mode
                     and getattr(spec, "idx_shifted", False)
                     and extra is not None
                     and extra2 is not None
@@ -709,7 +629,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                         meta=_tag_temp({"round": r, "vec": v, "sel": "mask"}, extra_key),
                     )
                     _node_xor(sel, meta={"round": r, "vec": v})
-                elif selection_mode == "bitmask" and extra is not None:
+                elif selection_mode in {"bitmask", "bitmask_valu"} and extra is not None:
                     # Lower half: nodes 7..10
                     _add_alu_vec(alu_ops, "&", tmp, idx, layout.const_s[1], meta={"round": r, "vec": v})
                     _add_vselect_parity(
@@ -839,139 +759,57 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     _add_load_offset(load_ops, tmp, sel, lane, meta={"round": r, "vec": v, "lane": lane})
                 _node_xor(tmp, meta={"round": r, "vec": v})
         elif r in spec.depth4_cached_rounds and v < spec.x4:
-            if mask_precompute and getattr(spec, "idx_shifted", False):
+            if selection_mode == "bitmask_valu" and extra is not None and extra2 is not None and extra3 is not None:
+                # Depth4 bitmask selection using VALU for bit extraction (reduces per-lane ALU pressure).
                 one_v = layout.const_v[1]
+                shift1 = layout.const_v[1]
+                shift2 = layout.const_v[2]
+                shift3 = layout.const_v[3]
+
+                # bit0 in tmp
+                _add_valu(valu_ops, "&", tmp, idx, one_v, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                # bit1 in extra3
+                _add_valu(valu_ops, ">>", extra3, idx, shift1, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_valu(valu_ops, "&", extra3, extra3, one_v, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+
                 # Lower half (15..22) -> sel
-                _add_vselect(
-                    flow_ops,
-                    sel,
-                    bits0,
-                    layout.node_v[16],
-                    layout.node_v[15],
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
-                _add_vselect(
-                    flow_ops,
-                    data1,
-                    bits0,
-                    layout.node_v[18],
-                    layout.node_v[17],
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
-                _add_vselect(
-                    flow_ops,
-                    sel,
-                    bits1,
-                    data1,
-                    sel,
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
-                _add_vselect(
-                    flow_ops,
-                    data1,
-                    bits0,
-                    layout.node_v[20],
-                    layout.node_v[19],
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
-                _add_vselect(
-                    flow_ops,
-                    data2,
-                    bits0,
-                    layout.node_v[22],
-                    layout.node_v[21],
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
-                _add_vselect(
-                    flow_ops,
-                    data1,
-                    bits1,
-                    data2,
-                    data1,
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
-                _add_valu(valu_ops, ">>", tmp, idx, layout.const_v[2], meta={"round": r, "vec": v, "sel": "mask_pre"})
-                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
-                _add_vselect(
-                    flow_ops,
-                    sel,
-                    tmp,
-                    data1,
-                    sel,
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
+                _add_vselect(flow_ops, sel, tmp, layout.node_v[16], layout.node_v[15], meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_vselect(flow_ops, extra, tmp, layout.node_v[18], layout.node_v[17], meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_vselect(flow_ops, sel, extra3, extra, sel, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_vselect(flow_ops, extra, tmp, layout.node_v[20], layout.node_v[19], meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_vselect(flow_ops, extra2, tmp, layout.node_v[22], layout.node_v[21], meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_vselect(flow_ops, extra, extra3, extra2, extra, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
 
-                # Upper half (23..30) -> data1
-                _add_vselect(
-                    flow_ops,
-                    data1,
-                    bits0,
-                    layout.node_v[24],
-                    layout.node_v[23],
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
-                _add_vselect(
-                    flow_ops,
-                    data2,
-                    bits0,
-                    layout.node_v[26],
-                    layout.node_v[25],
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
-                _add_vselect(
-                    flow_ops,
-                    data1,
-                    bits1,
-                    data2,
-                    data1,
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
-                _add_vselect(
-                    flow_ops,
-                    data2,
-                    bits0,
-                    layout.node_v[28],
-                    layout.node_v[27],
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
-                _add_vselect(
-                    flow_ops,
-                    tmp,
-                    bits0,
-                    layout.node_v[30],
-                    layout.node_v[29],
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
-                _add_vselect(
-                    flow_ops,
-                    data2,
-                    bits1,
-                    tmp,
-                    data2,
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
-                _add_valu(valu_ops, ">>", tmp, idx, layout.const_v[2], meta={"round": r, "vec": v, "sel": "mask_pre"})
-                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
-                _add_vselect(
-                    flow_ops,
-                    data1,
-                    tmp,
-                    data2,
-                    data1,
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
+                # bit2 in extra3
+                _add_valu(valu_ops, ">>", extra3, idx, shift2, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_valu(valu_ops, "&", extra3, extra3, one_v, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_vselect(flow_ops, sel, extra3, extra, sel, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
 
-                # Final select between lower and upper
-                _add_valu(valu_ops, ">>", tmp, idx, layout.const_v[3], meta={"round": r, "vec": v, "sel": "mask_pre"})
-                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "mask_pre"})
-                _add_vselect(
-                    flow_ops,
-                    sel,
-                    tmp,
-                    data1,
-                    sel,
-                    meta=_tag_temp({"round": r, "vec": v, "sel": "mask_pre"}, tmp_read_key),
-                )
+                # Recompute bit1 into extra3
+                _add_valu(valu_ops, ">>", extra3, idx, shift1, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_valu(valu_ops, "&", extra3, extra3, one_v, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+
+                # Upper half (23..30) -> extra
+                _add_vselect(flow_ops, extra, tmp, layout.node_v[24], layout.node_v[23], meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_vselect(flow_ops, extra2, tmp, layout.node_v[26], layout.node_v[25], meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_vselect(flow_ops, extra, extra3, extra2, extra, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_vselect(flow_ops, extra2, tmp, layout.node_v[28], layout.node_v[27], meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_vselect(flow_ops, extra3, tmp, layout.node_v[30], layout.node_v[29], meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+
+                # bit1 in tmp (recompute) for upper pair select
+                _add_valu(valu_ops, ">>", tmp, idx, shift1, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_vselect(flow_ops, extra2, tmp, extra3, extra2, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+
+                # bit2 in tmp for upper reduction
+                _add_valu(valu_ops, ">>", tmp, idx, shift2, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_vselect(flow_ops, extra, tmp, extra2, extra, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+
+                # Final select between lower (sel) and upper (extra) using bit3
+                _add_valu(valu_ops, ">>", tmp, idx, shift3, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_valu(valu_ops, "&", tmp, tmp, one_v, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
+                _add_vselect(flow_ops, sel, tmp, extra, sel, meta={"round": r, "vec": v, "sel": "bitmask_valu"})
                 _node_xor(sel, meta={"round": r, "vec": v})
             elif selection_mode == "bitmask" and extra is not None and extra2 is not None and extra3 is not None:
                 # Depth4 bitmask selection (nodes 15..30) with extra temp vectors.
@@ -1172,7 +1010,7 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                 )
                 _node_xor(sel, meta={"round": r, "vec": v})
             elif (
-                selection_mode == "mask"
+                mask_mode
                 and getattr(spec, "idx_shifted", False)
                 and extra is not None
                 and extra2 is not None
@@ -1339,47 +1177,281 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
             _node_xor(tmp, meta={"round": r, "vec": v})
 
         # Hash stages
-        lin_i = 0
-        bit_i = 0
-        for op1, _, op2, op3, _ in HASH_STAGES:
-            if op1 == "+" and op2 == "+":
-                stage = linear[lin_i]
-                lin_i += 1
-                mult_v = layout.const_v[stage.mult]
-                add_v = layout.const_v[stage.add]
-                _add_vmuladd(valu_ops, val, val, mult_v, add_v, meta={"round": r, "vec": v, "stage": "linear"})
-            else:
-                stage = bitwise[bit_i]
-                bit_i += 1
-                const_v = layout.const_v[stage.const]
-                shift_v = layout.const_v[stage.shift]
+        hash_bitwise_style = getattr(spec, "hash_bitwise_style", "inplace")
+        if hash_bitwise_style not in {"inplace", "tmp_op1"}:
+            raise ValueError(f"unknown hash_bitwise_style {hash_bitwise_style!r}")
+        hash_xor_style = getattr(spec, "hash_xor_style", "baseline")
+        if hash_xor_style not in {"baseline", "swap", "tmp_xor_const"}:
+            raise ValueError(f"unknown hash_xor_style {hash_xor_style!r}")
+        if hash_variant == "ir":
+            assert hash_ir_prog is not None
+            assert _HashLinear is not None and _HashBitwise is not None
+
+            for st in hash_ir_prog:
+                if isinstance(st, _HashLinear):
+                    mult_v = layout.const_v[st.mult]
+                    add_v = layout.const_v[st.add]
+                    _add_vmuladd(
+                        valu_ops,
+                        val,
+                        val,
+                        mult_v,
+                        add_v,
+                        meta={"round": r, "vec": v, "stage": "linear", "hash_stage": st.stage_idx},
+                    )
+                    continue
+
+                assert isinstance(st, _HashBitwise)
+                const_v = layout.const_v[st.const]
+                shift_v = layout.const_v[st.shift]
                 _add_valu(
                     valu_ops,
-                    stage.shift_op,
+                    st.shift_op,
                     tmp,
                     val,
                     shift_v,
-                    meta={"round": r, "vec": v, "stage": "shift"},
+                    meta={"round": r, "vec": v, "stage": "shift", "hash_stage": st.stage_idx},
                     offloadable=getattr(spec, "offload_hash_shift", False),
                 )
-                _add_valu(
-                    valu_ops,
-                    stage.op1,
-                    val,
-                    val,
-                    const_v,
-                    meta={"round": r, "vec": v, "stage": "op1"},
-                    offloadable=getattr(spec, "offload_hash_op1", True),
-                )
-                _add_valu(
-                    valu_ops,
-                    stage.op2,
-                    val,
-                    val,
-                    tmp,
-                    meta={"round": r, "vec": v, "stage": "op2"},
-                    offloadable=getattr(spec, "offload_hash_op2", False),
-                )
+                if st.op1 == "^" and st.op2 == "^" and hash_xor_style != "baseline":
+                    if hash_xor_style == "swap":
+                        # Same semantics, but swaps which XOR is tagged op1/op2 so budgets can target them.
+                        _add_valu(
+                            valu_ops,
+                            "^",
+                            val,
+                            val,
+                            tmp,
+                            meta={"round": r, "vec": v, "stage": "op1", "hash_stage": st.stage_idx},
+                            offloadable=getattr(spec, "offload_hash_op1", True),
+                        )
+                        _add_valu(
+                            valu_ops,
+                            "^",
+                            val,
+                            val,
+                            const_v,
+                            meta={"round": r, "vec": v, "stage": "op2", "hash_stage": st.stage_idx},
+                            offloadable=getattr(spec, "offload_hash_op2", False),
+                        )
+                        continue
+                    if hash_xor_style == "tmp_xor_const":
+                        # Fold const-xor into the shifted temp; reduces WAW pressure on `val`.
+                        _add_valu(
+                            valu_ops,
+                            "^",
+                            tmp,
+                            tmp,
+                            const_v,
+                            meta={"round": r, "vec": v, "stage": "op1", "hash_stage": st.stage_idx},
+                            offloadable=getattr(spec, "offload_hash_op1", True),
+                        )
+                        _add_valu(
+                            valu_ops,
+                            "^",
+                            val,
+                            val,
+                            tmp,
+                            meta={"round": r, "vec": v, "stage": "op2", "hash_stage": st.stage_idx},
+                            offloadable=getattr(spec, "offload_hash_op2", False),
+                        )
+                        continue
+                if hash_bitwise_style == "inplace":
+                    _add_valu(
+                        valu_ops,
+                        st.op1,
+                        val,
+                        val,
+                        const_v,
+                        meta={"round": r, "vec": v, "stage": "op1", "hash_stage": st.stage_idx},
+                        offloadable=getattr(spec, "offload_hash_op1", True),
+                    )
+                    _add_valu(
+                        valu_ops,
+                        st.op2,
+                        val,
+                        val,
+                        tmp,
+                        meta={"round": r, "vec": v, "stage": "op2", "hash_stage": st.stage_idx},
+                        offloadable=getattr(spec, "offload_hash_op2", False),
+                    )
+                else:
+                    tmp_op1 = sel
+                    _add_valu(
+                        valu_ops,
+                        st.op1,
+                        tmp_op1,
+                        val,
+                        const_v,
+                        meta={"round": r, "vec": v, "stage": "op1", "hash_stage": st.stage_idx},
+                        offloadable=getattr(spec, "offload_hash_op1", True),
+                    )
+                    _add_valu(
+                        valu_ops,
+                        st.op2,
+                        val,
+                        tmp_op1,
+                        tmp,
+                        meta={"round": r, "vec": v, "stage": "op2", "hash_stage": st.stage_idx},
+                        offloadable=getattr(spec, "offload_hash_op2", False),
+                    )
+        elif hash_variant == "prog":
+            # Execute a custom hash program over (val, tmp, tmp2).
+            def _resolve_src(src):
+                if isinstance(src, int):
+                    return layout.const_v[src]
+                if src == "val":
+                    return val
+                if src == "tmp":
+                    return tmp
+                if src == "tmp2":
+                    return sel
+                raise ValueError(f"unknown hash_prog src {src!r}")
+
+            def _resolve_dst(dst):
+                if dst == "val":
+                    return val
+                if dst == "tmp":
+                    return tmp
+                if dst == "tmp2":
+                    return sel
+                raise ValueError(f"unknown hash_prog dst {dst!r}")
+
+            for inst in hash_prog:
+                op = inst.get("op")
+                dst = _resolve_dst(inst.get("dst"))
+                stage = inst.get("stage") or inst.get("tag")
+                if stage is None and op in {"<<", ">>"}:
+                    stage = "shift"
+                meta = {"round": r, "vec": v}
+                if stage is not None:
+                    meta["stage"] = stage
+                offloadable = False
+                if stage == "shift":
+                    offloadable = bool(getattr(spec, "offload_hash_shift", False))
+                elif stage == "op1":
+                    offloadable = bool(getattr(spec, "offload_hash_op1", False))
+                elif stage == "op2":
+                    offloadable = bool(getattr(spec, "offload_hash_op2", False))
+
+                if op == "muladd":
+                    a = _resolve_src(inst.get("a"))
+                    b = _resolve_src(inst.get("b"))
+                    c = _resolve_src(inst.get("c"))
+                    _add_vmuladd(valu_ops, dst, a, b, c, meta=meta)
+                elif op == "mov":
+                    a = _resolve_src(inst.get("a"))
+                    _add_valu(valu_ops, "+", dst, a, layout.const_v[0], meta=meta, offloadable=offloadable)
+                else:
+                    a = _resolve_src(inst.get("a"))
+                    b = _resolve_src(inst.get("b"))
+                    _add_valu(valu_ops, op, dst, a, b, meta=meta, offloadable=offloadable)
+        else:
+            lin_i = 0
+            bit_i = 0
+            for op1, _, op2, op3, _ in HASH_STAGES:
+                if op1 == "+" and op2 == "+":
+                    stage = linear[lin_i]
+                    lin_i += 1
+                    mult_v = layout.const_v[stage.mult]
+                    add_v = layout.const_v[stage.add]
+                    _add_vmuladd(valu_ops, val, val, mult_v, add_v, meta={"round": r, "vec": v, "stage": "linear"})
+                else:
+                    stage = bitwise[bit_i]
+                    bit_i += 1
+                    const_v = layout.const_v[stage.const]
+                    shift_v = layout.const_v[stage.shift]
+                    _add_valu(
+                        valu_ops,
+                        stage.shift_op,
+                        tmp,
+                        val,
+                        shift_v,
+                        meta={"round": r, "vec": v, "stage": "shift"},
+                        offloadable=getattr(spec, "offload_hash_shift", False),
+                    )
+                    if stage.op1 == "^" and stage.op2 == "^" and hash_xor_style != "baseline":
+                        if hash_xor_style == "swap":
+                            _add_valu(
+                                valu_ops,
+                                "^",
+                                val,
+                                val,
+                                tmp,
+                                meta={"round": r, "vec": v, "stage": "op1"},
+                                offloadable=getattr(spec, "offload_hash_op1", True),
+                            )
+                            _add_valu(
+                                valu_ops,
+                                "^",
+                                val,
+                                val,
+                                const_v,
+                                meta={"round": r, "vec": v, "stage": "op2"},
+                                offloadable=getattr(spec, "offload_hash_op2", False),
+                            )
+                            continue
+                        if hash_xor_style == "tmp_xor_const":
+                            _add_valu(
+                                valu_ops,
+                                "^",
+                                tmp,
+                                tmp,
+                                const_v,
+                                meta={"round": r, "vec": v, "stage": "op1"},
+                                offloadable=getattr(spec, "offload_hash_op1", True),
+                            )
+                            _add_valu(
+                                valu_ops,
+                                "^",
+                                val,
+                                val,
+                                tmp,
+                                meta={"round": r, "vec": v, "stage": "op2"},
+                                offloadable=getattr(spec, "offload_hash_op2", False),
+                            )
+                            continue
+                    if hash_bitwise_style == "inplace":
+                        _add_valu(
+                            valu_ops,
+                            stage.op1,
+                            val,
+                            val,
+                            const_v,
+                            meta={"round": r, "vec": v, "stage": "op1"},
+                            offloadable=getattr(spec, "offload_hash_op1", True),
+                        )
+                        _add_valu(
+                            valu_ops,
+                            stage.op2,
+                            val,
+                            val,
+                            tmp,
+                            meta={"round": r, "vec": v, "stage": "op2"},
+                            offloadable=getattr(spec, "offload_hash_op2", False),
+                        )
+                    else:
+                        # SSA-ish lowering: avoid writing to `val` twice in one stage.
+                        # This preserves semantics but can improve scheduling by reducing WAW pressure.
+                        tmp_op1 = sel
+                        _add_valu(
+                            valu_ops,
+                            stage.op1,
+                            tmp_op1,
+                            val,
+                            const_v,
+                            meta={"round": r, "vec": v, "stage": "op1"},
+                            offloadable=getattr(spec, "offload_hash_op1", True),
+                        )
+                        _add_valu(
+                            valu_ops,
+                            stage.op2,
+                            val,
+                            tmp_op1,
+                            tmp,
+                            meta={"round": r, "vec": v, "stage": "op2"},
+                            offloadable=getattr(spec, "offload_hash_op2", False),
+                        )
 
         # Index update
         one_v = layout.const_v[1]
@@ -1402,18 +1474,30 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                     meta={"round": r, "vec": v, "reset": "flow"},
                 )
         elif r != 15:
-            _add_valu(
-                valu_ops,
-                "&",
-                tmp,
-                val,
-                one_v,
-                meta={"round": r, "vec": v},
-                offloadable=getattr(spec, "offload_parity", False),
-            )
-            if not getattr(spec, "idx_shifted", False):
+            if getattr(spec, "idx_shifted", False):
+                # idx = idx * 2 + (val & 1)
+                _add_valu(
+                    valu_ops,
+                    "&",
+                    tmp,
+                    val,
+                    one_v,
+                    meta={"round": r, "vec": v},
+                    offloadable=getattr(spec, "offload_parity", False),
+                )
+                _add_vmuladd(valu_ops, idx, idx, two_v, tmp, meta={"round": r, "vec": v})
+            else:
+                _add_valu(
+                    valu_ops,
+                    "&",
+                    tmp,
+                    val,
+                    one_v,
+                    meta={"round": r, "vec": v},
+                    offloadable=getattr(spec, "offload_parity", False),
+                )
                 _add_valu(valu_ops, "+", tmp, tmp, one_v, meta={"round": r, "vec": v})
-            _add_vmuladd(valu_ops, idx, idx, two_v, tmp, meta={"round": r, "vec": v})
+                _add_vmuladd(valu_ops, idx, idx, two_v, tmp, meta={"round": r, "vec": v})
 
     # Final stores
     for v in range(spec.vectors):
