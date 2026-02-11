@@ -510,6 +510,139 @@ lemma memBigAllAddrs_card :
 -- them as axioms adds "trust-me" surface area. If/when we need them, prefer to
 -- reintroduce them as theorems with proofs.
 
+/-!
+### `memBig` satisfies `RoundDistinctNodes memBig 1`
+
+This is the "structured adversary" witness that upgrades the load-throughput lower bound
+from `16` (valid-input / value-slice) to `256` in the worst case.
+
+Key idea:
+- On `memBig`, the forest is all-zero and all input values are zero.
+- Lane `i` reads the node at index `idxAtR r i` at round `r`.
+- Bumping that forest node from 0 to 1 changes the value update at that round and therefore
+  changes the final `spec_kernel` output for that lane.
+
+We *do not* need `myhash`/`iterHash` to be injective: since `ROUNDS = 16`, we can compute
+the per-round sensitivity of the "flip node at round r" perturbation via `native_decide`.
+-/
+
+def memBigTree (mem : Memory) : Nat → Nat :=
+  fun k => memAt mem (BIG_FOREST_BASE + k)
+
+lemma memBigTree_zero (k : Nat) (hk : k < N_NODES_BIG) :
+    memBigTree memBig k = 0 := by
+  simpa [memBigTree] using memBig_tree k hk
+
+lemma memBig_rounds_nat : memAt memBig 0 = ROUNDS := memBig_rounds
+
+lemma memBig_nodes_nat : memAt memBig 1 = N_NODES_BIG := by
+  simp [memAt, memBig]
+
+lemma memBig_val0 (i : Fin BATCH_SIZE) :
+    memAt memBig (BIG_VAL_BASE + i) = 0 := memBig_val i
+
+lemma memBig_idx0 (i : Fin BATCH_SIZE) :
+    memAt memBig (BIG_IDX_BASE + i) = bigIdx i := memBig_idx i
+
+lemma idxAt_zero (i : Fin BATCH_SIZE) : idxAt 0 i = bigIdx i := by
+  simp [idxAt, cSeq]
+
+lemma idxAt_succ (r : Nat) (i : Fin BATCH_SIZE) :
+    idxAt (r + 1) i = 2 * idxAt r i + bSeq r := by
+  -- Expand and regroup:
+  -- idxAt (r+1) i = 2^(r+1) * bigIdx i + cSeq (r+1)
+  --               = 2 * (2^r * bigIdx i + cSeq r) + bSeq r
+  simp [idxAt, cSeq, Nat.pow_succ, Nat.mul_add, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm,
+    Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm, Nat.left_distrib]
+
+lemma idxAt_lt_N_NODES_BIG_le (r : Nat) (i : Fin BATCH_SIZE) (hr : r ≤ ROUNDS) :
+    idxAt r i < N_NODES_BIG := by
+  -- Reuse the existing `<` proof for `r < ROUNDS` when possible; handle the `r = ROUNDS` edge case.
+  cases lt_or_eq_of_le hr with
+  | inl hlt =>
+      exact idxAt_lt_N_NODES_BIG (r := r) (i := i) hlt
+  | inr hEq =>
+      -- `r = ROUNDS`: the same bounding argument as `idxAt_lt_N_NODES_BIG` works.
+      subst hEq
+      -- `idxAt ROUNDS i = 2^ROUNDS * bigIdx i + cSeq ROUNDS`
+      have hi2 : 2 * (i : Nat) < 2 * BATCH_SIZE := by
+        exact (Nat.mul_lt_mul_left (a:=2) (b:=i) (c:=BATCH_SIZE) (by decide : 0 < (2:Nat))).2
+          i.is_lt
+      have hle : 2 * (i : Nat) + 1 ≤ 2 * BATCH_SIZE := Nat.succ_le_of_lt hi2
+      have hbig : bigIdx i ≤ (2 * BATCH_SIZE) * BIG_M := by
+        dsimp [bigIdx, bigIdxNat]
+        exact Nat.mul_le_mul_right _ hle
+      have hidx :
+          Nat.pow 2 ROUNDS * bigIdx i ≤ Nat.pow 2 ROUNDS * ((2 * BATCH_SIZE) * BIG_M) := by
+        exact Nat.mul_le_mul_left _ hbig
+      have hval : cSeq ROUNDS < BIG_M := by
+        have hc : cSeq ROUNDS < Nat.pow 2 (ROUNDS + 1) := cSeq_bound ROUNDS
+        have : Nat.pow 2 (ROUNDS + 1) ≤ BIG_M := by
+          -- `BIG_M = 2^(ROUNDS+2)`
+          unfold BIG_M
+          -- monotonicity of `Nat.pow` in the exponent
+          exact Nat.pow_le_pow_right (by decide : 0 < (2:Nat)) (Nat.le_succ (ROUNDS + 1))
+        exact lt_of_lt_of_le hc this
+      have hsum : idxAt ROUNDS i < Nat.pow 2 ROUNDS * ((2 * BATCH_SIZE) * BIG_M) + BIG_M := by
+        dsimp [idxAt]
+        exact Nat.add_lt_add_of_le_of_lt hidx hval
+      simpa [N_NODES_BIG, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using hsum
+
+lemma spec_kernel_memBig (i : Fin BATCH_SIZE) :
+    spec_kernel memBig i = iterHash ROUNDS 0 := by
+  classical
+  -- Unfold spec at lane `i`.
+  have hrounds : memAt memBig 0 = ROUNDS := memBig_rounds
+  have hnodes : memAt memBig 1 = N_NODES_BIG := memBig_nodes_nat
+  have hptrF : memAt memBig PTR_FOREST = BIG_FOREST_BASE := (memBig_ptrs).1
+  have hptrI : memAt memBig PTR_INP_IDX = BIG_IDX_BASE := (memBig_ptrs).2.1
+  have hptrV : memAt memBig PTR_INP_VAL = BIG_VAL_BASE := (memBig_ptrs).2.2
+  have hidx0 : memAt memBig (memAt memBig PTR_INP_IDX + i) = bigIdx i := by
+    simpa [hptrI] using memBig_idx0 i
+  have hval0 : memAt memBig (memAt memBig PTR_INP_VAL + i) = 0 := by
+    simpa [hptrV] using memBig_val0 i
+  -- The forest is all-zero on `[0, N_NODES_BIG)`.
+  let tree : Nat → Nat := fun k => memAt memBig (BIG_FOREST_BASE + k)
+  have htree0 : ∀ k < N_NODES_BIG, tree k = 0 := by
+    intro k hk
+    simpa [tree] using memBigTree_zero k hk
+  have hnpos : 0 < N_NODES_BIG := by decide
+  have hidx0_lt : (bigIdx i) < N_NODES_BIG := by
+    -- `bigIdx i = idxAt 0 i`.
+    simpa [idxAt_zero] using (idxAt_lt_N_NODES_BIG_le (r := 0) (i := i) (by decide : 0 ≤ ROUNDS))
+  -- Apply the zero-tree value lemma at `n = ROUNDS - 1` (same as in `spec_kernel_uniform_val`,
+  -- but for an arbitrary in-range `idx0`).
+  have hrounds_pos : 1 ≤ ROUNDS := by decide
+  have hrounds_succ : (ROUNDS - 1) + 1 = ROUNDS := Nat.sub_add_cancel hrounds_pos
+  have hvalF :
+      (iterRounds tree N_NODES_BIG ((ROUNDS - 1) + 1) (bigIdx i) 0).2 =
+        iterHash ((ROUNDS - 1) + 1) (mod32 0) := by
+    simpa using
+      iterRounds_zero_tree_val_range_succ tree N_NODES_BIG htree0 hnpos (n := ROUNDS - 1)
+        (idx := bigIdx i) (val := 0) hidx0_lt
+  -- Turn `hvalF` into the `ROUNDS`-form.
+  have hvalF' :
+      (iterRounds tree N_NODES_BIG ROUNDS (bigIdx i) 0).2 = iterHash ROUNDS 0 := by
+    simpa [hrounds_succ, mod32] using hvalF
+  -- Finish by unfolding `spec_kernel` and rewriting pointers/inputs to match `hvalF'`.
+  -- (We rewrite the lane's `idx0/val0` via the concrete `memBig_*` lemmas.)
+  unfold spec_kernel
+  -- `simp` turns the spec into `(iterRounds tree ...).2` and then we can apply `hvalF'`.
+  simpa [hrounds, hnodes, hptrF, hptrI, hptrV, memBig_idx0, memBig_val0, tree] using hvalF'
+
+/-!
+Per-round sensitivity of the "flip a single forest node at round `r`" perturbation.
+
+This is a *value-level* fact (no machine/program), so we compute it via `native_decide`
+once we reduce the spec to a pure `iterHash` expression.
+-/
+lemma iterHash_bump_round_ne (r : Fin ROUNDS) :
+    iterHash ROUNDS 0 ≠
+      iterHash (ROUNDS - (r.1 + 1))
+        (myhash (aluEval AluOp.xor (iterHash r.1 0) 1)) := by
+  -- There are only `ROUNDS = 16` cases.
+  fin_cases r <;> native_decide
+
 lemma memBig_tree_addr_safe (r : Fin ROUNDS) (i : Fin BATCH_SIZE) :
     AddrSafe memBig (BIG_FOREST_BASE + idxAtR r i) := by
   have hge : HEADER_SIZE ≤ BIG_FOREST_BASE + idxAtR r i := by
@@ -544,34 +677,9 @@ lemma memBig_val_addr_safe (i : Fin BATCH_SIZE) :
     exact hlt'
   exact ⟨hge, hlt⟩
 
-axiom memBigAllAddrs_subset_readWords_machine (p : Program)
-    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel) :
-    memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset
-
-theorem memBigTreeAddrs_subset_readWords_machine (p : Program)
-    (_hstraight : StraightLine p)
-    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel) :
-    memBigTreeAddrs ⊆ (readWordsMachine p memBig).toFinset := by
-  intro a ha
-  have haAll : a ∈ memBigAllAddrs := by
-    -- `memBigAllAddrs = memBigTreeAddrs ∪ memBigValAddrs`
-    simpa [memBigAllAddrs] using (Finset.mem_union.mpr (Or.inl ha))
-  exact memBigAllAddrs_subset_readWords_machine p hcorrect haAll
-
-theorem memBigValAddrs_subset_readWords_machine (p : Program)
-    (_hstraight : StraightLine p)
-    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel) :
-    memBigValAddrs ⊆ (readWordsMachine p memBig).toFinset := by
-  intro a ha
-  have haAll : a ∈ memBigAllAddrs := by
-    simpa [memBigAllAddrs] using (Finset.mem_union.mpr (Or.inr ha))
-  exact memBigAllAddrs_subset_readWords_machine p hcorrect haAll
-
 theorem min_required_words_kernel_machine_memBig_all (p : Program)
-    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel) :
+    (hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset) :
     BATCH_SIZE * (ROUNDS + 1) ≤ readWordCountMachine p memBig := by
-  have hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset :=
-    memBigAllAddrs_subset_readWords_machine p hcorrect
   have hcard_le : memBigAllAddrs.card ≤ (readWordsMachine p memBig).toFinset.card := by
     simpa using (Finset.card_le_card hsubset)
   have hlen : (readWordsMachine p memBig).toFinset.card ≤ (readWordsMachine p memBig).length := by

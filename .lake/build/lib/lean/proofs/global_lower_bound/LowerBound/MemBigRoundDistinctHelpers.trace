@@ -1,0 +1,35 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["8bd6c02b7823c6f0.olean"],
+  "i": "4b77f7bcf7ede3d4.ilean",
+  "c": "c86031af15c394b8.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/xyz/deco/original_performance_takehome/.lake/packages/Cli/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/batteries/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/Qq/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/aesop/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/importGraph/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/plausible/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/mathlib/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean /Users/xyz/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/xyz/deco/original_performance_takehome/proofs/global_lower_bound/LowerBound/MemBigRoundDistinctHelpers.lean -o /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/global_lower_bound/LowerBound/MemBigRoundDistinctHelpers.olean -i /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/global_lower_bound/LowerBound/MemBigRoundDistinctHelpers.ilean -c /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/global_lower_bound/LowerBound/MemBigRoundDistinctHelpers.c --setup /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/global_lower_bound/LowerBound/MemBigRoundDistinctHelpers.setup.json --json",
+   "level": "trace"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/MemBigRoundDistinctHelpers.lean:66:4: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"}],
+ "inputs":
+ [["proofs.global_lower_bound.LowerBound.MemBigRoundDistinctHelpers:deps",
+   [["deps",
+     [["original_performance_takehome/TakehomeProofs:extraDep",
+       [["@original_performance_takehome:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["proofs.global_lower_bound.LowerBound.Adversary transitive imports (legacy)",
+         "78190c7d172b8891"],
+        ["proofs.global_lower_bound.LowerBound.Adversary:importAllArts",
+         "eb2d6d040b2d628a"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/xyz/deco/original_performance_takehome/proofs/global_lower_bound/LowerBound/MemBigRoundDistinctHelpers.lean",
+   "68b2bbe28438f314"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "0223f5b6512aaee0"}

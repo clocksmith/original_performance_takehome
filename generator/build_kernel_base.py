@@ -14,6 +14,7 @@ from .offload import apply_offload_stream
 
 def _build_setup_prelude(spec: SpecBase, layout) -> list[dict[str, list[tuple]]]:
     setup_instrs: list[dict[str, list[tuple]]] = []
+    assume_zero_indices = bool(getattr(spec, "assume_zero_indices", False))
 
     def _pack(engine: str, slots: list[tuple]) -> None:
         cap = SLOT_LIMITS[engine]
@@ -32,9 +33,10 @@ def _build_setup_prelude(spec: SpecBase, layout) -> list[dict[str, list[tuple]]]
     # Load base pointers from mem[4], mem[5], mem[6].
     ptr_loads = [
         ("load", layout.forest_values_p, layout.const_s[4]),
-        ("load", layout.inp_indices_p, layout.const_s[5]),
         ("load", layout.inp_values_p, layout.const_s[6]),
     ]
+    if not assume_zero_indices:
+        ptr_loads.insert(1, ("load", layout.inp_indices_p, layout.const_s[5]))
     _pack("load", ptr_loads)
 
     # Broadcast forest_values_p pointer for uncached address compute (shifted if needed).
@@ -49,22 +51,32 @@ def _build_setup_prelude(spec: SpecBase, layout) -> list[dict[str, list[tuple]]]
     # Pointer setup (flow add_imm or ALU +, depending on spec).
     ptr_engine = getattr(spec, "ptr_setup_engine", "flow")
     if ptr_engine == "flow":
-        flow_setup = [
-            ("add_imm", layout.idx_ptr[0], layout.inp_indices_p, 0),
-            ("add_imm", layout.val_ptr[0], layout.inp_values_p, 0),
-        ]
+        flow_setup = [("add_imm", layout.val_ptr[0], layout.inp_values_p, 0)]
         for v in range(1, spec.vectors):
-            flow_setup.append(("add_imm", layout.idx_ptr[v], layout.idx_ptr[v - 1], VLEN))
             flow_setup.append(("add_imm", layout.val_ptr[v], layout.val_ptr[v - 1], VLEN))
+        if not assume_zero_indices:
+            flow_setup.insert(0, ("add_imm", layout.idx_ptr[0], layout.inp_indices_p, 0))
+            for v in range(1, spec.vectors):
+                flow_setup.insert(2 * v, ("add_imm", layout.idx_ptr[v], layout.idx_ptr[v - 1], VLEN))
         _pack("flow", flow_setup)
     elif ptr_engine == "alu":
+        # Two independent pointer chains (idx_ptr and val_ptr). We can safely
+        # issue one step from each chain in the same cycle.
         zero = layout.const_s[0]
         vlen = layout.const_s[VLEN]
-        setup_instrs.append({"alu": [("+", layout.idx_ptr[0], layout.inp_indices_p, zero)]})
-        setup_instrs.append({"alu": [("+", layout.val_ptr[0], layout.inp_values_p, zero)]})
+
+        slots0: list[tuple] = []
+        if not assume_zero_indices:
+            slots0.append(("+", layout.idx_ptr[0], layout.inp_indices_p, zero))
+        slots0.append(("+", layout.val_ptr[0], layout.inp_values_p, zero))
+        setup_instrs.append({"alu": slots0})
+
         for v in range(1, spec.vectors):
-            setup_instrs.append({"alu": [("+", layout.idx_ptr[v], layout.idx_ptr[v - 1], vlen)]})
-            setup_instrs.append({"alu": [("+", layout.val_ptr[v], layout.val_ptr[v - 1], vlen)]})
+            slots: list[tuple] = []
+            if not assume_zero_indices:
+                slots.append(("+", layout.idx_ptr[v], layout.idx_ptr[v - 1], vlen))
+            slots.append(("+", layout.val_ptr[v], layout.val_ptr[v - 1], vlen))
+            setup_instrs.append({"alu": slots})
     else:
         raise ValueError(f"unknown ptr_setup_engine {ptr_engine!r}")
 
@@ -96,10 +108,17 @@ def _build_setup_prelude(spec: SpecBase, layout) -> list[dict[str, list[tuple]]]
     # Initial vloads (indices + values).
     vloads = []
     for v in range(spec.vectors):
-        vloads.append(("vload", layout.idx[v], layout.idx_ptr[v]))
+        if not assume_zero_indices:
+            vloads.append(("vload", layout.idx[v], layout.idx_ptr[v]))
         vloads.append(("vload", layout.val[v], layout.val_ptr[v]))
     _pack("load", vloads)
-    if getattr(spec, "idx_shifted", False) and not getattr(spec, "proof_assume_shifted_input", False):
+    # If the harness guarantees zero input indices, we can skip loading them and
+    # instead initialize idx vectors here.
+    if assume_zero_indices:
+        init = layout.const_s[1] if getattr(spec, "idx_shifted", False) else layout.const_s[0]
+        idx_inits = [("vbroadcast", layout.idx[v], init) for v in range(spec.vectors)]
+        _pack("valu", idx_inits)
+    elif getattr(spec, "idx_shifted", False) and not getattr(spec, "proof_assume_shifted_input", False):
         shift_ops = [("+", layout.idx[v], layout.idx[v], layout.const_v[1]) for v in range(spec.vectors)]
         _pack("valu", shift_ops)
 
@@ -138,11 +157,17 @@ def build_base_instrs(spec: SpecBase | None = None):
     sched_seed = getattr(spec, "sched_seed", 0)
     sched_jitter = getattr(spec, "sched_jitter", 0.0)
     sched_restarts = getattr(spec, "sched_restarts", 1)
+    sched_compact = bool(getattr(spec, "sched_compact", False))
+    sched_policy = getattr(spec, "sched_policy", "baseline")
+    sched_target_cycles = getattr(spec, "sched_target_cycles", None)
     instrs = schedule_ops_dep(
         final_ops,
         seed=sched_seed,
         jitter=sched_jitter,
         restarts=sched_restarts,
+        compact=sched_compact,
+        policy=sched_policy,
+        target_cycles=sched_target_cycles,
     )
     if setup_style == "packed":
         return setup_instrs + instrs

@@ -86,6 +86,7 @@ LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_AluOp_i
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_execLoadSlot___lam__0___boxed(lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_FlowSlot_trace__write_elim(lean_object*, lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_AluOp_mul_elim___redArg(lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_memWriteMany_match__1_splitter___redArg(lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_instReprCoreState_repr(uint8_t, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_Std_Format_joinSep___at___00List_repr___at___00ProofMachine_instReprInstruction_repr_spec__16_spec__16(lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_execAluSlots(lean_object*, lean_object*);
@@ -148,6 +149,7 @@ LEAN_EXPORT uint8_t lp_original__performance__takehome_ProofMachine_execLoadSlot
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_LoadSlot_vload_elim(lean_object*, lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_AluOp_shr_elim(lean_object*, uint8_t, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_StoreSlot_ctorIdx(lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_execInstruction_match__1_splitter(lean_object*, lean_object*, lean_object*, lean_object*, lean_object*);
 static lean_object* lp_original__performance__takehome_ProofMachine_instReprLoadSlot_repr___closed__10;
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_listGet_x3f(lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_instReprAluSlot_repr___boxed(lean_object*, lean_object*);
@@ -173,6 +175,7 @@ LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_vecDivZ
 LEAN_EXPORT lean_object* lp_original__performance__takehome_List_repr___at___00ProofMachine_instReprInstruction_repr_spec__4(lean_object*, lean_object*);
 static lean_object* lp_original__performance__takehome_ProofMachine_instReprAluOp_repr___closed__20;
 lean_object* lean_nat_to_int(lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_execInstruction_match__1_splitter___redArg(lean_object*, lean_object*, lean_object*, lean_object*);
 static lean_object* lp_original__performance__takehome_ProofMachine_instReprAluOp_repr___closed__15;
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_natXor(lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_List_repr___at___00ProofMachine_instReprInstruction_repr_spec__8___boxed(lean_object*, lean_object*);
@@ -218,6 +221,7 @@ LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_LoadSlo
 static lean_object* lp_original__performance__takehome_ProofMachine_instReprStoreSlot_repr___closed__1;
 LEAN_EXPORT lean_object* lp_original__performance__takehome_Std_Format_joinSep___at___00List_repr___at___00ProofMachine_instReprInstruction_repr_spec__12_spec__12___lam__0(lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_ValuSlot_ctorIdx___boxed(lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_memWriteMany_match__1_splitter(lean_object*, lean_object*, lean_object*, lean_object*);
 static lean_object* lp_original__performance__takehome_ProofMachine_instReprAluOp_repr___closed__19;
 static lean_object* lp_original__performance__takehome_ProofMachine_instReprFlowSlot_repr___closed__29;
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_vecWrites(lean_object*, lean_object*);
@@ -235,6 +239,7 @@ LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_DebugSl
 static lean_object* lp_original__performance__takehome_ProofMachine_instReprInstruction_repr___redArg___closed__14;
 static lean_object* lp_original__performance__takehome_ProofMachine_instReprCoreState_repr___closed__6;
 static lean_object* lp_original__performance__takehome_ProofMachine_instReprInstruction_repr___redArg___closed__9;
+LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_execAluSlots_match__1_splitter___redArg(lean_object*, lean_object*, lean_object*);
 static lean_object* lp_original__performance__takehome_List_mapTR_loop___at___00ProofMachine_execLoadSlot_spec__1___closed__3;
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_StoreSlot_ctorElim(lean_object*, lean_object*, lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_CoreState_running_elim(lean_object*, uint8_t, lean_object*, lean_object*);
@@ -375,6 +380,7 @@ LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_CoreSta
 static lean_object* lp_original__performance__takehome_ProofMachine_instReprAluOp_repr___closed__16;
 static lean_object* lp_original__performance__takehome_ProofMachine_instReprValuSlot_repr___closed__4;
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_execValuSlot___lam__1(lean_object*, lean_object*, lean_object*, lean_object*, lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_execAluSlots_match__1_splitter(lean_object*, lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofMachine_instReprCoreState_repr___boxed(lean_object*, lean_object*);
 lean_object* l_List_reverse___redArg(lean_object*);
 uint8_t lean_int_dec_lt(lean_object*, lean_object*);
@@ -10277,6 +10283,138 @@ _start:
 uint8_t x_4; lean_object* x_5; 
 x_4 = lp_original__performance__takehome_ProofMachine_execDebugSlot(x_1, x_2, x_3);
 x_5 = lean_box(x_4);
+return x_5;
+}
+}
+LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_execAluSlots_match__1_splitter___redArg(lean_object* x_1, lean_object* x_2, lean_object* x_3) {
+_start:
+{
+if (lean_obj_tag(x_1) == 0)
+{
+lean_object* x_4; lean_object* x_5; 
+lean_dec(x_3);
+x_4 = lean_box(0);
+x_5 = lean_apply_1(x_2, x_4);
+return x_5;
+}
+else
+{
+lean_object* x_6; lean_object* x_7; 
+lean_dec(x_2);
+x_6 = lean_ctor_get(x_1, 0);
+lean_inc(x_6);
+lean_dec_ref(x_1);
+x_7 = lean_apply_1(x_3, x_6);
+return x_7;
+}
+}
+}
+LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_execAluSlots_match__1_splitter(lean_object* x_1, lean_object* x_2, lean_object* x_3, lean_object* x_4) {
+_start:
+{
+lean_object* x_5; 
+x_5 = lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_execAluSlots_match__1_splitter___redArg(x_2, x_3, x_4);
+return x_5;
+}
+}
+LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_execInstruction_match__1_splitter(lean_object* x_1, lean_object* x_2, lean_object* x_3, lean_object* x_4, lean_object* x_5) {
+_start:
+{
+if (lean_obj_tag(x_2) == 1)
+{
+if (lean_obj_tag(x_3) == 1)
+{
+lean_object* x_6; lean_object* x_7; lean_object* x_8; 
+lean_dec(x_5);
+x_6 = lean_ctor_get(x_2, 0);
+lean_inc(x_6);
+lean_dec_ref(x_2);
+x_7 = lean_ctor_get(x_3, 0);
+lean_inc(x_7);
+lean_dec_ref(x_3);
+x_8 = lean_apply_2(x_4, x_6, x_7);
+return x_8;
+}
+else
+{
+lean_object* x_9; 
+lean_dec(x_4);
+x_9 = lean_apply_3(x_5, x_2, x_3, lean_box(0));
+return x_9;
+}
+}
+else
+{
+lean_object* x_10; 
+lean_dec(x_4);
+x_10 = lean_apply_3(x_5, x_2, x_3, lean_box(0));
+return x_10;
+}
+}
+}
+LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_execInstruction_match__1_splitter___redArg(lean_object* x_1, lean_object* x_2, lean_object* x_3, lean_object* x_4) {
+_start:
+{
+if (lean_obj_tag(x_1) == 1)
+{
+if (lean_obj_tag(x_2) == 1)
+{
+lean_object* x_5; lean_object* x_6; lean_object* x_7; 
+lean_dec(x_4);
+x_5 = lean_ctor_get(x_1, 0);
+lean_inc(x_5);
+lean_dec_ref(x_1);
+x_6 = lean_ctor_get(x_2, 0);
+lean_inc(x_6);
+lean_dec_ref(x_2);
+x_7 = lean_apply_2(x_3, x_5, x_6);
+return x_7;
+}
+else
+{
+lean_object* x_8; 
+lean_dec(x_3);
+x_8 = lean_apply_3(x_4, x_1, x_2, lean_box(0));
+return x_8;
+}
+}
+else
+{
+lean_object* x_9; 
+lean_dec(x_3);
+x_9 = lean_apply_3(x_4, x_1, x_2, lean_box(0));
+return x_9;
+}
+}
+}
+LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_memWriteMany_match__1_splitter___redArg(lean_object* x_1, lean_object* x_2, lean_object* x_3) {
+_start:
+{
+if (lean_obj_tag(x_1) == 0)
+{
+lean_object* x_4; lean_object* x_5; 
+lean_dec(x_3);
+x_4 = lean_box(0);
+x_5 = lean_apply_1(x_2, x_4);
+return x_5;
+}
+else
+{
+lean_object* x_6; lean_object* x_7; 
+lean_dec(x_2);
+x_6 = lean_ctor_get(x_1, 0);
+lean_inc(x_6);
+lean_dec_ref(x_1);
+x_7 = lean_apply_1(x_3, x_6);
+return x_7;
+}
+}
+}
+LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_memWriteMany_match__1_splitter(lean_object* x_1, lean_object* x_2, lean_object* x_3, lean_object* x_4) {
+_start:
+{
+lean_object* x_5; 
+x_5 = lp_original__performance__takehome___private_proofs_common_Machine_0__ProofMachine_memWriteMany_match__1_splitter___redArg(x_2, x_3, x_4);
 return x_5;
 }
 }

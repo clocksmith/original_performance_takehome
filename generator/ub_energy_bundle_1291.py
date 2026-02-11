@@ -66,6 +66,7 @@ SPEC_UB_ENERGY_BUNDLE_1291 = replace(
     sched_seed=9,
     sched_jitter=0.1,
     sched_restarts=2,
+    sched_target_cycles=None,
     use_temp_deps=True,
 )
 

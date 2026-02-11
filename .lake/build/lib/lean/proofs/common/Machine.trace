@@ -1,13 +1,25 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["57a8b1e919646a18.olean"],
-  "i": "64678b5acf75d6fe.ilean",
-  "c": "cae23ce3272ce9e1.c"},
+ {"o": ["57bdc64aafd4981b.olean"],
+  "i": "f9a4c95ccd4323e1.ilean",
+  "c": "eac5fe7faac243ca.c"},
  "log":
  [{"message":
    ".> LEAN_PATH=/Users/xyz/deco/original_performance_takehome/.lake/packages/Cli/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/batteries/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/Qq/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/aesop/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/importGraph/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/plausible/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/mathlib/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean /Users/xyz/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/xyz/deco/original_performance_takehome/proofs/common/Machine.lean -o /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/common/Machine.olean -i /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/common/Machine.ilean -c /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/common/Machine.c --setup /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/common/Machine.setup.json --json",
-   "level": "trace"}],
+   "level": "trace"},
+  {"message":
+   "proofs/common/Machine.lean:466:68: This simp argument is unused:\n  hvalu\n\nHint: Omit it from the simp argument list.\n  simp ̵[̵h̵v̵a̵l̵u̵]̵\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "proofs/common/Machine.lean:467:65: This simp argument is unused:\n  halu\n\nHint: Omit it from the simp argument list.\n  simp ̵[̵h̵a̵l̵u̵]̵\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "proofs/common/Machine.lean:474:32: This simp argument is unused:\n  hload\n\nHint: Omit it from the simp argument list.\n  simp ̵[̵h̵l̵o̵a̵d̵]̵\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "proofs/common/Machine.lean:476:14: This simp argument is unused:\n  hmw\n\nHint: Omit it from the simp argument list.\n  simp ̵[̵h̵m̵w̵]̵\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"}],
  "inputs":
  [["proofs.common.Machine:deps",
    [["deps",
@@ -26,7 +38,7 @@
   ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
    "9a2be90fd35343e5"],
   ["/Users/xyz/deco/original_performance_takehome/proofs/common/Machine.lean",
-   "2b63262db35af536"],
+   "88191c8ac426eb0a"],
   ["options", "00000000000006bb"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "6a5ea888ccb0c8e2"}
+ "depHash": "193e245edc9e36cf"}

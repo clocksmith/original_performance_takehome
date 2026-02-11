@@ -32,6 +32,8 @@ static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_HAS
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_spec__values___boxed(lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel___lam__0(lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_zeroTree___boxed(lean_object*);
+lean_object* l_Nat_recCompiled___redArg(lean_object*, lean_object*, lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_iterHash___lam__0(lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_global__lower__bound_LowerBound_Specs_0__ProofMachine_instReprAluOp_repr_match__1_splitter___redArg(uint8_t, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_HASH__STAGES;
 static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_HASH__STAGES___closed__0;
@@ -39,14 +41,17 @@ static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_HAS
 static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_HASH__STAGES___closed__9;
 static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_HASH__STAGES___closed__17;
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel___lam__0___boxed(lean_object*, lean_object*, lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_iterRounds___lam__0___boxed(lean_object*, lean_object*, lean_object*, lean_object*);
 static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_HASH__STAGES___closed__12;
 lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_memAt(lean_object*, lean_object*);
 static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_HASH__STAGES___closed__7;
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_step___boxed(lean_object*, lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_zeroTree(lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_iterRounds___lam__0(lean_object*, lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_memUniform0;
 LEAN_EXPORT lean_object* lp_original__performance__takehome___private_proofs_global__lower__bound_LowerBound_Specs_0__ProofGlobalLowerBound_hashStage_match__1_splitter___redArg(lean_object*, lean_object*);
 static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_HASH__STAGES___closed__2;
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_iterHash___boxed(lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_List_foldl___at___00ProofGlobalLowerBound_myhash_spec__0(lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel___boxed(lean_object*, lean_object*);
 static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_HASH__STAGES___closed__29;
@@ -60,8 +65,8 @@ LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBoun
 uint8_t lean_nat_dec_eq(lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_hashStage___boxed(lean_object*, lean_object*);
 lean_object* lean_nat_mod(lean_object*, lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_iterHash___lam__0___boxed(lean_object*, lean_object*);
 static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_HASH__STAGES___closed__18;
-lean_object* lean_nat_sub(lean_object*, lean_object*);
 lean_object* lean_nat_mul(lean_object*, lean_object*);
 static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_HASH__STAGES___closed__25;
 static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_HASH__STAGES___closed__1;
@@ -942,41 +947,43 @@ lean_dec(x_2);
 return x_5;
 }
 }
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_iterRounds___lam__0(lean_object* x_1, lean_object* x_2, lean_object* x_3, lean_object* x_4) {
+_start:
+{
+lean_object* x_5; lean_object* x_6; lean_object* x_7; 
+x_5 = lean_ctor_get(x_4, 0);
+lean_inc(x_5);
+x_6 = lean_ctor_get(x_4, 1);
+lean_inc(x_6);
+lean_dec_ref(x_4);
+x_7 = lp_original__performance__takehome_ProofGlobalLowerBound_step(x_1, x_2, x_5, x_6);
+lean_dec(x_6);
+return x_7;
+}
+}
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_iterRounds___lam__0___boxed(lean_object* x_1, lean_object* x_2, lean_object* x_3, lean_object* x_4) {
+_start:
+{
+lean_object* x_5; 
+x_5 = lp_original__performance__takehome_ProofGlobalLowerBound_iterRounds___lam__0(x_1, x_2, x_3, x_4);
+lean_dec(x_3);
+lean_dec(x_2);
+return x_5;
+}
+}
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_iterRounds(lean_object* x_1, lean_object* x_2, lean_object* x_3, lean_object* x_4, lean_object* x_5) {
 _start:
 {
-lean_object* x_6; uint8_t x_7; 
-x_6 = lean_unsigned_to_nat(0u);
-x_7 = lean_nat_dec_eq(x_3, x_6);
-if (x_7 == 1)
-{
-lean_object* x_8; 
-lean_dec(x_3);
-lean_dec_ref(x_1);
-x_8 = lean_alloc_ctor(0, 2, 0);
-lean_ctor_set(x_8, 0, x_4);
-lean_ctor_set(x_8, 1, x_5);
+lean_object* x_6; lean_object* x_7; lean_object* x_8; 
+x_6 = lean_alloc_closure((void*)(lp_original__performance__takehome_ProofGlobalLowerBound_iterRounds___lam__0___boxed), 4, 2);
+lean_closure_set(x_6, 0, x_1);
+lean_closure_set(x_6, 1, x_2);
+x_7 = lean_alloc_ctor(0, 2, 0);
+lean_ctor_set(x_7, 0, x_4);
+lean_ctor_set(x_7, 1, x_5);
+x_8 = l_Nat_recCompiled___redArg(x_7, x_6, x_3);
+lean_dec_ref(x_7);
 return x_8;
-}
-else
-{
-lean_object* x_9; lean_object* x_10; lean_object* x_11; lean_object* x_12; lean_object* x_13; 
-lean_inc_ref(x_1);
-x_9 = lp_original__performance__takehome_ProofGlobalLowerBound_step(x_1, x_2, x_4, x_5);
-lean_dec(x_5);
-x_10 = lean_ctor_get(x_9, 0);
-lean_inc(x_10);
-x_11 = lean_ctor_get(x_9, 1);
-lean_inc(x_11);
-lean_dec_ref(x_9);
-x_12 = lean_unsigned_to_nat(1u);
-x_13 = lean_nat_sub(x_3, x_12);
-lean_dec(x_3);
-x_3 = x_13;
-x_4 = x_10;
-x_5 = x_11;
-goto _start;
-}
 }
 }
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_iterRounds___boxed(lean_object* x_1, lean_object* x_2, lean_object* x_3, lean_object* x_4, lean_object* x_5) {
@@ -984,7 +991,7 @@ _start:
 {
 lean_object* x_6; 
 x_6 = lp_original__performance__takehome_ProofGlobalLowerBound_iterRounds(x_1, x_2, x_3, x_4, x_5);
-lean_dec(x_2);
+lean_dec(x_3);
 return x_6;
 }
 }
@@ -1038,7 +1045,7 @@ x_16 = lean_nat_add(x_13, x_2);
 lean_dec(x_13);
 x_17 = lp_original__performance__takehome_ProofGlobalLowerBound_memAt(x_1, x_16);
 x_18 = lp_original__performance__takehome_ProofGlobalLowerBound_iterRounds(x_9, x_6, x_4, x_15, x_17);
-lean_dec(x_6);
+lean_dec(x_4);
 x_19 = lean_ctor_get(x_18, 1);
 lean_inc(x_19);
 lean_dec_ref(x_18);
@@ -1054,28 +1061,40 @@ lean_dec(x_2);
 return x_3;
 }
 }
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_iterHash___lam__0(lean_object* x_1, lean_object* x_2) {
+_start:
+{
+lean_object* x_3; 
+x_3 = lp_original__performance__takehome_ProofGlobalLowerBound_myhash(x_2);
+return x_3;
+}
+}
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_iterHash___lam__0___boxed(lean_object* x_1, lean_object* x_2) {
+_start:
+{
+lean_object* x_3; 
+x_3 = lp_original__performance__takehome_ProofGlobalLowerBound_iterHash___lam__0(x_1, x_2);
+lean_dec(x_1);
+return x_3;
+}
+}
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_iterHash(lean_object* x_1, lean_object* x_2) {
 _start:
 {
-lean_object* x_3; uint8_t x_4; 
-x_3 = lean_unsigned_to_nat(0u);
-x_4 = lean_nat_dec_eq(x_1, x_3);
-if (x_4 == 1)
-{
-lean_dec(x_1);
-return x_2;
+lean_object* x_3; lean_object* x_4; 
+x_3 = lean_alloc_closure((void*)(lp_original__performance__takehome_ProofGlobalLowerBound_iterHash___lam__0___boxed), 2, 0);
+x_4 = l_Nat_recCompiled___redArg(x_2, x_3, x_1);
+return x_4;
 }
-else
-{
-lean_object* x_5; lean_object* x_6; lean_object* x_7; 
-x_5 = lean_unsigned_to_nat(1u);
-x_6 = lean_nat_sub(x_1, x_5);
-lean_dec(x_1);
-x_7 = lp_original__performance__takehome_ProofGlobalLowerBound_myhash(x_2);
-x_1 = x_6;
-x_2 = x_7;
-goto _start;
 }
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_iterHash___boxed(lean_object* x_1, lean_object* x_2) {
+_start:
+{
+lean_object* x_3; 
+x_3 = lp_original__performance__takehome_ProofGlobalLowerBound_iterHash(x_1, x_2);
+lean_dec(x_2);
+lean_dec(x_1);
+return x_3;
 }
 }
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_zeroTree(lean_object* x_1) {

@@ -76,8 +76,14 @@ DEFAULT_BINOPS = ["+", "^", "<<", ">>", "*"]
 def _apply_binop(op: str, a: z3.BitVecRef, b: z3.BitVecRef) -> z3.BitVecRef:
     if op == "+":
         return a + b
+    if op == "-":
+        return a - b
     if op == "^":
         return a ^ b
+    if op == "&":
+        return a & b
+    if op == "|":
+        return a | b
     if op == "<<":
         return a << b
     if op == ">>":
@@ -186,6 +192,55 @@ def _target_hash_block(a: z3.BitVecRef, *, start: int, count: int, width: int) -
 def _target_myhash(a: z3.BitVecRef, *, width: int) -> z3.BitVecRef:
     return _target_hash_block(a, start=0, count=len(HASH_STAGES), width=width)
 
+def _target_myhash_compose(a: z3.BitVecRef, *, width: int, k: int) -> z3.BitVecRef:
+    assert k >= 1
+    out = a
+    for _ in range(k):
+        out = _target_myhash(out, width=width)
+    return out
+
+
+def _target_kernel2_rounds(
+    val0: z3.BitVecRef,
+    node0: z3.BitVecRef,
+    node_even: z3.BitVecRef,
+    node_odd: z3.BitVecRef,
+    *,
+    width: int,
+    rounds: int,
+) -> z3.BitVecRef:
+    """
+    Model the value evolution for multiple rounds, abstracting memory by taking
+    node values as explicit inputs.
+
+    For rounds=2, this is the relevant cross-round fusion target:
+      val1 = H(val0 ^ node0)
+      node1 = (val1 even ? node_even : node_odd)
+      val2 = H(val1 ^ node1)
+
+    Notes:
+    - The real kernel's node1 depends on idx1, which depends on val1 parity. We
+      treat the *resulting* node value as an input for each parity case.
+    - This ignores idx wraparound, tree geometry, etc. It's the best-case model
+      for "can we fuse two rounds of hash+parity-driven node mix".
+    """
+    if rounds != 2:
+        raise ValueError("only rounds=2 supported in this target for now")
+    one = _bv(1, width)
+    zero = _bv(0, width)
+
+    val1 = _target_myhash(val0 ^ node0, width=width)
+
+    # bit = val1 & 1 (0 if even, 1 if odd)
+    bit = val1 & one
+    # mask = 0 - bit  (0x00..00 if even else 0xFF..FF)
+    mask = zero - bit
+    # branchless select: node_even if even else node_odd
+    node1 = node_even ^ ((node_even ^ node_odd) & mask)
+
+    val2 = _target_myhash(val1 ^ node1, width=width)
+    return val2
+
 
 def _consts_for_stages(stage_indices: Iterable[int]) -> list[int]:
     consts = {0, 1}
@@ -214,6 +269,39 @@ def _eval_myhash_u32(a: int) -> int:
         else:
             a = _u32(op1_out ^ shifted)
     return a
+
+
+def _eval_myhash_compose_u32(a: int, *, k: int) -> int:
+    assert k >= 1
+    out = _u32(a)
+    for _ in range(k):
+        out = _eval_myhash_u32(out)
+    return out
+
+
+def _eval_kernel2_rounds_u32(val0: int, node0: int, node_even: int, node_odd: int) -> int:
+    # Mirror _target_kernel2_rounds with 32-bit modular arithmetic.
+    val1 = _eval_myhash_u32(val0 ^ node0)
+    bit = val1 & 1
+    mask = (-bit) & MASK32
+    node1 = node_even ^ ((node_even ^ node_odd) & mask)
+    val2 = _eval_myhash_u32(val1 ^ node1)
+    return val2
+
+
+def _initial_samples_multi(*, seed: int, n: int, n_inputs: int) -> list[tuple[int, ...]]:
+    rng = random.Random(seed)
+    edge = [0, 1, 2, 3, 4, 0x7FFFFFFF, 0x80000000, 0xFFFFFFFF]
+    out: list[tuple[int, ...]] = []
+    for i in range(n):
+        row = []
+        for j in range(n_inputs):
+            if i < len(edge):
+                row.append(edge[(i + j) % len(edge)])
+            else:
+                row.append(rng.getrandbits(32))
+        out.append(tuple(row))
+    return out
 
 
 def _apply_u32(op: str, a: int, b: int, c: int | None = None) -> int:
@@ -900,6 +988,289 @@ def _domain_constraints_2reg(
     return cons
 
 
+def _domain_constraints_2reg_multi(
+    sym: dict[str, z3.ExprRef],
+    *,
+    n_ops: int,
+    consts: list[int],
+    shift_vals: set[int],
+    binops: list[str],
+    op_muladd: int | None,
+    tmp_defined_flags: list[z3.BoolRef],
+    n_inputs: int,
+    shift_src_val: bool,
+    shift_dst_tmp: bool,
+    muladd_dst_val: bool,
+) -> list[z3.BoolRef]:
+    cons: list[z3.BoolRef] = []
+
+    def in_range(v: z3.ArithRef, lo: int, hi_excl: int) -> z3.BoolRef:
+        return z3.And(v >= lo, v < hi_excl)
+
+    # Sources: val, tmp, consts..., in1..in{n_inputs-1}
+    src_count = 2 + len(consts) + max(0, n_inputs - 1)
+
+    for i in range(n_ops):
+        op_i = sym[f"op{i}"]
+        dst_i = sym[f"dst{i}"]
+        a_i = sym[f"a{i}"]
+        b_i = sym[f"b{i}"]
+        c_i = sym[f"c{i}"]
+
+        cons.append(in_range(op_i, 0, len(binops) + (1 if op_muladd is not None else 0)))
+        cons.append(in_range(dst_i, 0, 2))
+        cons.append(in_range(a_i, 0, src_count))
+        cons.append(in_range(b_i, 0, src_count))
+        cons.append(in_range(c_i, 0, src_count))
+
+        # tmp cannot be used before it's defined.
+        tmp_ok = tmp_defined_flags[i]
+        cons.append(z3.Implies(a_i == 1, tmp_ok))
+        cons.append(z3.Implies(b_i == 1, tmp_ok))
+        cons.append(z3.Implies(c_i == 1, tmp_ok))
+
+        if shift_vals:
+            const_offset = 2
+            allowed = [const_offset + j for j, v in enumerate(consts) if v in shift_vals]
+            if allowed:
+                allowed_set = z3.Or([b_i == v for v in allowed])
+                is_shift = z3.Or(op_i == binops.index("<<"), op_i == binops.index(">>"))
+                cons.append(z3.Implies(is_shift, allowed_set))
+                if shift_src_val:
+                    cons.append(z3.Implies(is_shift, a_i == 0))
+                if shift_dst_tmp:
+                    cons.append(z3.Implies(is_shift, dst_i == 1))
+                    # In "shift to tmp" mode, keep tmp as a pure shift temp to reduce search.
+                    cons.append(z3.Implies(z3.Not(is_shift), dst_i == 0))
+        is_muladd = z3.BoolVal(False)
+        if op_muladd is not None:
+            is_muladd = op_i == op_muladd
+        if muladd_dst_val and op_muladd is not None:
+            cons.append(z3.Implies(is_muladd, dst_i == 0))
+            # Also restrict muladd shape to match the myhash linear stage pattern:
+            #   val = val * K + C
+            # This is a strong restriction, but without it the kernel2 search space is too large.
+            const_lo = 2
+            const_hi = 2 + len(consts)
+            cons.append(z3.Implies(is_muladd, a_i == 0))
+            cons.append(z3.Implies(is_muladd, z3.And(b_i >= const_lo, b_i < const_hi)))
+            cons.append(z3.Implies(is_muladd, z3.And(c_i >= const_lo, c_i < const_hi)))
+        # Strong shape restriction for kernel2 search: model most ops as "val = op(val, src)".
+        # When shifts are forced to tmp and muladd is forced to val, treat everything else
+        # as updating val from the current val (in-place).
+        if shift_dst_tmp:
+            is_shift = z3.Or(op_i == binops.index("<<"), op_i == binops.index(">>"))
+            cons.append(z3.Implies(z3.And(z3.Not(is_shift), z3.Not(is_muladd)), a_i == 0))
+
+    return cons
+
+
+def _build_template_2reg_multi(
+    *,
+    n_ops: int,
+    consts: list[int],
+    binops: list[str],
+    op_muladd: int | None,
+    width: int,
+    n_inputs: int,
+    const_syms_override: list[z3.BitVecRef] | None,
+) -> tuple[dict[str, z3.ExprRef], list[z3.BitVecRef], z3.BitVecRef, list[z3.BoolRef]]:
+    """
+    Two-register template (val/tmp) but with extra immutable inputs.
+
+    Sources available to each op:
+      - val
+      - tmp (only after it is defined)
+      - k0..k{m-1} constants
+      - in1..in{n_inputs-1} extra inputs (in0 is the initial val)
+    """
+    if n_inputs < 1:
+        raise ValueError("n_inputs must be >= 1")
+    inputs = [z3.BitVec(f"in{i}", width) for i in range(n_inputs)]
+    val = inputs[0]
+    tmp = z3.BitVecVal(0, width)
+
+    const_syms = const_syms_override
+    if const_syms is None:
+        const_syms = [z3.BitVec(f"k{i}", width) for i in range(len(consts))]
+    if len(const_syms) != len(consts):
+        raise ValueError("const_syms_override length mismatch")
+
+    sym: dict[str, z3.ExprRef] = {}
+    for i in range(n_ops):
+        sym[f"op{i}"] = z3.Int(f"op{i}")
+        sym[f"dst{i}"] = z3.Int(f"dst{i}")
+        sym[f"a{i}"] = z3.Int(f"a{i}")
+        sym[f"b{i}"] = z3.Int(f"b{i}")
+        sym[f"c{i}"] = z3.Int(f"c{i}")
+    for i, k in enumerate(const_syms):
+        sym[f"k{i}"] = k
+
+    tmp_defined_flags: list[z3.BoolRef] = []
+    tmp_defined = z3.BoolVal(False)
+    for i in range(n_ops):
+        tmp_defined_flags.append(tmp_defined)
+        tmp_defined = z3.Or(tmp_defined, sym[f"dst{i}"] == 1)
+
+    def _src_expr(sel_idx: z3.ArithRef, *, allow_tmp: bool) -> z3.BitVecRef:
+        # Ordering: val=0, tmp=1, consts start at 2, then extra inputs.
+        srcs: list[z3.BitVecRef] = [val]
+        if allow_tmp:
+            srcs.append(tmp)
+        else:
+            srcs.append(z3.BitVecVal(0, width))
+        srcs.extend(const_syms)
+        srcs.extend(inputs[1:])  # in1..in{n-1}
+        return _sel(srcs, sel_idx)
+
+    for i in range(n_ops):
+        op_i = sym[f"op{i}"]
+        dst_i = sym[f"dst{i}"]
+        a_i = sym[f"a{i}"]
+        b_i = sym[f"b{i}"]
+        c_i = sym[f"c{i}"]
+
+        a = _src_expr(a_i, allow_tmp=True)
+        b = _src_expr(b_i, allow_tmp=True)
+        c = _src_expr(c_i, allow_tmp=True)
+
+        # op code: [binops...] (+ optional muladd)
+        out_bin = _sel([_apply_binop(op, a, b) for op in binops], op_i)
+        out = out_bin
+        if op_muladd is not None:
+            out = z3.If(op_i == op_muladd, (a * b) + c, out_bin)
+
+        val = z3.If(dst_i == 0, out, val)
+        tmp = z3.If(dst_i == 1, out, tmp)
+
+    return sym, inputs, val, tmp_defined_flags
+
+
+def cegis_superopt_multi_2reg(
+    *,
+    n_ops: int,
+    consts: list[int],
+    shift_vals: set[int],
+    binops: list[str],
+    op_muladd: int | None,
+    target_fn,
+    n_inputs: int,
+    shift_src_val: bool,
+    shift_dst_tmp: bool,
+    muladd_dst_val: bool,
+    width: int,
+    budget: dict[str, int] | None,
+    const_assigns: dict[int, int] | None,
+    const_syms_override: list[z3.BitVecRef] | None,
+    init_samples: int,
+    max_iters: int,
+    seed: int,
+    synth_timeout_ms: int,
+    verify_timeout_ms: int,
+) -> tuple[bool, str]:
+    sym, inputs, out, tmp_flags = _build_template_2reg_multi(
+        n_ops=n_ops,
+        consts=consts,
+        binops=binops,
+        op_muladd=op_muladd,
+        width=width,
+        n_inputs=n_inputs,
+        const_syms_override=const_syms_override,
+    )
+
+    # Domain constraints
+    cons = _domain_constraints_2reg_multi(
+        sym,
+        n_ops=n_ops,
+        consts=consts,
+        shift_vals=shift_vals,
+        binops=binops,
+        op_muladd=op_muladd,
+        tmp_defined_flags=tmp_flags,
+        n_inputs=n_inputs,
+        shift_src_val=shift_src_val,
+        shift_dst_tmp=shift_dst_tmp,
+        muladd_dst_val=muladd_dst_val,
+    )
+
+    if budget:
+        op_code_map = {op: i for i, op in enumerate(binops)}
+        if op_muladd is not None:
+            op_code_map["muladd"] = op_muladd
+        for op, count in budget.items():
+            code = op_code_map.get(op)
+            if code is None:
+                raise ValueError(f"budget op {op!r} not in opset")
+            uses = []
+            for i in range(n_ops):
+                uses.append(z3.If(sym[f"op{i}"] == code, z3.IntVal(1), z3.IntVal(0)))
+            cons.append(z3.Sum(uses) == int(count))
+
+    if const_assigns:
+        for k_idx, val in const_assigns.items():
+            k_sym = sym.get(f"k{k_idx}")
+            if k_sym is None:
+                raise ValueError(f"const_assign uses k{k_idx} but no such symbol")
+            cons.append(k_sym == _bv(val, width))
+
+    target = target_fn(*inputs)
+
+    samples = _initial_samples_multi(seed=seed, n=init_samples, n_inputs=n_inputs)
+    seen = set(samples)
+
+    for it in range(1, max_iters + 1):
+        s = z3.Solver()
+        s.set(timeout=synth_timeout_ms)
+        s.add(cons)
+        for row in samples:
+            subs = [(inputs[j], _bv(int(row[j]), width)) for j in range(n_inputs)]
+            s.add(z3.substitute(out, *subs) == z3.substitute(target, *subs))
+        res = s.check()
+        if res == z3.unknown:
+            return False, f"unknown (synthesis timed out) at iter {it} with {len(samples)} samples"
+        if res == z3.unsat:
+            return False, f"UNSAT: no program with {n_ops} ops under current opset/consts"
+
+        model = s.model()
+        prog2 = _decode_model_2reg(model, sym, n_ops, binops=binops, op_muladd=op_muladd)
+
+        subs_ops = []
+        for i in range(n_ops):
+            op_name = prog2.ops[i]
+            if op_name == "muladd":
+                if op_muladd is None:
+                    raise RuntimeError("decoded muladd while muladd is disabled")
+                op_code = op_muladd
+            else:
+                op_code = binops.index(op_name)
+            subs_ops.append((sym[f"op{i}"], z3.IntVal(op_code)))
+            subs_ops.append((sym[f"dst{i}"], z3.IntVal(prog2.dst_idx[i])))
+            subs_ops.append((sym[f"a{i}"], z3.IntVal(prog2.a_idx[i])))
+            subs_ops.append((sym[f"b{i}"], z3.IntVal(prog2.b_idx[i])))
+            subs_ops.append((sym[f"c{i}"], z3.IntVal(prog2.c_idx[i])))
+
+        out_m = z3.simplify(z3.substitute(out, *subs_ops))
+
+        v = z3.Solver()
+        v.set(timeout=verify_timeout_ms)
+        v.add(out_m != target)
+        res = v.check()
+        if res == z3.unknown:
+            detail = _pretty_program_2reg(prog2, consts)
+            return False, f"unknown (verify timed out)\n{detail}"
+        if res == z3.unsat:
+            detail = _pretty_program_2reg(prog2, consts)
+            return True, f"FOUND program with {n_ops} ops\n{detail}"
+
+        m = v.model()
+        row = tuple(int(m.eval(inputs[j], model_completion=True).as_long()) for j in range(n_inputs))
+        if row not in seen:
+            samples.append(row)
+            seen.add(row)
+
+    return False, f"gave up after {max_iters} iters (still SAT on samples)"
+
+
 def cegis_superopt(
     *,
     n_ops: int,
@@ -1259,6 +1630,7 @@ def _search_template_random(
     consts: list[int],
     op4: str,
     samples: list[int],
+    eval_target_u32,
 ) -> list[dict] | None:
     rng = random.Random(seed)
     consts = [c for c in consts if isinstance(c, int)]
@@ -1266,7 +1638,7 @@ def _search_template_random(
         return None
 
     # Precompute target values for samples.
-    target = {a: _eval_myhash_u32(a) for a in samples}
+    target = {a: eval_target_u32(a) for a in samples}
 
     for _ in range(attempts):
         c0 = rng.choice(consts)
@@ -1288,7 +1660,7 @@ def _search_template_random(
     return None
 
 
-def _verify_prog_z3(prog: list[dict]) -> bool:
+def _verify_prog_z3(prog: list[dict], *, target_fn=None) -> bool:
     a = z3.BitVec("a", 32)
     val = a
     tmp = z3.BitVecVal(0, 32)
@@ -1320,7 +1692,9 @@ def _verify_prog_z3(prog: list[dict]) -> bool:
         else:
             raise ValueError(f"bad dst {dst!r}")
 
-    target = _target_myhash(a, width=32)
+    if target_fn is None:
+        target_fn = lambda x: _target_myhash(x, width=32)
+    target = target_fn(a)
     v = z3.Solver()
     v.add(val != target)
     return v.check() == z3.unsat
@@ -1339,6 +1713,7 @@ def _const_hill_for_skeleton(
     hill_steps: int,
     hill_samples: int,
     hill_seed: int,
+    eval_target_u32=_eval_myhash_u32,
 ) -> tuple[int, dict[int, int] | None]:
     def _build_const_pools_local(seed_for_pool: int):
         k_roles: dict[int, set[str]] = {}
@@ -1394,7 +1769,7 @@ def _const_hill_for_skeleton(
 
     pools, fixed = _build_const_pools_local(seed_for_pool=hill_seed)
     samples = _rand_u32_samples(seed=hill_seed, n=hill_samples)
-    targets = [_eval_myhash_u32(a) for a in samples]
+    targets = [eval_target_u32(a) for a in samples]
     rng = random.Random(hill_seed)
     mutable_keys = [k for k in pools.keys() if k not in fixed and pools[k]]
     if not mutable_keys:
@@ -1486,8 +1861,10 @@ def main() -> None:
                     help="Fixed src sequence for c (comma-separated: val,tmp,k0,k1,...)")
     ap.add_argument("--const-assign", type=str, default="",
                     help="Assign symbolic consts, e.g. 'k0=12,k1=19'")
-    ap.add_argument("--shape", choices=["full", "stage", "block"], default="full",
-                    help="Target: full myhash, one stage, or a block of stages.")
+    ap.add_argument("--shape", choices=["full", "stage", "block", "kernel2"], default="full",
+                    help="Target: full myhash, one stage, a block of stages, or a 2-round kernel value block (abstracted nodes).")
+    ap.add_argument("--compose", type=int, default=1,
+                    help="For --shape full: target myhash composed k times (k>=1).")
     ap.add_argument("--stage-idx", type=int, default=0,
                     help="Stage index for --shape stage.")
     ap.add_argument("--stage-start", type=int, default=0,
@@ -1536,11 +1913,33 @@ def main() -> None:
     ap.add_argument("--skeleton-13", action="store_true",
                     help="Run 13-op skeleton enumeration with constant hill search.")
     args = ap.parse_args()
+    if args.compose < 1:
+        raise SystemExit("--compose must be >= 1")
+    if args.compose != 1 and args.shape != "full":
+        raise SystemExit("--compose is only supported for --shape full")
+    if args.shape == "kernel2" and args.compose != 1:
+        raise SystemExit("--compose is not supported for --shape kernel2")
 
+    # Z3 verification helpers operate at 32-bit (for the single-input cases).
+    if args.shape != "kernel2":
+        if args.shape == "full" and args.compose != 1:
+            target_fn_32 = lambda a: _target_myhash_compose(a, width=32, k=args.compose)
+            eval_target_u32 = lambda a: _eval_myhash_compose_u32(a, k=args.compose)
+        else:
+            target_fn_32 = lambda a: _target_myhash(a, width=32)
+            eval_target_u32 = lambda a: _eval_myhash_u32(a)
+
+    # Base opset.
     if args.no_mul and "*" in DEFAULT_BINOPS:
         binops = [op for op in DEFAULT_BINOPS if op != "*"]
     else:
         binops = list(DEFAULT_BINOPS)
+
+    # For kernel2 we need basic bit-twiddling to express the parity select.
+    if args.shape == "kernel2":
+        for extra in ("-", "&"):
+            if extra not in binops:
+                binops.append(extra)
 
     if args.const_pool == "minimal":
         consts = list(MINIMAL_CONSTS)
@@ -1641,6 +2040,46 @@ def main() -> None:
         consts = [0 for _ in range(sym_const_count)]
         shift_vals = set()
 
+    # Kernel2 mode: multi-input synthesis for 2-round value evolution with a parity-controlled node select.
+    if args.shape == "kernel2":
+        if not args.two_reg:
+            raise SystemExit("--shape kernel2 currently requires --two-reg")
+        if args.width < 2 or args.width > 32:
+            raise SystemExit("--width must be in [2,32] for --shape kernel2")
+        # Target: out = kernel2_rounds(val0, node0, node_even, node_odd).
+        target_fn = lambda val0, node0, node_even, node_odd: _target_kernel2_rounds(
+            val0,
+            node0,
+            node_even,
+            node_odd,
+            width=args.width,
+            rounds=2,
+        )
+        ok, detail = cegis_superopt_multi_2reg(
+            n_ops=args.n_ops,
+            consts=consts,
+            shift_vals=shift_vals,
+            binops=binops,
+            op_muladd=op_muladd,
+            target_fn=target_fn,
+            n_inputs=4,
+            shift_src_val=args.shift_src_val,
+            shift_dst_tmp=args.shift_dst_tmp,
+            muladd_dst_val=args.muladd_dst_val,
+            width=args.width,
+            budget=budget_op_counts,
+            const_assigns=const_assigns,
+            const_syms_override=const_syms_override,
+            init_samples=args.init_samples,
+            max_iters=args.max_iters,
+            seed=args.seed,
+            synth_timeout_ms=args.synth_timeout_ms,
+            verify_timeout_ms=args.verify_timeout_ms,
+        )
+        verdict = "FOUND" if ok else "UNKNOWN_OR_UNSAT"
+        print(f"kernel2_rounds(2) {args.n_ops}-op: {verdict} ({detail})")
+        return
+
     def _build_const_pools(*, seed_for_pool: int):
         if not (op_seq and dst_seq and src_seq_a and src_seq_b and src_seq_c):
             raise SystemExit("const-search/const-hill requires op-seq, dst-seq, src-seq-a/b/c")
@@ -1727,7 +2166,7 @@ def main() -> None:
             print("mitm: no candidate found")
             return
         print("mitm: candidate found on reduced width, verifying...")
-        if _verify_prog_z3(prog):
+        if _verify_prog_z3(prog, target_fn=target_fn_32):
             print("mitm: verified exact equivalence")
             print("hash_prog:")
             for inst in prog:
@@ -1775,6 +2214,7 @@ def main() -> None:
                 hill_steps=args.hill_steps,
                 hill_samples=args.hill_samples,
                 hill_seed=args.hill_seed + remove_at,
+                eval_target_u32=eval_target_u32,
             )
             if score < best_score:
                 best_score = score
@@ -1794,7 +2234,7 @@ def main() -> None:
             const_values=consts,
         )
         print("skeleton_11: candidate passed samples, verifying...")
-        if _verify_prog_z3(prog):
+        if _verify_prog_z3(prog, target_fn=target_fn_32):
             print("skeleton_11: verified exact equivalence")
             print("hash_prog:")
             for inst in prog:
@@ -1843,6 +2283,7 @@ def main() -> None:
                 hill_steps=args.hill_steps,
                 hill_samples=args.hill_samples,
                 hill_seed=args.hill_seed + insert_at,
+                eval_target_u32=eval_target_u32,
             )
             if score < best_score:
                 best_score = score
@@ -1862,7 +2303,7 @@ def main() -> None:
             const_values=consts,
         )
         print("skeleton_13: candidate passed samples, verifying...")
-        if _verify_prog_z3(prog):
+        if _verify_prog_z3(prog, target_fn=target_fn_32):
             print("skeleton_13: verified exact equivalence")
             print("hash_prog:")
             for inst in prog:
@@ -1874,7 +2315,7 @@ def main() -> None:
     if args.const_hill:
         pools, fixed = _build_const_pools(seed_for_pool=args.hill_seed)
         samples = _rand_u32_samples(seed=args.hill_seed, n=args.hill_samples)
-        targets = [_eval_myhash_u32(a) for a in samples]
+        targets = [eval_target_u32(a) for a in samples]
 
         rng = random.Random(args.hill_seed)
         mutable_keys = [k for k in pools.keys() if k not in fixed]
@@ -1935,7 +2376,7 @@ def main() -> None:
                         const_values=const_values,
                     )
                     print("const_hill: candidate passed sample set")
-                    if _verify_prog_z3(prog):
+                    if _verify_prog_z3(prog, target_fn=target_fn_32):
                         print("const_hill: verified exact equivalence")
                         print("hash_prog:")
                         for inst in prog:
@@ -1960,7 +2401,7 @@ def main() -> None:
                             const_values=best_overall,
                         )
                         print("const_hill: repair candidate passed sample set")
-                        if _verify_prog_z3(prog):
+                        if _verify_prog_z3(prog, target_fn=target_fn_32):
                             print("const_hill: verified exact equivalence")
                             print("hash_prog:")
                             for inst in prog:
@@ -1985,7 +2426,7 @@ def main() -> None:
         # Progressive sample gates.
         gate_sizes = [16, 64, 256]
         samples = _rand_u32_samples(seed=args.const_seed, n=max(gate_sizes))
-        targets = [_eval_myhash_u32(a) for a in samples]
+        targets = [eval_target_u32(a) for a in samples]
 
         rng = random.Random(args.const_seed)
         for attempt in range(1, args.const_attempts + 1):
@@ -2016,7 +2457,7 @@ def main() -> None:
                 continue
 
             print(f"const_search: candidate passed gates at attempt {attempt}")
-            if _verify_prog_z3(prog):
+            if _verify_prog_z3(prog, target_fn=target_fn_32):
                 print("const_search: verified exact equivalence")
                 print("hash_prog:")
                 for inst in prog:
@@ -2041,12 +2482,13 @@ def main() -> None:
             consts=consts,
             op4=op4,
             samples=samples,
+            eval_target_u32=eval_target_u32,
         )
         if prog is None:
             print("template_search: no candidate found in random search")
             return
         print("template_search: candidate found on samples")
-        ok = _verify_prog_z3(prog)
+        ok = _verify_prog_z3(prog, target_fn=target_fn_32)
         if ok:
             print("template_search: verified exact equivalence")
         else:
@@ -2067,7 +2509,10 @@ def main() -> None:
             raise SystemExit("stage-start + stage-count exceeds HASH_STAGES")
         target_fn = lambda a: _target_hash_block(a, start=args.stage_start, count=args.stage_count, width=args.width)
     else:
-        target_fn = lambda a: _target_myhash(a, width=args.width)
+        if args.compose == 1:
+            target_fn = lambda a: _target_myhash(a, width=args.width)
+        else:
+            target_fn = lambda a: _target_myhash_compose(a, width=args.width, k=args.compose)
 
     ok, detail = cegis_superopt(
         n_ops=args.n_ops,

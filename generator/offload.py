@@ -43,7 +43,7 @@ def apply_offload_stream(spec, ops: list[Op]) -> list[Op]:
     real kernels.
     """
     mode = getattr(spec, "offload_mode", "prefix")
-    if mode not in {"prefix", "budgeted"}:
+    if mode not in {"prefix", "budgeted", "budgeted_spread"}:
         raise ValueError(f"unknown offload_mode {mode!r}")
 
     budgets = {
@@ -58,35 +58,92 @@ def apply_offload_stream(spec, ops: list[Op]) -> list[Op]:
     offload_prefix_cap = int(getattr(spec, "offload_op1", 0))
     offloaded_prefix = 0
 
+    offload_idxs: set[int] | None = None
+    if mode == "budgeted_spread":
+        # Precompute which op indices to offload so that the (typically small)
+        # set of *non-offloaded* ops in a category is distributed across the
+        # stream instead of being clustered at the end (which can create a VALU
+        # tail and hurt scheduling).
+        per_cat: dict[str, list[int]] = {k: [] for k in budgets}
+        for i, op in enumerate(ops):
+            if not op.offloadable:
+                continue
+            cat = _offload_category(op)
+            if cat is None:
+                continue
+            if cat not in per_cat:
+                continue
+            per_cat[cat].append(i)
+
+        offload_idxs = set()
+        for cat, idxs in per_cat.items():
+            cap = int(budgets.get(cat, 0))
+            if cap <= 0 or not idxs:
+                continue
+            n = len(idxs)
+            if cap >= n:
+                offload_idxs.update(idxs)
+                continue
+            keep = n - cap
+            if keep <= 0:
+                offload_idxs.update(idxs)
+                continue
+            # Choose `keep` indices spaced across [0..n-1] (inclusive endpoints).
+            keep_set: set[int] = set()
+            if keep == 1:
+                keep_set.add(idxs[n // 2])
+            else:
+                for k in range(keep):
+                    j = (k * (n - 1)) // (keep - 1)
+                    keep_set.add(idxs[j])
+            for i in idxs:
+                if i not in keep_set:
+                    offload_idxs.add(i)
+
     out: list[Op] = []
-    for op in ops:
+    offload_alu_vec = bool(getattr(spec, "offload_alu_vec", False))
+    for i, op in enumerate(ops):
         do_offload = False
         if op.offloadable:
             if mode == "prefix":
                 do_offload = offloaded_prefix < offload_prefix_cap
-            else:
+            elif mode == "budgeted":
                 cat = _offload_category(op)
                 if cat is not None:
                     cap = budgets.get(cat, 0)
                     do_offload = used[cat] < cap
                     if do_offload:
                         used[cat] += 1
+            else:
+                assert mode == "budgeted_spread"
+                do_offload = offload_idxs is not None and i in offload_idxs
 
         if not do_offload:
             out.append(op)
             continue
 
-        # Expand to scalar ALU ops (one per lane).
+        # Expand to scalar ALU ops (one per lane). This is the canonical
+        # lowering used by the current best kernels.
+        #
+        # When offload_alu_vec=True, we instead emit a single pseudo op
+        # ("alu_vec", ...) which the scheduler accounts as VLEN ALU slots and
+        # is expanded back into scalar slots when emitting bundles.
+        #
         # NOTE: Only supports binary vector ops: (op, dest, a, b).
         op_name, dest, a, b = op.slot
-        for lane in range(VLEN):
-            out.append(
-                Op(
-                    engine="alu",
-                    slot=(op_name, dest + lane, a + lane, b + lane),
-                    meta=op.meta,
+        meta2 = dict(op.meta or {})
+        meta2["offload"] = True
+        if offload_alu_vec:
+            out.append(Op(engine="alu", slot=("alu_vec", op_name, dest, a, b), meta=meta2))
+        else:
+            for lane in range(VLEN):
+                out.append(
+                    Op(
+                        engine="alu",
+                        slot=(op_name, dest + lane, a + lane, b + lane),
+                        meta=meta2,
+                    )
                 )
-            )
         offloaded_prefix += 1
 
     return out
@@ -97,12 +154,23 @@ def apply_offload(spec, ops: OpLists) -> OffloadedOps:
     valu_ops: list[Op] = []
 
     offloaded = 0
+    offload_alu_vec = bool(getattr(spec, "offload_alu_vec", False))
     for op in ops.valu_ops:
         if op.offloadable and offloaded < spec.offload_op1:
-            # Expand to scalar ALU ops (one per lane)
-            _, dest, a, b = op.slot
-            for lane in range(VLEN):
-                alu_ops.append(Op(engine="alu", slot=(op.slot[0], dest + lane, a + lane, b + lane), meta=op.meta))
+            op_name, dest, a, b = op.slot
+            meta2 = dict(op.meta or {})
+            meta2["offload"] = True
+            if offload_alu_vec:
+                alu_ops.append(Op(engine="alu", slot=("alu_vec", op_name, dest, a, b), meta=meta2))
+            else:
+                for lane in range(VLEN):
+                    alu_ops.append(
+                        Op(
+                            engine="alu",
+                            slot=(op_name, dest + lane, a + lane, b + lane),
+                            meta=meta2,
+                        )
+                    )
             offloaded += 1
         else:
             valu_ops.append(op)

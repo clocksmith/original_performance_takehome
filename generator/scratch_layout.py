@@ -80,9 +80,14 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
             node_cache = 15
     node_v = [scratch.alloc(f"node_v_{i}", VLEN) for i in range(node_cache)]
     
-    # Node differences for fast VALU selection
+    # Node differences for fast VALU selection.
+    # These cost scratch (VLEN words each). For large node caches (e.g. depth4),
+    # we sometimes need to disable diff precompute to fit in SCRATCH_SIZE.
     node_diff_v = {}
-    if getattr(spec, "valu_select", False):
+    if (
+        (getattr(spec, "valu_select", False) or getattr(spec, "valu_select_leaf_pairs", False))
+        and bool(getattr(spec, "valu_select_precompute_diffs", True))
+    ):
         # We only need diffs for the pairs used in vselect_parity (Level 1-4)
         # Pairs are (2,1), (4,3), (6,5), (8,7), (10,9), (12,11), (14,13), etc.
         for i in range(2, node_cache + 1, 2):
@@ -135,9 +140,9 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
         prog = getattr(spec, "hash_prog", None) or []
         for inst in prog:
             for key in ("a", "b", "c"):
-                val = inst.get(key)
-                if isinstance(val, int):
-                    vec_consts.add(val)
+                imm = inst.get(key)
+                if isinstance(imm, int):
+                    vec_consts.add(imm)
     for op1, val1, op2, op3, val3 in HASH_STAGES:
         if op1 == "+" and op2 == "+":
             mult = (1 + (1 << val3)) % (2**32)
@@ -158,13 +163,25 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
             reserve_const(v)
 
     # Scalar node indices for ALU equality selection (conditional).
+    #
+    # IMPORTANT: Even if the global selection mode is bitmask, some rounds may
+    # override to "eq" via selection_mode_by_round (e.g. the 1291 kernel does
+    # this for rounds 11-14). Those rounds still need scalar node-index consts.
     use_bitmask = getattr(spec, "use_bitmask_selection", False)
     depth4_rounds = getattr(spec, "depth4_rounds", 0)
     x4 = getattr(spec, "x4", 0)
     depth4_bitmask = use_bitmask and getattr(spec, "extra_vecs", 1) >= 3
 
-    if not use_bitmask:
-        for v in range(1, 15):
+    selection_mode_by_round = getattr(spec, "selection_mode_by_round", None) or {}
+    selection_mode = getattr(spec, "selection_mode", None)
+    needs_eq_consts = (selection_mode == "eq") or any(
+        m == "eq" for m in selection_mode_by_round.values()
+    )
+    if needs_eq_consts:
+        # For idx_shifted=True, eq-selection compares against (node_idx+1),
+        # so we need consts up to 15 (for node_idx=14).
+        hi = 16 if getattr(spec, "idx_shifted", False) else 15
+        for v in range(1, hi):
             reserve_const(v)
     if depth4_rounds and x4 > 0 and not depth4_bitmask:
         for v in range(15, 31):

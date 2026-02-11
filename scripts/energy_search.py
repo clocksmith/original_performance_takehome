@@ -217,6 +217,25 @@ def parse_selection_by_round(s: str) -> list[dict[int, str]]:
     return out
 
 
+def parse_round_sets_or_none(s: str) -> list[tuple[int, ...] | None]:
+    """
+    Like parse_round_sets, but allows an explicit None token.
+
+    Examples:
+      - "none|4|4,15" -> [None, (4,), (4,15)]
+    """
+    out: list[tuple[int, ...] | None] = []
+    for block in s.split("|"):
+        block = block.strip()
+        if not block:
+            continue
+        if block.lower() in {"none", "null"}:
+            out.append(None)
+            continue
+        out.append(tuple(parse_int_list(block)))
+    return out
+
+
 def parse_partial_cache(s: str) -> list[tuple[dict[int, int], dict[int, int]]]:
     """
     Parse partial-cache choices. Tokens:
@@ -430,9 +449,10 @@ def _constraint_energy(spec) -> tuple[float, list[str]]:
     if selection_mode is None:
         selection_mode = "bitmask" if getattr(spec, "use_bitmask_selection", False) else "eq"
     extra_vecs = getattr(spec, "extra_vecs", 0)
-    if selection_mode == "mask_precompute" and extra_vecs < 4:
+    uses_depth4 = bool(depth4_rounds and getattr(spec, "x4", 0) > 0)
+    if selection_mode == "mask_precompute" and uses_depth4 and extra_vecs < 4:
         penalty += 3.0
-        violations.append("soft: mask_precompute with extra_vecs < 4")
+        violations.append("soft: mask_precompute with extra_vecs < 4 (depth4)")
     if selection_mode == "mask_precompute" and not getattr(spec, "idx_shifted", False):
         penalty += 1.0
         violations.append("soft: mask_precompute with idx_shifted=0")
@@ -458,9 +478,9 @@ def _constraint_energy(spec) -> tuple[float, list[str]]:
             penalty += 1.0
             violations.append("soft: selection_mode_by_round bitmask with extra_vecs < 3")
             break
-        if mode == "mask_precompute" and extra_vecs < 4:
+        if mode == "mask_precompute" and uses_depth4 and round_id in depth4_cached_rounds and extra_vecs < 4:
             penalty += 1.0
-            violations.append("soft: selection_mode_by_round mask_precompute with extra_vecs < 4")
+            violations.append("soft: selection_mode_by_round mask_precompute with extra_vecs < 4 (depth4)")
             break
         if mode == "mask_precompute" and not getattr(spec, "idx_shifted", False):
             penalty += 0.5
@@ -711,9 +731,11 @@ def main() -> None:
     ap.add_argument("--extra-vecs", type=str, default="0,1,2,3,4")
     ap.add_argument("--reset-on-valu", type=str, default="0,1")
     ap.add_argument("--shifts-on-valu", type=str, default="0,1")
+    ap.add_argument("--use-temp-deps", type=str, default="0,1",
+                    help="include temp hazards in the dependency model (0/1 domain)")
     ap.add_argument("--cached-nodes", type=str, default="none,7,15,31,63")
     ap.add_argument("--base-cached-presets", type=str, default="top4,skip_r3,skip_r3_r13,loadbound")
-    ap.add_argument("--depth4-rounds", type=str, default="4|none")
+    ap.add_argument("--depth4-rounds", type=str, default="4|15|4,15|none")
     ap.add_argument("--x4", type=str, default="0,8,12,15,24,32")
     ap.add_argument("--selection-by-round", type=str, default="none|11-14=bitmask|11-14=mask_precompute",
                     help="per-round selection overrides, e.g. '11-14=bitmask|none'")
@@ -724,17 +746,17 @@ def main() -> None:
     ap.add_argument("--partial-cache", type=str, default="none,x8,x16,x24,x32",
                     help="partial cache choices: none|x8|x16|x24|x32 (applies to rounds 11-14)")
     ap.add_argument("--offload-op1", type=str, default="0,200,400,800,1200,1600")
-    ap.add_argument("--offload-mode", type=str, default="prefix",
+    ap.add_argument("--offload-mode", type=str, default="prefix,budgeted",
                     help="offload mode: prefix|budgeted (comma-separated domain)")
-    ap.add_argument("--offload-budget-hash-shift", type=str, default="0",
+    ap.add_argument("--offload-budget-hash-shift", type=str, default="0,12,48,96,192,384,768,1536",
                     help="budgeted offload cap for hash shift ops (vector ops count)")
-    ap.add_argument("--offload-budget-hash-op1", type=str, default="0",
+    ap.add_argument("--offload-budget-hash-op1", type=str, default="0,12,48,96,192,384,768,1536",
                     help="budgeted offload cap for hash op1 ops (vector ops count)")
-    ap.add_argument("--offload-budget-hash-op2", type=str, default="0",
+    ap.add_argument("--offload-budget-hash-op2", type=str, default="0,12,48,96,192,384,768,1536",
                     help="budgeted offload cap for hash op2 ops (vector ops count)")
-    ap.add_argument("--offload-budget-parity", type=str, default="0",
+    ap.add_argument("--offload-budget-parity", type=str, default="0,32,64,128,256,384,448",
                     help="budgeted offload cap for parity ops (vector ops count)")
-    ap.add_argument("--offload-budget-node-xor", type=str, default="0",
+    ap.add_argument("--offload-budget-node-xor", type=str, default="0,32,64,128,256,384,512",
                     help="budgeted offload cap for node_xor ops (vector ops count)")
     ap.add_argument("--offload-hash-op1", type=str, default="0,1")
     ap.add_argument("--offload-hash-shift", type=str, default="0,1")
@@ -743,13 +765,17 @@ def main() -> None:
     ap.add_argument("--offload-node-xor", type=str, default="0,1")
     ap.add_argument("--node-ptr-incremental", type=str, default="0,1")
     ap.add_argument("--valu-select", type=str, default="0,1")
+    ap.add_argument("--valu-select-precompute-diffs", type=str, default="0,1",
+                    help="precompute node diffs for valu_select (costs scratch)")
+    ap.add_argument("--valu-select-rounds", type=str, default="none|4|15|4,15",
+                    help="round whitelist for valu_select lowering (none=all rounds)")
     ap.add_argument("--ptr-setup-engine", type=str, default="flow,alu")
     ap.add_argument("--setup-style", type=str, default="packed,inline")
     ap.add_argument("--hash-variant", type=str, default="direct,ir",
                     help="hash implementation variant: direct|ir (comma-separated domain)")
     ap.add_argument("--hash-bitwise-style", type=str, default="inplace,tmp_op1",
                     help="hash lowering for bitwise stages: inplace|tmp_op1 (comma-separated domain)")
-    ap.add_argument("--hash-xor-style", type=str, default="baseline",
+    ap.add_argument("--hash-xor-style", type=str, default="baseline,swap,tmp_xor_const",
                     help="xor-stage lowering: baseline|swap|tmp_xor_const (comma-separated domain)")
 
     ap.add_argument("--sched-restarts", type=int, default=10)
@@ -860,6 +886,7 @@ def main() -> None:
     extra_vecs_list = parse_int_list(args.extra_vecs)
     reset_on_valu_list = parse_bool_list(args.reset_on_valu)
     shifts_on_valu_list = parse_bool_list(args.shifts_on_valu)
+    use_temp_deps_list = parse_bool_list(args.use_temp_deps)
     hash_variant_list = parse_list(args.hash_variant)
     hash_bitwise_style_list = parse_list(args.hash_bitwise_style)
     hash_xor_style_list = parse_list(args.hash_xor_style)
@@ -883,6 +910,8 @@ def main() -> None:
     cached_round_x_list = parse_round_maps(args.cached_round_x) if args.cached_round_x else [{}]
     cached_round_depth_list = parse_round_maps(args.cached_round_depth) if args.cached_round_depth else [{}]
     partial_cache_list = parse_partial_cache(args.partial_cache)
+    valu_select_precompute_diffs_list = parse_bool_list(args.valu_select_precompute_diffs)
+    valu_select_rounds_list = parse_round_sets_or_none(args.valu_select_rounds)
 
     domains = {
         "selection_mode": selection_modes,
@@ -891,6 +920,7 @@ def main() -> None:
         "extra_vecs": extra_vecs_list,
         "reset_on_valu": reset_on_valu_list,
         "shifts_on_valu": shifts_on_valu_list,
+        "use_temp_deps": use_temp_deps_list,
         "cached_nodes": cached_nodes_list,
         "base_cached_rounds": base_presets,
         "depth4_rounds": depth4_sets,
@@ -913,6 +943,8 @@ def main() -> None:
         "offload_node_xor": parse_bool_list(args.offload_node_xor),
         "node_ptr_incremental": parse_bool_list(args.node_ptr_incremental),
         "valu_select": parse_bool_list(args.valu_select),
+        "valu_select_precompute_diffs": valu_select_precompute_diffs_list,
+        "valu_select_rounds": valu_select_rounds_list,
         "ptr_setup_engine": parse_list(args.ptr_setup_engine),
         "setup_style": parse_list(args.setup_style),
         "hash_variant": hash_variant_list,

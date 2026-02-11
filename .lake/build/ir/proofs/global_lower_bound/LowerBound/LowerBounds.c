@@ -1,6 +1,6 @@
 // Lean compiler output
 // Module: proofs.global_lower_bound.LowerBound.LowerBounds
-// Imports: public import Init public import proofs.global_lower_bound.LowerBound.MachineTraceEq public import proofs.global_lower_bound.LowerBound.Adversary
+// Imports: public import Init public import proofs.global_lower_bound.LowerBound.MachineTraceEq public import proofs.global_lower_bound.LowerBound.Adversary public import proofs.global_lower_bound.LowerBound.CycleLB
 #include <lean/lean.h>
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunused-parameter"
@@ -273,6 +273,7 @@ return x_2;
 lean_object* initialize_Init(uint8_t builtin);
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_MachineTraceEq(uint8_t builtin);
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_Adversary(uint8_t builtin);
+lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_CycleLB(uint8_t builtin);
 static bool _G_initialized = false;
 LEAN_EXPORT lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_LowerBounds(uint8_t builtin) {
 lean_object * res;
@@ -285,6 +286,9 @@ res = initialize_original__performance__takehome_proofs_global__lower__bound_Low
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_Adversary(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_CycleLB(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound___closed__0 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound___closed__0();

@@ -101,6 +101,22 @@ def parse_list(s: str) -> list[str]:
 def parse_int_list(s: str) -> list[int]:
     return [int(x) for x in parse_list(s)]
 
+def parse_kv_int_str_list(s: str) -> dict[int, str]:
+    """
+    Parse "R:mode,R:mode,..." into {R: mode}.
+    Example: "11:eq,12:eq,13:eq,14:eq".
+    """
+    out: dict[int, str] = {}
+    s = (s or "").strip()
+    if not s:
+        return out
+    for part in parse_list(s):
+        if ":" not in part:
+            raise ValueError(f"bad selection override {part!r} (expected R:mode)")
+        r_s, mode = part.split(":", 1)
+        out[int(r_s)] = mode.strip()
+    return out
+
 
 def parse_bool_list(s: str) -> list[bool]:
     return [bool(int(x)) for x in parse_list(s)]
@@ -795,6 +811,20 @@ def build_final_ops(spec) -> list[Op]:
 
     return apply_offload_stream(spec, setup_ops + ordered_ops)
 
+def _lb_cycles_from_counts(counts: dict[str, int], *, caps: dict[str, int]) -> int:
+    import math
+
+    vals = []
+    for eng, cap in caps.items():
+        if eng == "debug":
+            continue
+        c = int(counts.get(eng, 0))
+        if cap <= 0:
+            vals.append(0)
+        else:
+            vals.append(int(math.ceil(c / cap)))
+    return max(vals or [0])
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -821,14 +851,28 @@ def main():
     ap.add_argument("--node-ptr-incremental", type=str, default="0,1")
     ap.add_argument("--ptr-setup-engine", type=str, default="flow,alu")
     ap.add_argument("--setup-style", type=str, default="packed,inline")
+    ap.add_argument("--selection-by-round", type=str, default="",
+                    help="comma-separated per-round selection overrides: R:mode (e.g. 11:eq,12:eq)")
+    ap.add_argument("--offload-mode", type=str, default="prefix",
+                    help="comma-separated offload modes: prefix,budgeted")
     ap.add_argument("--offload-op1", type=str, default="0,200,400,448,600,800,1000,1200,1400")
+    ap.add_argument("--budget-hash-shift", type=str, default="0",
+                    help="comma-separated offload budgets (budgeted mode)")
+    ap.add_argument("--budget-hash-op1", type=str, default="0",
+                    help="comma-separated offload budgets (budgeted mode)")
+    ap.add_argument("--budget-hash-op2", type=str, default="0",
+                    help="comma-separated offload budgets (budgeted mode)")
+    ap.add_argument("--budget-parity", type=str, default="0",
+                    help="comma-separated offload budgets (budgeted mode)")
+    ap.add_argument("--budget-node-xor", type=str, default="0",
+                    help="comma-separated offload budgets (budgeted mode)")
     ap.add_argument("--cache-depths", type=str, default="none,0,1,2,3,4")
     ap.add_argument("--cache-x", type=str, default="8,12,15,24,32")
     ap.add_argument("--cache-x-all", type=int, default=0,
                     help="if 1, allow cache_x choices for depths 0..3 (partial caching)")
     ap.add_argument("--cache-mode", choices=["canonical", "free"], default="canonical",
                     help="canonical: only allow correct cache depth per round (or none); free: any depth per round")
-    ap.add_argument("--depth4-rounds", type=str, default="4",
+    ap.add_argument("--depth4-rounds", type=str, default="4,15",
                     help="comma-separated rounds that may use depth4 caching (canonical mode only)")
     ap.add_argument("--cache-disable-rounds", type=str, default="",
                     help="comma-separated rounds to forbid caching (canonical mode only)")
@@ -852,6 +896,8 @@ def main():
                     help="max DP states per spec/offload to schedule (sorted by T)")
     ap.add_argument("--state-margin", type=int, default=0,
                     help="include DP states within best_T + margin (per spec/offload)")
+    ap.add_argument("--score-mode", choices=["dp", "final_lb"], default="dp",
+                    help="dp: rank by DP min_T (prefix-offload model); final_lb: rank by real post-offload LB from final op stream")
     ap.add_argument("--cache-dir", type=str, default="", help="pickle cache directory for DP frontiers")
     ap.add_argument("--cache-reset", action="store_true", help="ignore existing cache_dir contents")
     args = ap.parse_args()
@@ -862,6 +908,7 @@ def main():
     extra_vecs_list = parse_int_list(args.extra_vecs)
     reset_on_valu_list = parse_bool_list(args.reset_on_valu)
     shifts_on_valu_list = parse_bool_list(args.shifts_on_valu)
+    selection_by_round = parse_kv_int_str_list(args.selection_by_round)
     cached_nodes_list = []
     for item in parse_list(args.cached_nodes):
         if item.lower() in {"none", "null"}:
@@ -876,7 +923,13 @@ def main():
     node_ptr_inc_list = parse_bool_list(args.node_ptr_incremental)
     ptr_engines = parse_list(args.ptr_setup_engine)
     setup_styles = parse_list(args.setup_style)
+    offload_modes = parse_list(args.offload_mode)
     offload_op1_list = parse_int_list(args.offload_op1)
+    budget_hash_shift_list = parse_int_list(args.budget_hash_shift)
+    budget_hash_op1_list = parse_int_list(args.budget_hash_op1)
+    budget_hash_op2_list = parse_int_list(args.budget_hash_op2)
+    budget_parity_list = parse_int_list(args.budget_parity)
+    budget_node_xor_list = parse_int_list(args.budget_node_xor)
     cache_depths = [None if x == "none" else int(x) for x in parse_list(args.cache_depths)]
     cache_xs = parse_int_list(args.cache_x)
     depth4_rounds = set(parse_int_list(args.depth4_rounds)) if args.depth4_rounds else set()
@@ -926,251 +979,291 @@ def main():
         cache_xs = [SPEC_BASE.x4]
     x4_choices = cache_xs if allow_depth4 else [cache_xs[0]]
 
-    for selection in selection_modes:
-        use_bitmask = selection == "bitmask"
+    import itertools
+
+    global_iter = itertools.product(
+        selection_modes,
+        idx_shifted_list,
+        vector_blocks,
+        extra_vecs_list,
+        reset_on_valu_list,
+        shifts_on_valu_list,
+        cached_nodes_list,
+        base_cached_rounds_list,
+        offload_hash_op1_list,
+        offload_hash_shift_list,
+        offload_hash_op2_list,
+        offload_parity_list,
+        offload_node_xor_list,
+        node_ptr_inc_list,
+        ptr_engines,
+        offload_modes,
+    )
+
+    for (
+        selection,
+        idx_shifted,
+        vector_block,
+        extra_vecs,
+        reset_on_valu,
+        shifts_on_valu,
+        cached_nodes,
+        base_cached_rounds,
+        offload_hash_op1,
+        offload_hash_shift,
+        offload_hash_op2,
+        offload_parity,
+        offload_node_xor,
+        node_ptr_inc,
+        ptr_engine,
+        offload_mode,
+    ) in global_iter:
         if stop():
             break
-        for idx_shifted in idx_shifted_list:
+        if offload_mode not in {"prefix", "budgeted"}:
+            continue
+
+        use_bitmask = selection == "bitmask"
+        base_cached_set = set(base_cached_rounds)
+
+        if offload_mode == "budgeted":
+            budget_iter = itertools.product(
+                budget_hash_shift_list,
+                budget_hash_op1_list,
+                budget_hash_op2_list,
+                budget_parity_list,
+                budget_node_xor_list,
+            )
+        else:
+            budget_iter = [(0, 0, 0, 0, 0)]
+
+        for b_shift, b_op1, b_op2, b_parity, b_node_xor in budget_iter:
             if stop():
                 break
-            for vector_block in vector_blocks:
+
+            dp_spec_base = replace(
+                SPEC_BASE,
+                selection_mode=selection,
+                use_bitmask_selection=use_bitmask,
+                selection_mode_by_round=selection_by_round,
+                idx_shifted=idx_shifted,
+                vector_block=vector_block,
+                extra_vecs=extra_vecs,
+                reset_on_valu=reset_on_valu,
+                shifts_on_valu=shifts_on_valu,
+                cached_nodes=cached_nodes,
+                base_cached_rounds=base_cached_rounds,
+                offload_mode=offload_mode,
+                offload_budget_hash_shift=b_shift,
+                offload_budget_hash_op1=b_op1,
+                offload_budget_hash_op2=b_op2,
+                offload_budget_parity=b_parity,
+                offload_budget_node_xor=b_node_xor,
+                offload_hash_op1=offload_hash_op1,
+                offload_hash_shift=offload_hash_shift,
+                offload_hash_op2=offload_hash_op2,
+                offload_parity=offload_parity,
+                offload_node_xor=offload_node_xor,
+                node_ptr_incremental=node_ptr_inc,
+                ptr_setup_engine=ptr_engine,
+                include_setup=True,
+            )
+            spec_key = _spec_cache_key(dp_spec_base)
+
+            for x4 in x4_choices:
                 if stop():
                     break
-                for extra_vecs in extra_vecs_list:
+
+                dp_key = (
+                    spec_key,
+                    x4,
+                    tuple(cache_depths),
+                    tuple(cache_xs),
+                    args.cache_x_all,
+                    args.cache_mode,
+                    tuple(sorted(depth4_rounds)),
+                    args.rounds,
+                    args.offload_order_mode,
+                    CAPS_KEY,
+                    args.max_states,
+                    1536,
+                )
+                frontier = dp_cache.get(dp_key)
+
+                if frontier is None:
+                    setup_profile = {
+                        "alu_base": 0,
+                        "valu_raw": 0,
+                        "flow": 0,
+                        "load": 0,
+                        "store": 0,
+                        "offloadable": 0,
+                        "offload_prefix": 0,
+                        "scratch": 0,
+                    }
+                    rounds_cfg = []
+                    for r in range(args.rounds):
+                        allowed_depths = _allowed_depths_for_round(
+                            r,
+                            cache_mode=args.cache_mode,
+                            cache_depths=cache_depths,
+                            depth4_rounds=depth4_rounds,
+                            disabled_rounds=disabled_rounds,
+                            base_cached_rounds=base_cached_set,
+                            respect_base_cached=bool(args.respect_base_cached),
+                        )
+                        choices = []
+                        for depth in allowed_depths:
+                            if depth == 4 and not allow_depth4:
+                                continue
+                            if depth is None:
+                                depth_xs = [0]
+                            elif depth == 4:
+                                depth_xs = [x4]
+                            else:
+                                depth_xs = cache_xs if args.cache_x_all else [dp_spec_base.vectors]
+                            for cx in depth_xs:
+                                try:
+                                    counts, scratch_abs, setup_counts = _choice_counts_cached(
+                                        dp_spec_base,
+                                        depth,
+                                        cx,
+                                        allow_depth4=allow_depth4,
+                                        cache=choice_cache,
+                                        spec_key=spec_key,
+                                    )
+                                except Exception:
+                                    continue
+
+                                for k in ("alu_base", "valu_raw", "flow", "load", "store", "offloadable"):
+                                    setup_profile[k] = max(
+                                        setup_profile[k], setup_counts.get(k, 0)
+                                    )
+                                setup_profile["scratch"] = max(
+                                    setup_profile["scratch"], scratch_abs
+                                )
+
+                                choices.append(
+                                    {
+                                        "name": f"d={depth if depth is not None else 'none'},x={cx}",
+                                        "alu_base": counts["alu_base"],
+                                        "valu_raw": counts["valu_raw"],
+                                        "flow": counts["flow"],
+                                        "load": counts["load"],
+                                        "store": counts["store"],
+                                        "offloadable": counts["offloadable"],
+                                        "offload_prefix": counts["offloadable"],
+                                        "scratch_abs": scratch_abs,
+                                    }
+                                )
+
+                        if not choices:
+                            continue
+                        rounds_cfg.append({"round": r, "choices": choices})
+
+                    if not rounds_cfg:
+                        continue
+
+                    cfg = {
+                        "globals": {
+                            "selection_mode": selection,
+                            "offload_order_mode": args.offload_order_mode,
+                            "scratch_mode": "max",
+                            "setup_profile": "default",
+                        },
+                        "setup_profiles": {"default": setup_profile},
+                        "rounds": rounds_cfg,
+                        "caps": CAPS,
+                        "scratch_limit": 1536,
+                    }
+
+                    frontier = pareto._run_dp(
+                        cfg,
+                        include_setup=True,
+                        caps=CAPS,
+                        max_states=args.max_states,
+                        offload_order_mode=args.offload_order_mode,
+                        max_T=None,
+                        progress_log=None,
+                        checkpoint=None,
+                        checkpoint_every=0,
+                        resume_state=None,
+                        log_every_seconds=0.0,
+                    )
+                    dp_cache[dp_key] = frontier
+
+                for offload_op1 in offload_op1_list:
                     if stop():
                         break
-                    for reset_on_valu in reset_on_valu_list:
-                        if stop():
-                            break
-                        for shifts_on_valu in shifts_on_valu_list:
+
+                    cap_key = offload_op1 if args.cap_offload else -1
+                    best_key = (dp_key, cap_key)
+                    state_list = state_cache.get(best_key)
+                    if state_list is None:
+                        scored: list[tuple[int, pareto.State]] = []
+                        for s in frontier:
+                            s_cap = _state_with_offload_cap(
+                                s, offload_op1
+                            ) if args.cap_offload else s
+                            T = pareto._min_T_for_state(
+                                s_cap,
+                                offload_order_mode=args.offload_order_mode,
+                                caps=CAPS,
+                                max_T=None,
+                            )
+                            if T is not None:
+                                scored.append((T, s))
+                        scored.sort(key=lambda x: x[0])
+                        if scored:
+                            if args.state_margin > 0:
+                                cutoff = scored[0][0] + args.state_margin
+                                scored = [x for x in scored if x[0] <= cutoff]
+                            if args.state_top and len(scored) > args.state_top:
+                                scored = scored[: args.state_top]
+                        state_list = scored
+                        state_cache[best_key] = state_list
+
+                    if not state_list:
+                        continue
+
+                    for best_T, best_state in state_list:
+                        for setup_style in setup_styles:
                             if stop():
                                 break
-                            for cached_nodes in cached_nodes_list:
-                                if stop():
-                                    break
-                                for base_cached_rounds in base_cached_rounds_list:
-                                    if stop():
-                                        break
-                                    base_cached_set = set(base_cached_rounds)
-                                    for offload_hash_op1 in offload_hash_op1_list:
-                                        if stop():
-                                            break
-                                        for offload_hash_shift in offload_hash_shift_list:
-                                            if stop():
-                                                break
-                                            for offload_hash_op2 in offload_hash_op2_list:
-                                                if stop():
-                                                    break
-                                                for offload_parity in offload_parity_list:
-                                                    if stop():
-                                                        break
-                                                    for offload_node_xor in offload_node_xor_list:
-                                                        if stop():
-                                                            break
-                                                        for node_ptr_inc in node_ptr_inc_list:
-                                                            if stop():
-                                                                break
-                                                            for ptr_engine in ptr_engines:
-                                                                if stop():
-                                                                    break
-
-                                                                dp_spec_base = replace(
-                                                                    SPEC_BASE,
-                                                                    selection_mode=selection,
-                                                                    use_bitmask_selection=use_bitmask,
-                                                                    idx_shifted=idx_shifted,
-                                                                    vector_block=vector_block,
-                                                                    extra_vecs=extra_vecs,
-                                                                    reset_on_valu=reset_on_valu,
-                                                                    shifts_on_valu=shifts_on_valu,
-                                                                    cached_nodes=cached_nodes,
-                                                                    base_cached_rounds=base_cached_rounds,
-                                                                    offload_hash_op1=offload_hash_op1,
-                                                                    offload_hash_shift=offload_hash_shift,
-                                                                    offload_hash_op2=offload_hash_op2,
-                                                                    offload_parity=offload_parity,
-                                                                    offload_node_xor=offload_node_xor,
-                                                                    node_ptr_incremental=node_ptr_inc,
-                                                                    ptr_setup_engine=ptr_engine,
-                                                                    include_setup=True,
-                                                                )
-                                                                spec_key = _spec_cache_key(dp_spec_base)
-
-                                                                for x4 in x4_choices:
-                                                                    if stop():
-                                                                        break
-
-                                            dp_key = (
-                                                spec_key,
-                                                x4,
-                                                tuple(cache_depths),
-                                                tuple(cache_xs),
-                                                args.cache_x_all,
-                                                args.cache_mode,
-                                                tuple(sorted(depth4_rounds)),
-                                                args.rounds,
-                                                args.offload_order_mode,
-                                                CAPS_KEY,
-                                                args.max_states,
-                                                1536,
-                                            )
-                                            frontier = dp_cache.get(dp_key)
-
-                                            if frontier is None:
-                                                setup_profile = {
-                                                    "alu_base": 0,
-                                                    "valu_raw": 0,
-                                                    "flow": 0,
-                                                    "load": 0,
-                                                    "store": 0,
-                                                    "offloadable": 0,
-                                                    "offload_prefix": 0,
-                                                    "scratch": 0,
-                                                }
-                                                rounds_cfg = []
-                                                for r in range(args.rounds):
-                                                    allowed_depths = _allowed_depths_for_round(
-                                                        r,
-                                                        cache_mode=args.cache_mode,
-                                                        cache_depths=cache_depths,
-                                                        depth4_rounds=depth4_rounds,
-                                                        disabled_rounds=disabled_rounds,
-                                                        base_cached_rounds=base_cached_set,
-                                                        respect_base_cached=bool(args.respect_base_cached),
-                                                    )
-                                                    choices = []
-                                                    for depth in allowed_depths:
-                                                        if depth == 4 and not allow_depth4:
-                                                            continue
-                                                        if depth is None:
-                                                            depth_xs = [0]
-                                                        elif depth == 4:
-                                                            depth_xs = [x4]
-                                                        else:
-                                                            depth_xs = cache_xs if args.cache_x_all else [dp_spec_base.vectors]
-                                                        for cx in depth_xs:
-                                                            try:
-                                                                counts, scratch_abs, setup_counts = _choice_counts_cached(
-                                                                    dp_spec_base,
-                                                                    depth,
-                                                                    cx,
-                                                                    allow_depth4=allow_depth4,
-                                                                    cache=choice_cache,
-                                                                    spec_key=spec_key,
-                                                                )
-                                                            except Exception:
-                                                                continue
-
-                                                            for k in ("alu_base", "valu_raw", "flow", "load", "store", "offloadable"):
-                                                                setup_profile[k] = max(
-                                                                    setup_profile[k], setup_counts.get(k, 0)
-                                                                )
-                                                            setup_profile["scratch"] = max(
-                                                                setup_profile["scratch"], scratch_abs
-                                                            )
-
-                                                            choices.append(
-                                                                {
-                                                                    "name": f"d={depth if depth is not None else 'none'},x={cx}",
-                                                                    "alu_base": counts["alu_base"],
-                                                                    "valu_raw": counts["valu_raw"],
-                                                                    "flow": counts["flow"],
-                                                                    "load": counts["load"],
-                                                                    "store": counts["store"],
-                                                                    "offloadable": counts["offloadable"],
-                                                                    "offload_prefix": counts["offloadable"],
-                                                                    "scratch_abs": scratch_abs,
-                                                                }
-                                                            )
-
-                                                    if not choices:
-                                                        continue
-                                                    rounds_cfg.append({"round": r, "choices": choices})
-
-                                                if not rounds_cfg:
-                                                    continue
-
-                                                cfg = {
-                                                    "globals": {
-                                                        "selection_mode": selection,
-                                                        "offload_order_mode": args.offload_order_mode,
-                                                        "scratch_mode": "max",
-                                                        "setup_profile": "default",
-                                                    },
-                                                    "setup_profiles": {"default": setup_profile},
-                                                    "rounds": rounds_cfg,
-                                                    "caps": CAPS,
-                                                    "scratch_limit": 1536,
-                                                }
-
-                                                frontier = pareto._run_dp(
-                                                    cfg,
-                                                    include_setup=True,
-                                                    caps=CAPS,
-                                                    max_states=args.max_states,
-                                                    offload_order_mode=args.offload_order_mode,
-                                                    max_T=None,
-                                                    progress_log=None,
-                                                    checkpoint=None,
-                                                    checkpoint_every=0,
-                                                    resume_state=None,
-                                                    log_every_seconds=0.0,
-                                                )
-                                                dp_cache[dp_key] = frontier
-
-                                            for offload_op1 in offload_op1_list:
-                                                if stop():
-                                                    break
-
-                                                cap_key = offload_op1 if args.cap_offload else -1
-                                                best_key = (dp_key, cap_key)
-                                                state_list = state_cache.get(best_key)
-                                                if state_list is None:
-                                                    scored: list[tuple[int, pareto.State]] = []
-                                                    for s in frontier:
-                                                        s_cap = _state_with_offload_cap(
-                                                            s, offload_op1
-                                                        ) if args.cap_offload else s
-                                                        T = pareto._min_T_for_state(
-                                                            s_cap,
-                                                            offload_order_mode=args.offload_order_mode,
-                                                            caps=CAPS,
-                                                            max_T=None,
-                                                        )
-                                                        if T is not None:
-                                                            scored.append((T, s))
-                                                    scored.sort(key=lambda x: x[0])
-                                                    if scored:
-                                                        if args.state_margin > 0:
-                                                            cutoff = scored[0][0] + args.state_margin
-                                                            scored = [x for x in scored if x[0] <= cutoff]
-                                                        if args.state_top and len(scored) > args.state_top:
-                                                            scored = scored[: args.state_top]
-                                                    state_list = scored
-                                                    state_cache[best_key] = state_list
-
-                                                if not state_list:
-                                                    continue
-
-                                                for best_T, best_state in state_list:
-                                                    for setup_style in setup_styles:
-                                                        if stop():
-                                                            break
-                                                        tried += 1
-                                                        sched_spec = replace(
-                                                            dp_spec_base,
-                                                            offload_op1=offload_op1,
-                                                            setup_style=setup_style,
-                                                        )
-                                                        candidates.append((best_T, sched_spec, x4, best_state))
+                            tried += 1
+                            sched_spec = replace(
+                                dp_spec_base,
+                                offload_op1=offload_op1,
+                                setup_style=setup_style,
+                            )
+                            if args.score_mode == "final_lb":
+                                # Use the real post-offload LB as the score.
+                                try:
+                                    full_spec = _build_spec_from_path(
+                                        sched_spec,
+                                        best_state.choice_path,
+                                        vectors=sched_spec.vectors,
+                                        x4=x4,
+                                    )
+                                    ops = build_final_ops(full_spec)
+                                    counts = {k: 0 for k in CAPS}
+                                    for op in ops:
+                                        if op.engine != "debug":
+                                            counts[op.engine] = counts.get(op.engine, 0) + 1
+                                    score_T = _lb_cycles_from_counts(counts, caps=CAPS)
+                                except Exception:
+                                    continue
+                                candidates.append((score_T, sched_spec, x4, best_state))
+                            else:
+                                candidates.append((best_T, sched_spec, x4, best_state))
 
     candidates.sort(key=lambda x: x[0])
     print(f"candidates tried: {len(candidates)}")
-    print("top DP bounds:")
+    print("top candidate bounds:")
     for i, (t, spec, x4, _state) in enumerate(candidates[: min(5, len(candidates))]):
         print(
             f"  {i+1}. T={t} selection={spec.selection_mode} idx_shifted={spec.idx_shifted} "
-            f"x4={x4} offload_op1={spec.offload_op1} setup={spec.setup_style}"
+            f"x4={x4} offload_mode={getattr(spec, 'offload_mode', 'prefix')} offload_op1={spec.offload_op1} setup={spec.setup_style}"
         )
 
     # Schedule top-N candidates (optionally within margin of best_T)

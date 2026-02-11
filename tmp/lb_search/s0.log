@@ -1,0 +1,133 @@
+energy_search: 2026-02-09 14:28:58
+  mode=parity score_mode=lb steps=4000 seed=0
+  schedule_every=999999 unscheduled_score=lb
+  mutate_count=6 mutate_sched=False
+  mutate_keys=['base_cached_rounds', 'cached_nodes', 'depth4_rounds', 'extra_vecs', 'hash_bitwise_style', 'hash_variant', 'idx_shifted', 'node_ptr_incremental', 'offload_hash_op1', 'offload_hash_op2', 'offload_hash_shift', 'offload_node_xor', 'offload_op1', 'offload_parity', 'partial_cache', 'ptr_setup_engine', 'reset_on_valu', 'selection_by_round', 'selection_mode', 'setup_style', 'shifts_on_valu', 'valu_select', 'vector_block', 'x4']
+  sched_policies=['mix'] sched_restarts=10 sched_jitter=0.4
+  hazards=['raw', 'temp', 'war', 'waw'] latency_raw=1 latency_waw=1 latency_war=0 latency_temp=1 latency_default=1
+  gate=999999.0 lambda=1.0 target=1000 penalty=1000.0
+  log_file=tmp/lb_search/s0.log
+BEST step=2 t=0.0s energy=383382.0 cycles=1382 lb=1382 penalty=0.0 skipped=False policy=None
+  spec={'rounds': 16, 'vectors': 32, 'vlen': 8, 'depth4_rounds': 1, 'x4': 15, 'x5': 0, 'flow_setup': 64, 'reset_on_valu': False, 'shifts_on_valu': True, 'offload_op1': 0, 'offload_mode': 'prefix', 'offload_budget_hash_shift': 0, 'offload_budget_hash_op1': 0, 'offload_budget_hash_op2': 0, 'offload_budget_parity': 0, 'offload_budget_node_xor': 0, 'offload_hash_op1': True, 'offload_hash_shift': False, 'offload_hash_op2': False, 'offload_parity': False, 'offload_node_xor': True, 'use_bitmask_selection': False, 'selection_mode': 'eq', 'binsearch_select': False, 'selection_mode_by_round': {}, 'valu_select': False, 'valu_select_precompute_diffs': True, 'fuse_stages': False, 'hash_variant': 'ir', 'hash_xor_style': 'baseline', 'hash_bitwise_style': 'inplace', 'hash_prog': None, 'node_ptr_incremental': False, 'idx_shifted': False, 'ptr_setup_engine': 'flow', 'setup_style': 'inline', 'include_setup': True, 'proof_assume_shifted_input': False, 'proof_reset_single_op': False, 'proof_skip_const_zero': False, 'valu_pad_cycles': 0, 'vector_block': 32, 'extra_vecs': 2, 'cached_nodes': None, 'base_cached_rounds': (0, 1, 2, 3, 11, 12, 13, 14), 'depth4_cached_rounds': (4,), 'cached_round_aliases': {}, 'cached_round_depth': {}, 'cached_round_x': {}, 'valu_cap': 6, 'alu_cap': 12, 'flow_cap': 1, 'load_cap': 2, 'store_cap': 2, 'total_cycles': 1312, 'sched_seed': 0, 'sched_jitter': 0.0, 'sched_restarts': 1, 'use_temp_deps': True}
+BEST step=4 t=0.0s energy=316316.0 cycles=1315 lb=1315 penalty=1.0 skipped=False policy=None
+  spec={'rounds': 16, 'vectors': 32, 'vlen': 8, 'depth4_rounds': 1, 'x4': 15, 'x5': 0, 'flow_setup': 64, 'reset_on_valu': False, 'shifts_on_valu': True, 'offload_op1': 400, 'offload_mode': 'prefix', 'offload_budget_hash_shift': 0, 'offload_budget_hash_op1': 0, 'offload_budget_hash_op2': 0, 'offload_budget_parity': 0, 'offload_budget_node_xor': 0, 'offload_hash_op1': True, 'offload_hash_shift': False, 'offload_hash_op2': False, 'offload_parity': False, 'offload_node_xor': True, 'use_bitmask_selection': True, 'selection_mode': 'bitmask', 'binsearch_select': False, 'selection_mode_by_round': {}, 'valu_select': False, 'valu_select_precompute_diffs': True, 'fuse_stages': False, 'hash_variant': 'direct', 'hash_xor_style': 'baseline', 'hash_bitwise_style': 'inplace', 'hash_prog': None, 'node_ptr_incremental': False, 'idx_shifted': False, 'ptr_setup_engine': 'flow', 'setup_style': 'inline', 'include_setup': True, 'proof_assume_shifted_input': False, 'proof_reset_single_op': False, 'proof_skip_const_zero': False, 'valu_pad_cycles': 0, 'vector_block': 32, 'extra_vecs': 2, 'cached_nodes': None, 'base_cached_rounds': (0, 1, 2, 3, 11, 12, 13, 14), 'depth4_cached_rounds': (4,), 'cached_round_aliases': {}, 'cached_round_depth': {}, 'cached_round_x': {}, 'valu_cap': 6, 'alu_cap': 12, 'flow_cap': 1, 'load_cap': 2, 'store_cap': 2, 'total_cycles': 1312, 'sched_seed': 0, 'sched_jitter': 0.0, 'sched_restarts': 1, 'use_temp_deps': True}
+BEST step=14 t=0.1s energy=246246.0 cycles=1245 lb=1245 penalty=1.0 skipped=False policy=None
+  spec={'rounds': 16, 'vectors': 32, 'vlen': 8, 'depth4_rounds': 1, 'x4': 15, 'x5': 0, 'flow_setup': 64, 'reset_on_valu': False, 'shifts_on_valu': True, 'offload_op1': 400, 'offload_mode': 'prefix', 'offload_budget_hash_shift': 0, 'offload_budget_hash_op1': 0, 'offload_budget_hash_op2': 0, 'offload_budget_parity': 0, 'offload_budget_node_xor': 0, 'offload_hash_op1': True, 'offload_hash_shift': False, 'offload_hash_op2': False, 'offload_parity': False, 'offload_node_xor': True, 'use_bitmask_selection': True, 'selection_mode': 'bitmask', 'binsearch_select': False, 'selection_mode_by_round': {}, 'valu_select': False, 'valu_select_precompute_diffs': True, 'fuse_stages': False, 'hash_variant': 'direct', 'hash_xor_style': 'baseline', 'hash_bitwise_style': 'inplace', 'hash_prog': None, 'node_ptr_incremental': True, 'idx_shifted': True, 'ptr_setup_engine': 'flow', 'setup_style': 'inline', 'include_setup': True, 'proof_assume_shifted_input': False, 'proof_reset_single_op': False, 'proof_skip_const_zero': False, 'valu_pad_cycles': 0, 'vector_block': 32, 'extra_vecs': 2, 'cached_nodes': None, 'base_cached_rounds': (0, 1, 2, 3, 11, 12, 13, 14), 'depth4_cached_rounds': (4,), 'cached_round_aliases': {}, 'cached_round_depth': {}, 'cached_round_x': {}, 'valu_cap': 6, 'alu_cap': 12, 'flow_cap': 1, 'load_cap': 2, 'store_cap': 2, 'total_cycles': 1312, 'sched_seed': 0, 'sched_jitter': 0.0, 'sched_restarts': 1, 'use_temp_deps': True}
+BEST step=34 t=0.2s energy=151151.0 cycles=1150 lb=1150 penalty=1.0 skipped=False policy=None
+  spec={'rounds': 16, 'vectors': 32, 'vlen': 8, 'depth4_rounds': 1, 'x4': 0, 'x5': 0, 'flow_setup': 64, 'reset_on_valu': False, 'shifts_on_valu': True, 'offload_op1': 1200, 'offload_mode': 'prefix', 'offload_budget_hash_shift': 0, 'offload_budget_hash_op1': 0, 'offload_budget_hash_op2': 0, 'offload_budget_parity': 0, 'offload_budget_node_xor': 0, 'offload_hash_op1': True, 'offload_hash_shift': False, 'offload_hash_op2': False, 'offload_parity': False, 'offload_node_xor': True, 'use_bitmask_selection': True, 'selection_mode': 'bitmask', 'binsearch_select': False, 'selection_mode_by_round': {}, 'valu_select': False, 'valu_select_precompute_diffs': True, 'fuse_stages': False, 'hash_variant': 'direct', 'hash_xor_style': 'baseline', 'hash_bitwise_style': 'inplace', 'hash_prog': None, 'node_ptr_incremental': False, 'idx_shifted': True, 'ptr_setup_engine': 'alu', 'setup_style': 'packed', 'include_setup': True, 'proof_assume_shifted_input': False, 'proof_reset_single_op': False, 'proof_skip_const_zero': False, 'valu_pad_cycles': 0, 'vector_block': 4, 'extra_vecs': 2, 'cached_nodes': 31, 'base_cached_rounds': (0, 1, 2, 3, 11, 12, 13, 14), 'depth4_cached_rounds': (4,), 'cached_round_aliases': {}, 'cached_round_depth': {}, 'cached_round_x': {}, 'valu_cap': 6, 'alu_cap': 12, 'flow_cap': 1, 'load_cap': 2, 'store_cap': 2, 'total_cycles': 1312, 'sched_seed': 0, 'sched_jitter': 0.0, 'sched_restarts': 1, 'use_temp_deps': True}
+[   50] t=0.4s energy=151152.0 cycles=1150 lb=1150 best=151151.0
+BEST step=58 t=0.5s energy=149149.0 cycles=1148 lb=1148 penalty=1.0 skipped=False policy=None
+  spec={'rounds': 16, 'vectors': 32, 'vlen': 8, 'depth4_rounds': 1, 'x4': 0, 'x5': 0, 'flow_setup': 64, 'reset_on_valu': False, 'shifts_on_valu': True, 'offload_op1': 1200, 'offload_mode': 'prefix', 'offload_budget_hash_shift': 0, 'offload_budget_hash_op1': 0, 'offload_budget_hash_op2': 0, 'offload_budget_parity': 0, 'offload_budget_node_xor': 0, 'offload_hash_op1': False, 'offload_hash_shift': True, 'offload_hash_op2': False, 'offload_parity': True, 'offload_node_xor': True, 'use_bitmask_selection': True, 'selection_mode': 'bitmask', 'binsearch_select': False, 'selection_mode_by_round': {}, 'valu_select': False, 'valu_select_precompute_diffs': True, 'fuse_stages': False, 'hash_variant': 'ir', 'hash_xor_style': 'baseline', 'hash_bitwise_style': 'tmp_op1', 'hash_prog': None, 'node_ptr_incremental': True, 'idx_shifted': True, 'ptr_setup_engine': 'alu', 'setup_style': 'packed', 'include_setup': True, 'proof_assume_shifted_input': False, 'proof_reset_single_op': False, 'proof_skip_const_zero': False, 'valu_pad_cycles': 0, 'vector_block': 4, 'extra_vecs': 2, 'cached_nodes': 15, 'base_cached_rounds': (0, 1, 2, 3, 11, 12, 13, 14), 'depth4_cached_rounds': (4,), 'cached_round_aliases': {}, 'cached_round_depth': {}, 'cached_round_x': {}, 'valu_cap': 6, 'alu_cap': 12, 'flow_cap': 1, 'load_cap': 2, 'store_cap': 2, 'total_cycles': 1312, 'sched_seed': 0, 'sched_jitter': 0.0, 'sched_restarts': 1, 'use_temp_deps': True}
+BEST step=59 t=0.5s energy=149148.0 cycles=1148 lb=1148 penalty=0.0 skipped=False policy=None
+  spec={'rounds': 16, 'vectors': 32, 'vlen': 8, 'depth4_rounds': 1, 'x4': 0, 'x5': 0, 'flow_setup': 64, 'reset_on_valu': True, 'shifts_on_valu': False, 'offload_op1': 1200, 'offload_mode': 'prefix', 'offload_budget_hash_shift': 0, 'offload_budget_hash_op1': 0, 'offload_budget_hash_op2': 0, 'offload_budget_parity': 0, 'offload_budget_node_xor': 0, 'offload_hash_op1': False, 'offload_hash_shift': True, 'offload_hash_op2': False, 'offload_parity': True, 'offload_node_xor': True, 'use_bitmask_selection': True, 'selection_mode': 'bitmask', 'binsearch_select': False, 'selection_mode_by_round': {}, 'valu_select': False, 'valu_select_precompute_diffs': True, 'fuse_stages': False, 'hash_variant': 'ir', 'hash_xor_style': 'baseline', 'hash_bitwise_style': 'tmp_op1', 'hash_prog': None, 'node_ptr_incremental': True, 'idx_shifted': True, 'ptr_setup_engine': 'alu', 'setup_style': 'packed', 'include_setup': True, 'proof_assume_shifted_input': False, 'proof_reset_single_op': False, 'proof_skip_const_zero': False, 'valu_pad_cycles': 0, 'vector_block': 4, 'extra_vecs': 4, 'cached_nodes': 15, 'base_cached_rounds': (0, 1, 2, 3, 11, 12, 13, 14), 'depth4_cached_rounds': (4,), 'cached_round_aliases': {}, 'cached_round_depth': {}, 'cached_round_x': {}, 'valu_cap': 6, 'alu_cap': 12, 'flow_cap': 1, 'load_cap': 2, 'store_cap': 2, 'total_cycles': 1312, 'sched_seed': 0, 'sched_jitter': 0.0, 'sched_restarts': 1, 'use_temp_deps': True}
+[  100] t=0.9s energy=149150.0 cycles=1148 lb=1148 best=149148.0
+[  150] t=1.5s energy=149150.0 cycles=1148 lb=1148 best=149148.0
+[  200] t=2.0s energy=149150.0 cycles=1148 lb=1148 best=149148.0
+[  250] t=2.4s energy=149150.0 cycles=1148 lb=1148 best=149148.0
+BEST step=263 t=2.5s energy=144145.0 cycles=1143 lb=1143 penalty=2.0 skipped=False policy=None
+  spec={'rounds': 16, 'vectors': 32, 'vlen': 8, 'depth4_rounds': 0, 'x4': 0, 'x5': 0, 'flow_setup': 64, 'reset_on_valu': True, 'shifts_on_valu': True, 'offload_op1': 1200, 'offload_mode': 'prefix', 'offload_budget_hash_shift': 0, 'offload_budget_hash_op1': 0, 'offload_budget_hash_op2': 0, 'offload_budget_parity': 0, 'offload_budget_node_xor': 0, 'offload_hash_op1': True, 'offload_hash_shift': True, 'offload_hash_op2': False, 'offload_parity': True, 'offload_node_xor': False, 'use_bitmask_selection': False, 'selection_mode': 'bitmask_valu', 'binsearch_select': False, 'selection_mode_by_round': {11: 'bitmask', 12: 'bitmask', 13: 'bitmask', 14: 'bitmask'}, 'valu_select': False, 'valu_select_precompute_diffs': True, 'fuse_stages': False, 'hash_variant': 'direct', 'hash_xor_style': 'baseline', 'hash_bitwise_style': 'tmp_op1', 'hash_prog': None, 'node_ptr_incremental': True, 'idx_shifted': True, 'ptr_setup_engine': 'flow', 'setup_style': 'packed', 'include_setup': True, 'proof_assume_shifted_input': False, 'proof_reset_single_op': False, 'proof_skip_const_zero': False, 'valu_pad_cycles': 0, 'vector_block': 4, 'extra_vecs': 1, 'cached_nodes': None, 'base_cached_rounds': (0, 1, 2, 3, 11, 12, 13, 14), 'depth4_cached_rounds': (), 'cached_round_aliases': {}, 'cached_round_depth': {}, 'cached_round_x': {}, 'valu_cap': 6, 'alu_cap': 12, 'flow_cap': 1, 'load_cap': 2, 'store_cap': 2, 'total_cycles': 1312, 'sched_seed': 0, 'sched_jitter': 0.0, 'sched_restarts': 1, 'use_temp_deps': True}
+[  300] t=3.0s energy=144145.0 cycles=1143 lb=1143 best=144145.0
+BEST step=308 t=3.0s energy=144144.0 cycles=1143 lb=1143 penalty=1.0 skipped=False policy=None
+  spec={'rounds': 16, 'vectors': 32, 'vlen': 8, 'depth4_rounds': 0, 'x4': 0, 'x5': 0, 'flow_setup': 64, 'reset_on_valu': False, 'shifts_on_valu': True, 'offload_op1': 1200, 'offload_mode': 'prefix', 'offload_budget_hash_shift': 0, 'offload_budget_hash_op1': 0, 'offload_budget_hash_op2': 0, 'offload_budget_parity': 0, 'offload_budget_node_xor': 0, 'offload_hash_op1': True, 'offload_hash_shift': True, 'offload_hash_op2': False, 'offload_parity': True, 'offload_node_xor': False, 'use_bitmask_selection': True, 'selection_mode': 'bitmask', 'binsearch_select': False, 'selection_mode_by_round': {}, 'valu_select': False, 'valu_select_precompute_diffs': True, 'fuse_stages': False, 'hash_variant': 'ir', 'hash_xor_style': 'baseline', 'hash_bitwise_style': 'inplace', 'hash_prog': None, 'node_ptr_incremental': False, 'idx_shifted': True, 'ptr_setup_engine': 'flow', 'setup_style': 'inline', 'include_setup': True, 'proof_assume_shifted_input': False, 'proof_reset_single_op': False, 'proof_skip_const_zero': False, 'valu_pad_cycles': 0, 'vector_block': 8, 'extra_vecs': 1, 'cached_nodes': None, 'base_cached_rounds': (0, 1, 2, 3, 11, 12, 13, 14), 'depth4_cached_rounds': (), 'cached_round_aliases': {}, 'cached_round_depth': {}, 'cached_round_x': {}, 'valu_cap': 6, 'alu_cap': 12, 'flow_cap': 1, 'load_cap': 2, 'store_cap': 2, 'total_cycles': 1312, 'sched_seed': 0, 'sched_jitter': 0.0, 'sched_restarts': 1, 'use_temp_deps': True}
+BEST step=343 t=3.3s energy=144143.0 cycles=1143 lb=1143 penalty=0.0 skipped=False policy=None
+  spec={'rounds': 16, 'vectors': 32, 'vlen': 8, 'depth4_rounds': 0, 'x4': 0, 'x5': 0, 'flow_setup': 64, 'reset_on_valu': True, 'shifts_on_valu': False, 'offload_op1': 1200, 'offload_mode': 'prefix', 'offload_budget_hash_shift': 0, 'offload_budget_hash_op1': 0, 'offload_budget_hash_op2': 0, 'offload_budget_parity': 0, 'offload_budget_node_xor': 0, 'offload_hash_op1': False, 'offload_hash_shift': True, 'offload_hash_op2': False, 'offload_parity': True, 'offload_node_xor': True, 'use_bitmask_selection': True, 'selection_mode': 'bitmask', 'binsearch_select': False, 'selection_mode_by_round': {}, 'valu_select': False, 'valu_select_precompute_diffs': True, 'fuse_stages': False, 'hash_variant': 'ir', 'hash_xor_style': 'baseline', 'hash_bitwise_style': 'inplace', 'hash_prog': None, 'node_ptr_incremental': True, 'idx_shifted': True, 'ptr_setup_engine': 'flow', 'setup_style': 'inline', 'include_setup': True, 'proof_assume_shifted_input': False, 'proof_reset_single_op': False, 'proof_skip_const_zero': False, 'valu_pad_cycles': 0, 'vector_block': 8, 'extra_vecs': 4, 'cached_nodes': 15, 'base_cached_rounds': (0, 1, 2, 3, 11, 12, 13, 14), 'depth4_cached_rounds': (), 'cached_round_aliases': {}, 'cached_round_depth': {}, 'cached_round_x': {}, 'valu_cap': 6, 'alu_cap': 12, 'flow_cap': 1, 'load_cap': 2, 'store_cap': 2, 'total_cycles': 1312, 'sched_seed': 0, 'sched_jitter': 0.0, 'sched_restarts': 1, 'use_temp_deps': True}
+[  350] t=3.4s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[  400] t=3.9s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[  450] t=4.3s energy=144145.0 cycles=1143 lb=1143 best=144143.0
+[  500] t=4.9s energy=144145.0 cycles=1143 lb=1143 best=144143.0
+[  550] t=5.3s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[  600] t=5.8s energy=144144.0 cycles=1143 lb=1143 best=144143.0
+[  650] t=6.3s energy=144145.0 cycles=1143 lb=1143 best=144143.0
+[  700] t=6.7s energy=144145.0 cycles=1143 lb=1143 best=144143.0
+[  750] t=7.2s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[  800] t=7.6s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[  850] t=8.0s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[  900] t=8.5s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[  950] t=9.0s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1000] t=9.5s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1050] t=9.9s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1100] t=10.4s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1150] t=10.8s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1200] t=11.3s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1250] t=11.8s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1300] t=12.2s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1350] t=12.8s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1400] t=13.2s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1450] t=13.7s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1500] t=14.1s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1550] t=14.5s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1600] t=14.9s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1650] t=15.3s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1700] t=15.7s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1750] t=16.1s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1800] t=16.5s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1850] t=17.0s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1900] t=17.4s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 1950] t=17.8s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 2000] t=18.3s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 2050] t=18.9s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 2100] t=19.4s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 2150] t=19.8s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 2200] t=20.3s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 2250] t=20.9s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 2300] t=21.4s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 2350] t=21.9s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 2400] t=22.3s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 2450] t=22.8s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 2500] t=23.1s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+[ 2550] t=23.6s energy=144143.0 cycles=1143 lb=1143 best=144143.0
+BEST step=2568 t=23.7s energy=134134.0 cycles=1133 lb=1133 penalty=1.0 skipped=False policy=None
+  spec={'rounds': 16, 'vectors': 32, 'vlen': 8, 'depth4_rounds': 1, 'x4': 0, 'x5': 0, 'flow_setup': 64, 'reset_on_valu': False, 'shifts_on_valu': True, 'offload_op1': 1200, 'offload_mode': 'prefix', 'offload_budget_hash_shift': 0, 'offload_budget_hash_op1': 0, 'offload_budget_hash_op2': 0, 'offload_budget_parity': 0, 'offload_budget_node_xor': 0, 'offload_hash_op1': True, 'offload_hash_shift': True, 'offload_hash_op2': True, 'offload_parity': True, 'offload_node_xor': False, 'use_bitmask_selection': False, 'selection_mode': 'mask', 'binsearch_select': False, 'selection_mode_by_round': {11: 'bitmask', 12: 'bitmask', 13: 'bitmask', 14: 'bitmask'}, 'valu_select': False, 'valu_select_precompute_diffs': True, 'fuse_stages': False, 'hash_variant': 'ir', 'hash_xor_style': 'baseline', 'hash_bitwise_style': 'tmp_op1', 'hash_prog': None, 'node_ptr_incremental': False, 'idx_shifted': True, 'ptr_setup_engine': 'flow', 'setup_style': 'packed', 'include_setup': True, 'proof_assume_shifted_input': False, 'proof_reset_single_op': False, 'proof_skip_const_zero': False, 'valu_pad_cycles': 0, 'vector_block': 16, 'extra_vecs': 1, 'cached_nodes': 15, 'base_cached_rounds': (0, 1, 2, 3, 11, 12, 13, 14), 'depth4_cached_rounds': (4,), 'cached_round_aliases': {}, 'cached_round_depth': {}, 'cached_round_x': {}, 'valu_cap': 6, 'alu_cap': 12, 'flow_cap': 1, 'load_cap': 2, 'store_cap': 2, 'total_cycles': 1312, 'sched_seed': 0, 'sched_jitter': 0.0, 'sched_restarts': 1, 'use_temp_deps': True}
+[ 2600] t=24.0s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 2650] t=24.5s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 2700] t=24.9s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 2750] t=25.3s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 2800] t=25.7s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 2850] t=26.2s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 2900] t=26.7s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 2950] t=27.2s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3000] t=27.7s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3050] t=28.1s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3100] t=28.7s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3150] t=29.2s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3200] t=29.6s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3250] t=30.2s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3300] t=30.6s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3350] t=31.1s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3400] t=31.6s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3450] t=32.0s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3500] t=32.5s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3550] t=33.0s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3600] t=33.5s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3650] t=34.0s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3700] t=34.4s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3750] t=34.9s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3800] t=35.4s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3850] t=35.9s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3900] t=36.5s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 3950] t=37.0s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+[ 4000] t=37.5s energy=134134.0 cycles=1133 lb=1133 best=134134.0
+best_score: {"constraint_penalty": 1.0, "constraint_violations": ["soft: selection_mode_by_round bitmask with extra_vecs < 3"], "counts": {"alu": 13456, "flow": 800, "load": 2157, "store": 32, "valu": 6798}, "cycles": 1133, "energy": 134134.0, "gap": 133, "lb": 1133, "policy": null}
+best_spec: {"alu_cap": 12, "base_cached_rounds": [0, 1, 2, 3, 11, 12, 13, 14], "binsearch_select": false, "cached_nodes": 15, "cached_round_aliases": {}, "cached_round_depth": {}, "cached_round_x": {}, "depth4_cached_rounds": [4], "depth4_rounds": 1, "extra_vecs": 1, "flow_cap": 1, "flow_setup": 64, "fuse_stages": false, "hash_bitwise_style": "tmp_op1", "hash_prog": null, "hash_variant": "ir", "hash_xor_style": "baseline", "idx_shifted": true, "include_setup": true, "load_cap": 2, "node_ptr_incremental": false, "offload_budget_hash_op1": 0, "offload_budget_hash_op2": 0, "offload_budget_hash_shift": 0, "offload_budget_node_xor": 0, "offload_budget_parity": 0, "offload_hash_op1": true, "offload_hash_op2": true, "offload_hash_shift": true, "offload_mode": "prefix", "offload_node_xor": false, "offload_op1": 1200, "offload_parity": true, "proof_assume_shifted_input": false, "proof_reset_single_op": false, "proof_skip_const_zero": false, "ptr_setup_engine": "flow", "reset_on_valu": false, "rounds": 16, "sched_jitter": 0.0, "sched_restarts": 1, "sched_seed": 0, "selection_mode": "mask", "selection_mode_by_round": {"11": "bitmask", "12": "bitmask", "13": "bitmask", "14": "bitmask"}, "setup_style": "packed", "shifts_on_valu": true, "store_cap": 2, "total_cycles": 1312, "use_bitmask_selection": false, "use_temp_deps": true, "valu_cap": 6, "valu_pad_cycles": 0, "valu_select": false, "valu_select_precompute_diffs": true, "vector_block": 16, "vectors": 32, "vlen": 8, "x4": 0, "x5": 0}
+summary:
+  mode: parity
+  score_mode: lb
+  schedule_every: 999999 (unscheduled_score=lb)
+  mutate_count: 6 mutate_sched: False
+  sched_policies: ['mix'] (tie-break: earliest policy)
+  engine_order: ['alu', 'valu', 'load', 'store', 'flow']
+  caps_source: SLOT_LIMITS
+  hazards: ['raw', 'temp', 'war', 'waw']
+  latency: raw=1 waw=1 war=0 temp=1 default=1
+  gate: 999999.0
+  lambda: 1.0
+  fallback_cycles: 10000
+  best_cycles: 1133
+  best_energy: 134134.0
+  best_penalty: 1.0
+  best_gap: 133
+  elapsed_s: 37.8
+  dag_hash: 11c133d68b6fd4d1121de8e61572d3cc8ff44a5c960a2b9bb9d8fd4493f963f6
+  bundle_count: 2149
+  baseline_cycles: 2149
+  dependency_model: {'includes_raw': True, 'includes_waw': True, 'includes_war': True, 'temp_hazard_tags': True, 'read_after_read': False, 'latency': {'raw': 1, 'waw': 1, 'war': 0, 'temp': 1, 'default': 1}}

@@ -1,6 +1,6 @@
 // Lean compiler output
 // Module: proofs.global_lower_bound.LowerBound
-// Imports: public import Init public import proofs.global_lower_bound.LowerBound.Defs public import proofs.global_lower_bound.LowerBound.TraceEq public import proofs.global_lower_bound.LowerBound.Specs public import proofs.global_lower_bound.LowerBound.Adversary public import proofs.global_lower_bound.LowerBound.ValuesLB public import proofs.global_lower_bound.LowerBound.MachineTraceEq public import proofs.global_lower_bound.LowerBound.LowerBounds
+// Imports: public import Init public import proofs.global_lower_bound.LowerBound.Defs public import proofs.global_lower_bound.LowerBound.TraceEq public import proofs.global_lower_bound.LowerBound.Specs public import proofs.global_lower_bound.LowerBound.Adversary public import proofs.global_lower_bound.LowerBound.ValuesLB public import proofs.global_lower_bound.LowerBound.MachineTraceEq public import proofs.global_lower_bound.LowerBound.CycleLB public import proofs.global_lower_bound.LowerBound.LowerBounds public import proofs.global_lower_bound.LowerBound.MemBigRoundDistinct
 #include <lean/lean.h>
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunused-parameter"
@@ -20,7 +20,9 @@ lean_object* initialize_original__performance__takehome_proofs_global__lower__bo
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_Adversary(uint8_t builtin);
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_ValuesLB(uint8_t builtin);
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_MachineTraceEq(uint8_t builtin);
+lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_CycleLB(uint8_t builtin);
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_LowerBounds(uint8_t builtin);
+lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_MemBigRoundDistinct(uint8_t builtin);
 static bool _G_initialized = false;
 LEAN_EXPORT lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound(uint8_t builtin) {
 lean_object * res;
@@ -47,7 +49,13 @@ lean_dec_ref(res);
 res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_MachineTraceEq(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
+res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_CycleLB(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
 res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_LowerBounds(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_MemBigRoundDistinct(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 return lean_io_result_mk_ok(lean_box(0));

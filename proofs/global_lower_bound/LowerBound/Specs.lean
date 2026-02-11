@@ -125,12 +125,16 @@ def step (tree : Nat → Nat) (nNodes idx val : Nat) : Nat × Nat :=
   let idx'' := if idx' ≥ nNodes then 0 else idx'
   (idx'', val')
 
+-- `step` expands into `Nat` arithmetic + `Decidable` machinery (`≥`, `%`, nested `if`s).
+-- Letting the kernel unfold it during definitional equality checking can trigger
+-- `(kernel) deep recursion detected`. Keep it unfoldable only when explicitly requested.
+attribute [irreducible] step
+
+-- Iterate `step` `n` times starting from `(idx, val)`.
+-- Defining it via primitive recursion avoids kernel recursion issues we hit
+-- with the nested-recursive definition.
 def iterRounds (tree : Nat → Nat) (nNodes : Nat) (n idx val : Nat) : Nat × Nat :=
-  match n with
-  | 0 => (idx, val)
-  | Nat.succ n =>
-      let st := step tree nNodes idx val
-      iterRounds tree nNodes n st.1 st.2
+  Nat.rec (idx, val) (fun _ st => step tree nNodes st.1 st.2) n
 
 lemma iterRounds_zero (tree : Nat → Nat) (nNodes idx val : Nat) :
     iterRounds tree nNodes 0 idx val = (idx, val) := by
@@ -149,9 +153,18 @@ def spec_kernel (mem : Memory) : Output :=
     let (_, valF) := iterRounds tree nNodes rounds idx0 val0
     valF
 
-def iterHash : Nat → Nat → Nat
-  | 0, v => v
-  | Nat.succ n, v => iterHash n (myhash v)
+-- `iterHash n v` = apply `myhash` to `v`, `n` times.
+-- Defining it via primitive recursion avoids kernel recursion issues we hit
+-- with the nested-recursive definition.
+def iterHash (n : Nat) (v : Nat) : Nat :=
+  Nat.rec v (fun _ acc => myhash acc) n
+
+lemma iterHash_zero (v : Nat) : iterHash 0 v = v := by
+  rfl
+
+lemma iterHash_succ (n : Nat) (v : Nat) :
+    iterHash (Nat.succ n) v = myhash (iterHash n v) := by
+  rfl
 
 def zeroTree : Nat → Nat := fun _ => 0
 
@@ -171,7 +184,8 @@ lemma step_zeroTree_val (idx val : Nat) :
 
 lemma step_idx_lt (tree : Nat → Nat) (nNodes idx val : Nat) (hnpos : 0 < nNodes) :
     (step tree nNodes idx val).1 < nNodes := by
-  dsimp [step]
+  unfold step
+  dsimp
   set node := tree idx
   set val' := myhash (aluEval AluOp.xor val node)
   set idx' := 2 * idx + (if val' % 2 = 0 then 1 else 2)
@@ -181,45 +195,75 @@ lemma step_idx_lt (tree : Nat → Nat) (nNodes idx val : Nat) (hnpos : 0 < nNode
   · have hlt : idx' < nNodes := lt_of_not_ge hge
     simp [hge, hlt]
 
-theorem iterRounds_zero_tree_val_range_succ (tree : Nat → Nat) (nNodes : Nat)
-    (hzero : ∀ i < nNodes, tree i = 0) (hnpos : 0 < nNodes) :
-    ∀ n idx val, idx < nNodes →
-      (iterRounds tree nNodes (Nat.succ n) idx val).2 = iterHash (Nat.succ n) (mod32 val) := by
+lemma step_val_of_tree_zero (tree : Nat → Nat) (nNodes idx val : Nat)
+    (hnode : tree idx = 0) :
+    (step tree nNodes idx val).2 = myhash (mod32 val) := by
+  unfold step
+  -- the `.2` projection ignores the index-path bookkeeping
+  dsimp
+  simp [hnode, aluEval_xor_zero]
+
+lemma mod32_iterHash_succ (n x : Nat) :
+    mod32 (iterHash (Nat.succ n) x) = iterHash (Nat.succ n) x := by
+  -- `iterHash (n+1) x` is `myhash (...)`, so it's already mod32.
+  simpa [iterHash_succ] using (mod32_myhash (iterHash n x))
+
+lemma iterRounds_idx_lt (tree : Nat → Nat) (nNodes : Nat) (hnpos : 0 < nNodes) :
+    ∀ n idx val, idx < nNodes → (iterRounds tree nNodes n idx val).1 < nNodes := by
   intro n
   induction n with
   | zero =>
       intro idx val hidx
-      have hnode : tree idx = 0 := hzero idx hidx
-      -- unfold just enough to expose the single `step`
-      simp only [iterRounds, iterHash]
-      simp [step, hnode, aluEval_xor_zero]
+      simpa [iterRounds]
   | succ n ih =>
       intro idx val hidx
-      have hstepIdx : (step tree nNodes idx val).1 < nNodes :=
-        step_idx_lt tree nNodes idx val hnpos
-      have hrest :
-          (iterRounds tree nNodes (Nat.succ n)
-              (step tree nNodes idx val).1 (step tree nNodes idx val).2).2 =
-            iterHash (Nat.succ n) (mod32 ((step tree nNodes idx val).2)) :=
-        ih (idx := (step tree nNodes idx val).1) (val := (step tree nNodes idx val).2) hstepIdx
+      -- after `n` steps, we can always take one more `step`, and `step` clamps to `< nNodes`.
+      have : (step tree nNodes (iterRounds tree nNodes n idx val).1 (iterRounds tree nNodes n idx val).2).1 < nNodes :=
+        step_idx_lt tree nNodes (iterRounds tree nNodes n idx val).1 (iterRounds tree nNodes n idx val).2 hnpos
+      simpa [iterRounds] using this
+
+lemma iterRounds_zero_tree_val_range_succ (tree : Nat → Nat) (nNodes : Nat)
+    (hzero : ∀ i < nNodes, tree i = 0) (hnpos : 0 < nNodes) :
+    ∀ n idx val, idx < nNodes →
+      (iterRounds tree nNodes (Nat.succ n) idx val).2 = iterHash (Nat.succ n) (mod32 val) := by
+  intro n idx val hidx
+  induction n generalizing idx val with
+  | zero =>
       have hnode : tree idx = 0 := hzero idx hidx
-      have hstepVal : (step tree nNodes idx val).2 = myhash (mod32 val) := by
-        simp [step, hnode, aluEval_xor_zero]
-      have hmod : mod32 ((step tree nNodes idx val).2) = myhash (mod32 val) := by
-        calc
-          mod32 ((step tree nNodes idx val).2) = mod32 (myhash (mod32 val)) := by
-            simpa [hstepVal]
-          _ = myhash (mod32 val) := mod32_myhash (mod32 val)
+      -- One round: `iterRounds` reduces to `step`, and `iterHash` reduces to `myhash`.
+      -- Keep the proof explicit to avoid `simp` unfolding surprises.
       calc
-        (iterRounds tree nNodes (Nat.succ (Nat.succ n)) idx val).2 =
-            (iterRounds tree nNodes (Nat.succ n)
-                (step tree nNodes idx val).1 (step tree nNodes idx val).2).2 := by
-              simp [iterRounds]
-        _ = iterHash (Nat.succ n) (mod32 ((step tree nNodes idx val).2)) := hrest
-        _ = iterHash (Nat.succ n) (myhash (mod32 val)) := by
-              simp [hmod]
-        _ = iterHash (Nat.succ (Nat.succ n)) (mod32 val) := by
-              rfl
+        (iterRounds tree nNodes (Nat.succ 0) idx val).2
+            = (step tree nNodes idx val).2 := by
+                simp [iterRounds]
+        _   = myhash (mod32 val) := step_val_of_tree_zero tree nNodes idx val hnode
+        _   = iterHash (Nat.succ 0) (mod32 val) := by
+                simpa [iterHash_succ, iterHash_zero]
+  | succ n ih =>
+      -- Let `st` be the machine state after `n+1` rounds.
+      set st := iterRounds tree nNodes (Nat.succ n) idx val
+      have hst_idx : st.1 < nNodes := by
+        simpa [st] using iterRounds_idx_lt tree nNodes hnpos (Nat.succ n) idx val hidx
+      have hnode : tree st.1 = 0 := hzero st.1 hst_idx
+      have hst_val : st.2 = iterHash (Nat.succ n) (mod32 val) := by
+        simpa [st] using ih (idx := idx) (val := val) hidx
+      -- One more round: apply `step` to `st`, then use the IH and `mod32` normalization.
+      calc
+        (iterRounds tree nNodes (Nat.succ (Nat.succ n)) idx val).2
+            = (step tree nNodes st.1 st.2).2 := by
+                simp [iterRounds, st]
+        _   = myhash (mod32 st.2) := step_val_of_tree_zero tree nNodes st.1 st.2 hnode
+        _   = myhash (iterHash (Nat.succ n) (mod32 val)) := by
+                have : mod32 st.2 = iterHash (Nat.succ n) (mod32 val) := by
+                  calc
+                    mod32 st.2 = mod32 (iterHash (Nat.succ n) (mod32 val)) := by
+                      rw [hst_val]
+                    _ = iterHash (Nat.succ n) (mod32 val) := by
+                      exact mod32_iterHash_succ n (mod32 val)
+                simpa [this]
+        _   = iterHash (Nat.succ (Nat.succ n)) (mod32 val) := by
+                -- unfold `iterHash` once
+                simpa [iterHash_succ]
 
 theorem spec_kernel_uniform_val (mem : Memory) (i : Fin BATCH_SIZE) (v : Nat)
     (hrounds : memAt mem 0 = ROUNDS)

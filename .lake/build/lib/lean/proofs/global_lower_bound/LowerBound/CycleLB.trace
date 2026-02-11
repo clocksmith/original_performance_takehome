@@ -1,0 +1,77 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["16408e6d3601004a.olean"],
+  "i": "8048a4de8c2023da.ilean",
+  "c": "d42c4547ca58b43c.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/xyz/deco/original_performance_takehome/.lake/packages/Cli/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/batteries/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/Qq/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/aesop/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/importGraph/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/plausible/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/mathlib/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean /Users/xyz/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/xyz/deco/original_performance_takehome/proofs/global_lower_bound/LowerBound/CycleLB.lean -o /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/global_lower_bound/LowerBound/CycleLB.olean -i /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/global_lower_bound/LowerBound/CycleLB.ilean -c /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/global_lower_bound/LowerBound/CycleLB.c --setup /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/global_lower_bound/LowerBound/CycleLB.setup.json --json",
+   "level": "trace"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:25:68: This simp argument is unused:\n  List.append_assoc\n\nHint: Omit it from the simp argument list.\n  simp [runMachineTraceAuxFull, runMachineTraceAux, hrun, ih,̵ ̵L̵i̵s̵t̵.̵a̵p̵p̵e̵n̵d̵_̵a̵s̵s̵o̵c̵]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:185:38: This simp argument is unused:\n  hcycle\n\nHint: Omit it from the simp argument list.\n  simp [hstep, hok, hdid', hreads0,̵ ̵h̵c̵y̵c̵l̵e̵]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:211:54: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:324:48: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:353:48: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:466:10: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:470:59: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:472:14: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:490:54: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:540:10: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:547:10: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:570:18: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:572:18: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:573:18: try 'simp' instead of 'simpa'\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"},
+  {"message":
+   "proofs/global_lower_bound/LowerBound/CycleLB.lean:538:31: This simp argument is unused:\n  int_ofNat_add_one\n\nHint: Omit it from the simp argument list.\n  simp [coreM1, hpc,̵ ̵i̵n̵t̵_̵o̵f̵N̵a̵t̵_̵a̵d̵d̵_̵o̵n̵e̵]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"}],
+ "inputs":
+ [["proofs.global_lower_bound.LowerBound.CycleLB:deps",
+   [["deps",
+     [["original_performance_takehome/TakehomeProofs:extraDep",
+       [["@original_performance_takehome:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["proofs.global_lower_bound.LowerBound.MachineTraceEq transitive imports (legacy)",
+         "68d18e38e7d94598"],
+        ["proofs.global_lower_bound.LowerBound.MachineTraceEq:importAllArts",
+         "1b297a72cd4fa679"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/xyz/deco/original_performance_takehome/proofs/global_lower_bound/LowerBound/CycleLB.lean",
+   "cfee21797fd0e231"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "98c369c7dea29ad6"}

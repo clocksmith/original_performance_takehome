@@ -14,11 +14,6 @@ open ProofISA
 def mod32 (x : Nat) : Nat :=
   x % MOD32
 
--- `mod32` expands into `% MOD32` where `MOD32 = 2^32`. Letting the kernel unfold it
--- during definitional equality checking can lead to deep reductions inside `Nat.mod`.
--- Keep it opaque unless we explicitly `simp [mod32]` / `unfold mod32`.
-attribute [irreducible] mod32
-
 def cdiv (a b : Nat) : Nat :=
   if b = 0 then 0 else (a + b - 1) / b
 
@@ -450,6 +445,52 @@ noncomputable def execInstruction (enablePause : Bool) (enableDebug : Bool) (val
                       let core'' := { core' with scratch := scratch' }
                       { core := core'', mem := mem', ok := true, debug_ok := dbg_ok,
                         has_non_debug := has_non_debug }
+
+lemma execInstruction_hasNonDebug
+    (enablePause : Bool) (enableDebug : Bool) (valueTrace : Nat → Nat)
+    (mem : Mem) (core : Core) (instr : Instruction) :
+    (execInstruction enablePause enableDebug valueTrace mem core instr).has_non_debug =
+      instrHasNonDebug instr := by
+  -- `has_non_debug` is computed once and threaded unchanged through all branches.
+  unfold execInstruction
+  -- well-formedness gate
+  by_cases hwf : decide (instrWellFormed instr)
+  · -- well-formed branch
+    simp [hwf]
+    -- After unfolding/simplifying, the debug failure check shows up as a Prop.
+    by_cases hbad :
+        enableDebug = true ∧ ∃ x ∈ instr.debug, execDebugSlot core.scratch valueTrace x = false
+    · simp [hbad]
+    · simp [hbad]
+      -- remaining gates are matches; every branch keeps the same `has_non_debug`.
+      cases hvalu : execValuSlots core.scratch instr.valu <;> simp [hvalu]
+      cases halu : execAluSlots core.scratch instr.alu <;> simp [halu]
+      cases hload :
+          instr.load.foldl
+            (fun acc slot =>
+              match acc, execLoadSlot core.scratch mem slot with
+              | some ws, some ws' => some (ws ++ ws')
+              | _, _ => none)
+            (some []) <;> simp [hload]
+      cases hmw : memWriteMany mem (instr.store.flatMap (execStoreSlot core.scratch)) <;>
+        simp [hmw]
+  · -- ill-formed branch
+    simp [hwf]
+
+lemma execInstruction_ok_implies_wellFormed
+    (enablePause : Bool) (enableDebug : Bool) (valueTrace : Nat → Nat)
+    (mem : Mem) (core : Core) (instr : Instruction) :
+    (execInstruction enablePause enableDebug valueTrace mem core instr).ok = true →
+      instrWellFormed instr := by
+  intro hok
+  -- The first gate in `execInstruction` is `instrWellFormed`. If it's false, `ok=false`.
+  by_cases hwf : decide (instrWellFormed instr)
+  · -- `decide` says well-formed; extract the proposition.
+    exact of_decide_eq_true hwf
+  · -- If not well-formed, `execInstruction` returns `ok=false`, contradicting `hok`.
+    have : (execInstruction enablePause enableDebug valueTrace mem core instr).ok = false := by
+      simp [execInstruction, hwf]
+    simp [this] at hok
 
 /-! ### Machine-level stepping -/
 

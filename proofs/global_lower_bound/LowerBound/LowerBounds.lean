@@ -1,5 +1,6 @@
 import proofs.global_lower_bound.LowerBound.MachineTraceEq
 import proofs.global_lower_bound.LowerBound.Adversary
+import proofs.global_lower_bound.LowerBound.CycleLB
 
 namespace ProofGlobalLowerBound
 open ProofCommon
@@ -118,6 +119,30 @@ theorem global_load_lower_bound_kernel_machine_final_valid_16 (p : Program) (hst
   have h := global_load_lower_bound_kernel_machine_final_valid p hstraight hcorrect hsafeExec mem hvalid
   simpa [globalLowerBoundKernelFinal_eq_16] using h
 
+theorem global_cycle_lower_bound_kernel_machine_final_valid_16 (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
+    ∀ mem, ValidInput mem → 16 ≤ cycleCountMachine p mem := by
+  intro mem hvalid
+  have h16 :
+      16 ≤ loadLowerCycles (readWordCountMachine p mem) :=
+    global_load_lower_bound_kernel_machine_final_valid_16 p hstraight hcorrect hsafeExec mem hvalid
+  rcases hvalid with ⟨hsafe, _hlayout, _hks, _hdiff⟩
+  have habort :
+      (runMachineFinalFuel p p.program.length mem).aborted = false :=
+    runMachineFinalFuel_aborted_false_of_StraightLine_safeExec (p := p) (hstraight := hstraight)
+      mem (hsafeExec mem hsafe)
+  have hcycles :
+      loadLowerCycles (readWordCountMachine p mem) ≤ cycleCountMachine p mem := by
+    have h :=
+      loadLowerCycles_readWordCountMachineFuel_le_cycleCountMachineFuel
+        (p := p) (fuel := p.program.length) (mem := mem) (hnoAbort := habort)
+    -- rewrite `fuel=p.program.length` wrappers
+    simpa [loadLowerCycles, cycleCountMachine, cycleCountMachineFuel,
+      readWordCountMachine, readWordCountMachineFuel, readWordsMachine, readWordsMachineFuel,
+      readOpsMachine, readOpsMachineFuel, runMachineTrace, runMachineTraceFuel] using h
+  exact le_trans h16 hcycles
+
 theorem global_load_lower_bound_kernel_machine_uniformzero (p : Program) (hstraight : StraightLine p)
     (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
     (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
@@ -186,11 +211,66 @@ theorem global_load_lower_bound_kernel_machine_roundDistinct_512
     global_load_lower_bound_kernel_machine_adversaryK p hstraight hcorrect hsafeExec
       mem hsafe hwrites hrounds 2 hk
   simpa [globalLowerBoundKernelK_eq_512] using h
+
+/-!
+### Cycle-level versions of the structured-adversary bounds
+
+These are immediate now that we have:
+1. `loadLowerCycles (readWordCountMachine ...) ≤ cycleCountMachine ...` for straight-line + `SafeExec`.
+2. The load-level bounds above (256/512/etc).
+-/
+
+lemma loadLowerCycles_readWordCountMachine_le_cycleCountMachine_of_StraightLine_safeExec
+    (p : Program) (hstraight : StraightLine p) (mem : Memory) (hsafe : SafeExec p mem) :
+    loadLowerCycles (readWordCountMachine p mem) ≤ cycleCountMachine p mem := by
+  have habort :
+      (runMachineFinalFuel p p.program.length mem).aborted = false :=
+    runMachineFinalFuel_aborted_false_of_StraightLine_safeExec (p := p) (hstraight := hstraight) mem hsafe
+  have h :=
+    loadLowerCycles_readWordCountMachineFuel_le_cycleCountMachineFuel
+      (p := p) (fuel := p.program.length) (mem := mem) (hnoAbort := habort)
+  -- rewrite `fuel=p.program.length` wrappers
+  simpa [loadLowerCycles, cycleCountMachine, cycleCountMachineFuel,
+    readWordCountMachine, readWordCountMachineFuel, readWordsMachine, readWordsMachineFuel,
+    readOpsMachine, readOpsMachineFuel, runMachineTrace, runMachineTraceFuel] using h
+
+theorem global_cycle_lower_bound_kernel_machine_roundDistinct_256
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
+    ∀ mem, MemSafeKernel mem → WritesOutput p mem → memAt mem 0 = ROUNDS → RoundDistinctNodes mem 1 →
+      256 ≤ cycleCountMachine p mem := by
+  intro mem hsafe hwrites hrounds hrd
+  have h256 : 256 ≤ loadLowerCycles (readWordCountMachine p mem) :=
+    global_load_lower_bound_kernel_machine_roundDistinct_256 p hstraight hcorrect hsafeExec
+      mem hsafe hwrites hrounds hrd
+  have hcycles :
+      loadLowerCycles (readWordCountMachine p mem) ≤ cycleCountMachine p mem :=
+    loadLowerCycles_readWordCountMachine_le_cycleCountMachine_of_StraightLine_safeExec
+      (p := p) (hstraight := hstraight) (mem := mem) (hsafe := hsafeExec mem hsafe)
+  exact le_trans h256 hcycles
+
+theorem global_cycle_lower_bound_kernel_machine_roundDistinct_512
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
+    ∀ mem, MemSafeKernel mem → WritesOutput p mem → memAt mem 0 = ROUNDS → RoundDistinctNodes mem 2 →
+      512 ≤ cycleCountMachine p mem := by
+  intro mem hsafe hwrites hrounds hrd
+  have h512 : 512 ≤ loadLowerCycles (readWordCountMachine p mem) :=
+    global_load_lower_bound_kernel_machine_roundDistinct_512 p hstraight hcorrect hsafeExec
+      mem hsafe hwrites hrounds hrd
+  have hcycles :
+      loadLowerCycles (readWordCountMachine p mem) ≤ cycleCountMachine p mem :=
+    loadLowerCycles_readWordCountMachine_le_cycleCountMachine_of_StraightLine_safeExec
+      (p := p) (hstraight := hstraight) (mem := mem) (hsafe := hsafeExec mem hsafe)
+  exact le_trans h512 hcycles
 theorem global_load_lower_bound_kernel_machine_big_272
-    (p : Program) (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel) :
+    (p : Program) (_hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset) :
     272 ≤ loadLowerCycles (readWordCountMachine p memBig) := by
   have hmin : BATCH_SIZE * (ROUNDS + 1) ≤ readWordCountMachine p memBig :=
-    min_required_words_kernel_machine_memBig_all p hcorrect
+    min_required_words_kernel_machine_memBig_all p hsubset
   have hmono :
       loadLowerCycles (BATCH_SIZE * (ROUNDS + 1)) ≤
         loadLowerCycles (readWordCountMachine p memBig) :=
@@ -202,20 +282,37 @@ theorem global_load_lower_bound_kernel_machine_big_272
   simpa [globalLowerBoundKernelPlus_eq_272] using hmono'
 
 theorem global_load_lower_bound_kernel_machine_big_256
-    (p : Program) (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel) :
+    (p : Program) (_hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset) :
     256 ≤ loadLowerCycles (readWordCountMachine p memBig) := by
   have h272 : 272 ≤ loadLowerCycles (readWordCountMachine p memBig) :=
-    global_load_lower_bound_kernel_machine_big_272 p hcorrect
+    global_load_lower_bound_kernel_machine_big_272 p _hcorrect hsubset
   exact le_trans (by decide : 256 ≤ 272) h272
+
+theorem global_cycle_lower_bound_kernel_machine_big_272
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem)
+    (hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset) :
+    272 ≤ cycleCountMachine p memBig := by
+  have h272 : 272 ≤ loadLowerCycles (readWordCountMachine p memBig) :=
+    global_load_lower_bound_kernel_machine_big_272 p hcorrect hsubset
+  have hcycles :
+      loadLowerCycles (readWordCountMachine p memBig) ≤ cycleCountMachine p memBig :=
+    loadLowerCycles_readWordCountMachine_le_cycleCountMachine_of_StraightLine_safeExec
+      (p := p) (hstraight := hstraight) (mem := memBig) (hsafe := hsafeExec memBig memBig_safe)
+  exact le_trans h272 hcycles
 theorem global_load_lower_bound_kernel_machine_exists_big_256
-    (p : Program) (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel) :
+    (p : Program) (_hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset) :
     ∃ mem, 256 ≤ loadLowerCycles (readWordCountMachine p mem) := by
-  exact ⟨memBig, global_load_lower_bound_kernel_machine_big_256 p hcorrect⟩
+  exact ⟨memBig, global_load_lower_bound_kernel_machine_big_256 p _hcorrect hsubset⟩
 
 theorem global_load_lower_bound_kernel_machine_exists_big_272
-    (p : Program) (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel) :
+    (p : Program) (_hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset) :
     ∃ mem, 272 ≤ loadLowerCycles (readWordCountMachine p mem) := by
-  exact ⟨memBig, global_load_lower_bound_kernel_machine_big_272 p hcorrect⟩
+  exact ⟨memBig, global_load_lower_bound_kernel_machine_big_272 p _hcorrect hsubset⟩
 lemma globalLowerBound_eq :
     globalLowerBound = ceilDiv (ceilDiv MIN_REQUIRED_WORDS VLEN) LOAD_CAP := by
   rfl

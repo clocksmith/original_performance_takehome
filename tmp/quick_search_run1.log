@@ -1,0 +1,73 @@
+energy_search: 2026-02-09 22:17:44
+  mode=parity score_mode=bundle steps=4000 seed=1
+  schedule_every=0 unscheduled_score=skip
+  mutate_count=3 mutate_sched=False
+  mutate_keys=['base_cached_rounds', 'cached_nodes', 'depth4_rounds', 'extra_vecs', 'hash_bitwise_style', 'hash_variant', 'hash_xor_style', 'idx_shifted', 'node_ptr_incremental', 'offload_budget_hash_op1', 'offload_budget_hash_op2', 'offload_budget_hash_shift', 'offload_budget_node_xor', 'offload_budget_parity', 'offload_hash_op1', 'offload_hash_op2', 'offload_hash_shift', 'offload_mode', 'offload_node_xor', 'offload_op1', 'offload_parity', 'partial_cache', 'ptr_setup_engine', 'reset_on_valu', 'selection_by_round', 'selection_mode', 'setup_style', 'shifts_on_valu', 'valu_select', 'vector_block', 'x4']
+  sched_policies=['mix'] sched_restarts=10 sched_jitter=0.4
+  hazards=['raw', 'temp', 'war', 'waw'] latency_raw=1 latency_waw=1 latency_war=0 latency_temp=1 latency_default=1
+  gate=10.0 lambda=1.0 target=0 penalty=100.0
+  log_file=tmp/quick_search_run1.log
+[  100] t=25.2s energy=1583.0 cycles=1583 lb=1245 best=1291.0
+[  200] t=51.9s energy=1427.0 cycles=1427 lb=1345 best=1291.0
+[  300] t=80.2s energy=1406.0 cycles=1406 lb=1328 best=1291.0
+[  400] t=108.3s energy=1359.0 cycles=1356 lb=1270 best=1291.0
+[  500] t=136.8s energy=1363.0 cycles=1363 lb=1219 best=1291.0
+[  600] t=167.3s energy=1349.0 cycles=1349 lb=1214 best=1291.0
+[  700] t=196.5s energy=1349.0 cycles=1349 lb=1214 best=1291.0
+[  800] t=223.6s energy=1349.0 cycles=1349 lb=1214 best=1291.0
+[  900] t=252.7s energy=1349.0 cycles=1349 lb=1214 best=1291.0
+[ 1000] t=282.2s energy=1347.0 cycles=1347 lb=1214 best=1291.0
+[ 1100] t=312.6s energy=1347.0 cycles=1347 lb=1214 best=1291.0
+[ 1200] t=341.3s energy=1347.0 cycles=1347 lb=1214 best=1291.0
+[ 1300] t=370.2s energy=1347.0 cycles=1347 lb=1214 best=1291.0
+[ 1400] t=399.2s energy=1347.0 cycles=1347 lb=1214 best=1291.0
+[ 1500] t=427.1s energy=1347.0 cycles=1347 lb=1214 best=1291.0
+[ 1600] t=459.6s energy=1347.0 cycles=1347 lb=1235 best=1291.0
+[ 1700] t=487.4s energy=1347.0 cycles=1347 lb=1235 best=1291.0
+[ 1800] t=516.6s energy=1347.0 cycles=1347 lb=1236 best=1291.0
+[ 1900] t=544.9s energy=1347.0 cycles=1347 lb=1235 best=1291.0
+[ 2000] t=574.9s energy=1347.0 cycles=1347 lb=1236 best=1291.0
+[ 2100] t=605.2s energy=1347.0 cycles=1347 lb=1236 best=1291.0
+[ 2200] t=5560.3s energy=1347.0 cycles=1347 lb=1235 best=1291.0
+[ 2300] t=9926.2s energy=1347.0 cycles=1347 lb=1236 best=1291.0
+[ 2400] t=14919.8s energy=1347.0 cycles=1347 lb=1236 best=1291.0
+[ 2500] t=19310.1s energy=1347.0 cycles=1347 lb=1236 best=1291.0
+[ 2600] t=24230.3s energy=1347.0 cycles=1347 lb=1235 best=1291.0
+[ 2700] t=29412.4s energy=1347.0 cycles=1347 lb=1235 best=1291.0
+[ 2800] t=33075.8s energy=1347.0 cycles=1347 lb=1236 best=1291.0
+[ 2900] t=33398.3s energy=1347.0 cycles=1347 lb=1236 best=1291.0
+[ 3000] t=33428.6s energy=1347.0 cycles=1347 lb=1240 best=1291.0
+[ 3100] t=33457.1s energy=1347.0 cycles=1347 lb=1240 best=1291.0
+[ 3200] t=33485.2s energy=1347.0 cycles=1347 lb=1240 best=1291.0
+[ 3300] t=33514.7s energy=1347.0 cycles=1347 lb=1240 best=1291.0
+[ 3400] t=33542.7s energy=1347.0 cycles=1347 lb=1240 best=1291.0
+[ 3500] t=33571.9s energy=1347.0 cycles=1347 lb=1240 best=1291.0
+[ 3600] t=33600.2s energy=1347.0 cycles=1347 lb=1240 best=1291.0
+[ 3700] t=33632.3s energy=1347.0 cycles=1347 lb=1240 best=1291.0
+[ 3800] t=33661.1s energy=1347.0 cycles=1347 lb=1240 best=1291.0
+[ 3900] t=33692.8s energy=1347.0 cycles=1347 lb=1240 best=1291.0
+[ 4000] t=33719.2s energy=1347.0 cycles=1347 lb=1240 best=1291.0
+best_score: {"constraint_penalty": 0.0, "constraint_violations": [], "counts": {"alu": 11472, "flow": 800, "load": 2157, "store": 32, "valu": 7045}, "cycles": 1291, "energy": 1291.0, "gap": 0, "lb": 1175, "policy": null}
+best_spec: {"alu_cap": 12, "base_cached_rounds": [0, 1, 2, 3, 11, 12, 13, 14], "binsearch_select": false, "cached_nodes": 15, "cached_round_aliases": {}, "cached_round_depth": {}, "cached_round_x": {}, "depth4_cached_rounds": [], "depth4_rounds": 0, "extra_vecs": 3, "flow_cap": 1, "flow_setup": 64, "fuse_stages": false, "hash_bitwise_style": "inplace", "hash_prog": null, "hash_variant": "direct", "hash_xor_style": "baseline", "idx_shifted": true, "include_setup": true, "load_cap": 2, "node_ptr_incremental": false, "offload_budget_hash_op1": 0, "offload_budget_hash_op2": 12, "offload_budget_hash_shift": 12, "offload_budget_node_xor": 384, "offload_budget_parity": 416, "offload_hash_op1": false, "offload_hash_op2": true, "offload_hash_shift": true, "offload_mode": "budgeted", "offload_node_xor": true, "offload_op1": 800, "offload_parity": true, "proof_assume_shifted_input": false, "proof_reset_single_op": false, "proof_skip_const_zero": false, "ptr_setup_engine": "flow", "reset_on_valu": false, "rounds": 16, "sched_jitter": 0.1, "sched_restarts": 2, "sched_seed": 9, "selection_mode": "bitmask", "selection_mode_by_round": {"11": "eq", "12": "eq", "13": "eq", "14": "eq"}, "setup_style": "inline", "shifts_on_valu": true, "store_cap": 2, "total_cycles": 1312, "use_bitmask_selection": true, "use_temp_deps": true, "valu_cap": 6, "valu_pad_cycles": 0, "valu_select": false, "valu_select_precompute_diffs": true, "valu_select_rounds": null, "vector_block": 0, "vectors": 32, "vlen": 8, "x4": 0, "x5": 0}
+summary:
+  mode: parity
+  score_mode: bundle
+  schedule_every: 0 (unscheduled_score=skip)
+  mutate_count: 3 mutate_sched: False
+  sched_policies: ['mix'] (tie-break: earliest policy)
+  engine_order: ['alu', 'valu', 'load', 'store', 'flow']
+  caps_source: SLOT_LIMITS
+  hazards: ['raw', 'temp', 'war', 'waw']
+  latency: raw=1 waw=1 war=0 temp=1 default=1
+  gate: 10.0
+  lambda: 1.0
+  fallback_cycles: 10000
+  best_cycles: 1291
+  best_energy: 1291.0
+  best_penalty: 0.0
+  best_gap: 0
+  elapsed_s: 33719.6
+  dag_hash: dc908a49fa70a9115958eab7b4defe55255a038ff5437810fa958291c0360301
+  bundle_count: 1291
+  baseline_cycles: 1291
+  dependency_model: {'includes_raw': True, 'includes_waw': True, 'includes_war': True, 'temp_hazard_tags': True, 'read_after_read': False, 'latency': {'raw': 1, 'waw': 1, 'war': 0, 'temp': 1, 'default': 1}}

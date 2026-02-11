@@ -478,6 +478,32 @@ noncomputable def runMachineTraceAux : Nat → Machine → (Memory × List (List
         let (mem', reads') := runMachineTraceAux fuel m'
         (mem', reads ++ reads')
 
+/-!
+### A "full" runner that preserves the final `Machine` state (including `cycle`)
+
+`runMachineTraceAux` returns only the final memory and the collected read-trace.
+For cycle lower bounds we also need access to `Machine.cycle`, so we keep the
+final machine here.
+-/
+noncomputable def runMachineTraceAuxFull : Nat → Machine → (Machine × List (List Nat))
+  | 0, m => (m, [])
+  | fuel+1, m =>
+      if !anyRunning m then
+        (m, [])
+      else
+        let (m', reads) := stepMachineTrace m
+        let (mfin, reads') := runMachineTraceAuxFull fuel m'
+        (mfin, reads ++ reads')
+
+noncomputable def runMachineFinalFuel (p : Program) (fuel : Nat) (mem : Memory) : Machine :=
+  (runMachineTraceAuxFull fuel (initMachine p mem)).1
+
+noncomputable def cycleCountMachineFuel (p : Program) (fuel : Nat) (mem : Memory) : Nat :=
+  (runMachineFinalFuel p fuel mem).cycle
+
+noncomputable def cycleCountMachine (p : Program) (mem : Memory) : Nat :=
+  cycleCountMachineFuel p p.program.length mem
+
 noncomputable def runMachineTraceFuel (p : Program) (fuel : Nat) (mem : Memory) :
     Memory × List (List Nat) :=
   runMachineTraceAux fuel (initMachine p mem)
