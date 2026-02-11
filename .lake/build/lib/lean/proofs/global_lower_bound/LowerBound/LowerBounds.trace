@@ -1,9 +1,9 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["8ff793bdd3f51077.olean"],
-  "i": "0a06a00dd8af534d.ilean",
-  "c": "5c6dd888927dd8c5.c"},
+ {"o": ["fb6495505716106d.olean"],
+  "i": "dd4de410136d78f3.ilean",
+  "c": "3eb55603d1229a18.c"},
  "log":
  [{"message":
    ".> LEAN_PATH=/Users/xyz/deco/original_performance_takehome/.lake/packages/Cli/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/batteries/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/Qq/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/aesop/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/importGraph/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/plausible/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/mathlib/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean /Users/xyz/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/xyz/deco/original_performance_takehome/proofs/global_lower_bound/LowerBound/LowerBounds.lean -o /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/global_lower_bound/LowerBound/LowerBounds.olean -i /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/global_lower_bound/LowerBound/LowerBounds.ilean -c /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/global_lower_bound/LowerBound/LowerBounds.c --setup /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/global_lower_bound/LowerBound/LowerBounds.setup.json --json",
@@ -22,6 +22,10 @@
          "78190c7d172b8891"],
         ["proofs.global_lower_bound.LowerBound.Adversary:importAllArts",
          "eb2d6d040b2d628a"],
+        ["proofs.global_lower_bound.LowerBound.MemBigRoundDistinct transitive imports (legacy)",
+         "5e13b079c03d5bd5"],
+        ["proofs.global_lower_bound.LowerBound.MemBigRoundDistinct:importAllArts",
+         "ae389929c9d1b2da"],
         ["proofs.global_lower_bound.LowerBound.CycleLB transitive imports (legacy)",
          "e502f29f10c0e988"],
         ["proofs.global_lower_bound.LowerBound.CycleLB:importAllArts",
@@ -34,7 +38,7 @@
   ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
    "9a2be90fd35343e5"],
   ["/Users/xyz/deco/original_performance_takehome/proofs/global_lower_bound/LowerBound/LowerBounds.lean",
-   "fe8259ad4e9781c8"],
+   "4698eba1c63e174b"],
   ["options", "00000000000006bb"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "802e0ea39a976579"}
+ "depHash": "b05fca1ed1018a58"}

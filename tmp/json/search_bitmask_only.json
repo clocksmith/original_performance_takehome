@@ -1,0 +1,95 @@
+{
+  "score": {
+    "energy": 1301.0,
+    "cycles": 1299,
+    "lb": 1179,
+    "counts": {
+      "alu": 11280,
+      "valu": 7069,
+      "load": 2157,
+      "store": 32,
+      "flow": 800
+    },
+    "gap": 0,
+    "constraint_penalty": 2.0,
+    "constraint_violations": [
+      "soft: bitmask with extra_vecs < 3",
+      "soft: selection_mode_by_round mask_precompute with extra_vecs < 4"
+    ],
+    "policy": null
+  },
+  "spec": {
+    "rounds": 16,
+    "vectors": 32,
+    "vlen": 8,
+    "depth4_rounds": 1,
+    "x4": 0,
+    "x5": 0,
+    "flow_setup": 64,
+    "reset_on_valu": false,
+    "shifts_on_valu": true,
+    "offload_op1": 800,
+    "offload_hash_op1": false,
+    "offload_hash_shift": false,
+    "offload_hash_op2": false,
+    "offload_parity": true,
+    "offload_node_xor": true,
+    "use_bitmask_selection": true,
+    "selection_mode": "bitmask",
+    "selection_mode_by_round": {
+      "11": "mask_precompute",
+      "12": "mask_precompute",
+      "13": "mask_precompute",
+      "14": "mask_precompute"
+    },
+    "valu_select": false,
+    "node_ptr_incremental": false,
+    "idx_shifted": true,
+    "ptr_setup_engine": "flow",
+    "setup_style": "inline",
+    "include_setup": true,
+    "proof_assume_shifted_input": false,
+    "proof_reset_single_op": false,
+    "proof_skip_const_zero": false,
+    "valu_pad_cycles": 0,
+    "vector_block": 0,
+    "extra_vecs": 2,
+    "cached_nodes": 15,
+    "base_cached_rounds": [
+      0,
+      1,
+      2,
+      3,
+      11,
+      12,
+      13,
+      14
+    ],
+    "depth4_cached_rounds": [
+      4
+    ],
+    "cached_round_aliases": {},
+    "cached_round_depth": {
+      "11": 0,
+      "12": 1,
+      "13": 2,
+      "14": 3
+    },
+    "cached_round_x": {
+      "11": 32,
+      "12": 32,
+      "13": 32,
+      "14": 32
+    },
+    "valu_cap": 6,
+    "alu_cap": 12,
+    "flow_cap": 1,
+    "load_cap": 2,
+    "store_cap": 2,
+    "total_cycles": 1312,
+    "sched_seed": 40,
+    "sched_jitter": 0.1,
+    "sched_restarts": 16,
+    "use_temp_deps": true
+  }
+}

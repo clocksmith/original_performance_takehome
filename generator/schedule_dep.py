@@ -19,6 +19,8 @@ def _build_deps(
     *,
     waw0_same_engine: bool = False,
     waw0_all: bool = False,
+    include_waw: bool = True,
+    include_war: bool = True,
 ) -> tuple[list[list[tuple[int, int]]], list[list[tuple[int, int]]]]:
     """
     Build dependency graph from a linear op stream.
@@ -47,7 +49,7 @@ def _build_deps(
             if addr in last_write:
                 deps[i].append((last_write[addr], 1))
         for addr in writes:
-            if addr in last_write:
+            if include_waw and addr in last_write:
                 p = last_write[addr]
                 # The simulator commits scratch writes at end-of-cycle and resolves
                 # multiple same-cycle writes by "last write wins" in execution order.
@@ -57,7 +59,7 @@ def _build_deps(
                 else:
                     lat = 0 if (waw0_same_engine and ops[p].engine == ops[i].engine) else 1
                 deps[i].append((p, lat))
-            if addr in last_read:
+            if include_war and addr in last_read:
                 deps[i].append((last_read[addr], 0))
         temps: list[str] = []
         if ops[i].meta is not None:
@@ -174,18 +176,40 @@ def _schedule_ops_dep_once(
 
     waw0_same_engine = False
     waw0_all = False
+    include_waw = True
+    include_war = True
     deps_policy = policy
-    # Policy suffix: allow same-engine WAW at 0 latency (deterministic within-slot order).
-    if deps_policy.endswith("_waw0"):
-        waw0_same_engine = True
-        deps_policy = deps_policy[: -len("_waw0")]
-    # Policy suffix: allow WAW at 0 latency across engines too. This requires
-    # enforcing a per-cycle engine order consistent with those WAW edges.
-    if deps_policy.endswith("_waw0all"):
-        waw0_all = True
-        deps_policy = deps_policy[: -len("_waw0all")]
+    # Parse dependency suffixes in any order.
+    # Supported suffixes:
+    #   _waw0, _waw0all, _nowar, _nowaw
+    while True:
+        matched = False
+        if deps_policy.endswith("_waw0all"):
+            waw0_all = True
+            deps_policy = deps_policy[: -len("_waw0all")]
+            matched = True
+        elif deps_policy.endswith("_waw0"):
+            waw0_same_engine = True
+            deps_policy = deps_policy[: -len("_waw0")]
+            matched = True
+        elif deps_policy.endswith("_nowar"):
+            include_war = False
+            deps_policy = deps_policy[: -len("_nowar")]
+            matched = True
+        elif deps_policy.endswith("_nowaw"):
+            include_waw = False
+            deps_policy = deps_policy[: -len("_nowaw")]
+            matched = True
+        if not matched:
+            break
 
-    deps, children = _build_deps(ops, waw0_same_engine=waw0_same_engine, waw0_all=waw0_all)
+    deps, children = _build_deps(
+        ops,
+        waw0_same_engine=waw0_same_engine,
+        waw0_all=waw0_all,
+        include_waw=include_waw,
+        include_war=include_war,
+    )
     indegree = [len(deps[i]) for i in range(n_ops)]
 
     # Optional: compute ALAP latest-start times for slack scheduling.
@@ -751,6 +775,8 @@ def schedule_ops_dep(
     jitter: float = 0.0,
     restarts: int = 1,
     compact: bool = False,
+    repair_passes: int = 0,
+    repair_try_swap: bool = False,
     policy: str = "baseline",
     target_cycles: int | None = None,
 ) -> list[dict[str, list[Any]]]:
@@ -761,6 +787,13 @@ def schedule_ops_dep(
         )
         if compact:
             instrs = _compact_schedule(ops, instrs)
+        if repair_passes > 0:
+            instrs = _repair_schedule(
+                ops,
+                instrs,
+                passes=int(repair_passes),
+                try_swap=bool(repair_try_swap),
+            )
         if not return_ops:
             instrs = _strip_ops(instrs)
         return instrs
@@ -773,6 +806,13 @@ def schedule_ops_dep(
         )
         if compact:
             instrs_k = _compact_schedule(ops, instrs_k)
+        if repair_passes > 0:
+            instrs_k = _repair_schedule(
+                ops,
+                instrs_k,
+                passes=int(repair_passes),
+                try_swap=bool(repair_try_swap),
+            )
         cycles = _count_cycles(_strip_ops(instrs_k))
         if best_cycles is None or cycles < best_cycles:
             best_cycles = cycles
@@ -822,7 +862,12 @@ def _strip_ops(instrs: list[dict[str, list[Any]]]) -> list[dict[str, list[Any]]]
     return out
 
 
-def _compact_schedule(ops: list[Op], instrs_ops: list[dict[str, list[Any]]]) -> list[dict[str, list[Op]]]:
+def _compact_schedule(
+    ops: list[Op],
+    instrs_ops: list[dict[str, list[Any]]],
+    *,
+    order_mode: str = "tail",
+) -> list[dict[str, list[Op]]]:
     """
     Greedy "pull left" compaction pass over an existing schedule.
 
@@ -883,8 +928,23 @@ def _compact_schedule(ops: list[Op], instrs_ops: list[dict[str, list[Any]]]) -> 
             e = max(e, tp + lat)
         return e
 
-    # Move ops in descending time so we shrink the tail first.
-    order = sorted([i for i, ti in enumerate(t) if ti >= 0], key=lambda i: t[i], reverse=True)
+    # Choose move order for local repair.
+    live = [i for i, ti in enumerate(t) if ti >= 0]
+    if order_mode == "tail":
+        # Shrink the tail first.
+        order = sorted(live, key=lambda i: t[i], reverse=True)
+    elif order_mode == "front":
+        # Improve front packing first.
+        order = sorted(live, key=lambda i: t[i])
+    elif order_mode == "priority":
+        # Prefer ops on longer dependency tails.
+        priority = [1] * len(ops)
+        for i in range(len(ops) - 1, -1, -1):
+            if children[i]:
+                priority[i] = 1 + max(priority[c] for c, _ in children[i])
+        order = sorted(live, key=lambda i: (priority[i], t[i]), reverse=True)
+    else:
+        raise ValueError(f"unknown compact order_mode {order_mode!r}")
     for i in order:
         cur = t[i]
         e = earliest_cycle(i)
@@ -918,3 +978,159 @@ def _compact_schedule(ops: list[Op], instrs_ops: list[dict[str, list[Any]]]) -> 
         out[ti][ops[i].engine].append(ops[i])
     # Convert defaultdicts to dicts
     return [dict(b) for b in out]
+
+
+def _swap_pack_adjacent(ops: list[Op], instrs_ops: list[dict[str, list[Any]]]) -> list[dict[str, list[Op]]]:
+    """
+    Deterministic adjacent-cycle repair.
+
+    For each op in cycle c, try moving to c-1. If c-1 is engine-cap full, attempt a
+    same-engine swap with one op in c-1 that can legally move to c.
+    """
+    op_to_idx: dict[int, int] = {id(op): i for i, op in enumerate(ops)}
+    t: list[int] = [-1] * len(ops)
+    for cycle, bundle in enumerate(instrs_ops):
+        for slots in bundle.values():
+            for op in slots:
+                if not isinstance(op, Op):
+                    raise TypeError("swap repair requires return_ops=True schedule")
+                idx = op_to_idx.get(id(op))
+                if idx is not None:
+                    t[idx] = cycle
+
+    deps, children = _build_deps(ops)
+    writes_list = [_reads_writes(op)[1] for op in ops]
+
+    def _op_cost(op: Op) -> int:
+        if op.engine == "alu" and isinstance(op.slot, tuple) and op.slot and op.slot[0] == "alu_vec":
+            return VLEN
+        return 1
+
+    max_cycle = max((x for x in t if x >= 0), default=-1)
+    if max_cycle < 1:
+        return instrs_ops  # nothing to repair
+
+    engine_counts: list[dict[str, int]] = [defaultdict(int) for _ in range(max_cycle + 1)]
+    writes_count: list[dict[int, int]] = [defaultdict(int) for _ in range(max_cycle + 1)]
+    by_cycle: list[list[int]] = [[] for _ in range(max_cycle + 1)]
+    for i, ti in enumerate(t):
+        if ti < 0:
+            continue
+        by_cycle[ti].append(i)
+        eng = ops[i].engine
+        engine_counts[ti][eng] += _op_cost(ops[i])
+        for w in writes_list[i]:
+            writes_count[ti][w] += 1
+
+    def earliest_cycle(i: int) -> int:
+        e = 0
+        for p, lat in deps[i]:
+            tp = t[p]
+            if tp < 0:
+                continue
+            e = max(e, tp + lat)
+        return e
+
+    def latest_cycle(i: int) -> int:
+        li = max_cycle
+        for c, lat in children[i]:
+            tc = t[c]
+            if tc < 0:
+                continue
+            li = min(li, tc - lat)
+        return li
+
+    def can_place(i: int, c: int) -> bool:
+        eng = ops[i].engine
+        if engine_counts[c].get(eng, 0) + _op_cost(ops[i]) > SLOT_LIMITS[eng]:
+            return False
+        ws = writes_list[i]
+        if any(writes_count[c].get(w, 0) > 0 for w in ws):
+            return False
+        return True
+
+    def remove_from_cycle(i: int, c: int) -> None:
+        eng = ops[i].engine
+        engine_counts[c][eng] -= _op_cost(ops[i])
+        if engine_counts[c][eng] <= 0:
+            engine_counts[c].pop(eng, None)
+        for w in writes_list[i]:
+            writes_count[c][w] -= 1
+            if writes_count[c][w] <= 0:
+                writes_count[c].pop(w, None)
+        by_cycle[c].remove(i)
+
+    def add_to_cycle(i: int, c: int) -> None:
+        eng = ops[i].engine
+        engine_counts[c][eng] += _op_cost(ops[i])
+        for w in writes_list[i]:
+            writes_count[c][w] += 1
+        by_cycle[c].append(i)
+        t[i] = c
+
+    for c in range(1, max_cycle + 1):
+        for i in sorted(by_cycle[c], key=earliest_cycle):
+            if t[i] != c:
+                continue
+            prev = c - 1
+            if earliest_cycle(i) > prev:
+                continue
+            if can_place(i, prev):
+                remove_from_cycle(i, c)
+                add_to_cycle(i, prev)
+                continue
+            # Try a same-engine swap.
+            eng = ops[i].engine
+            cand_prev = [j for j in by_cycle[prev] if ops[j].engine == eng]
+            for j in cand_prev:
+                if earliest_cycle(j) > c or latest_cycle(j) < c:
+                    continue
+                # Temporarily remove j, then test whether i can place in prev and j in c.
+                remove_from_cycle(j, prev)
+                ok_i = can_place(i, prev)
+                ok_j = can_place(j, c)
+                if ok_i and ok_j:
+                    remove_from_cycle(i, c)
+                    add_to_cycle(i, prev)
+                    add_to_cycle(j, c)
+                    break
+                add_to_cycle(j, prev)
+
+    new_max = max((ti for ti in t if ti >= 0), default=-1)
+    out: list[dict[str, list[Op]]] = [defaultdict(list) for _ in range(new_max + 1)]  # type: ignore[list-item]
+    for i, ti in enumerate(t):
+        if ti >= 0:
+            out[ti][ops[i].engine].append(ops[i])
+    return [dict(b) for b in out]
+
+
+def _repair_schedule(
+    ops: list[Op],
+    instrs_ops: list[dict[str, list[Any]]],
+    *,
+    passes: int,
+    try_swap: bool,
+) -> list[dict[str, list[Op]]]:
+    if passes <= 0:
+        return instrs_ops  # type: ignore[return-value]
+    cur: list[dict[str, list[Op]]] = instrs_ops  # type: ignore[assignment]
+    cur_cycles = _count_cycles(_strip_ops(cur))
+    for _ in range(passes):
+        improved = False
+        for mode in ("tail", "priority", "front"):
+            cand = _compact_schedule(ops, cur, order_mode=mode)
+            cand_cycles = _count_cycles(_strip_ops(cand))
+            if cand_cycles < cur_cycles:
+                cur = cand
+                cur_cycles = cand_cycles
+                improved = True
+        if try_swap:
+            cand2 = _swap_pack_adjacent(ops, cur)
+            cand2_cycles = _count_cycles(_strip_ops(cand2))
+            if cand2_cycles < cur_cycles:
+                cur = cand2
+                cur_cycles = cand2_cycles
+                improved = True
+        if not improved:
+            break
+    return cur

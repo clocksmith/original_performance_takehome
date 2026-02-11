@@ -1,0 +1,1548 @@
+{
+  "best_cycles": 1290,
+  "best_cfg": {
+    "sched_deps_variant": "full",
+    "temp_rename_mode": "round",
+    "temp_rename_window": 8,
+    "sched_repair_passes": 1,
+    "sched_repair_try_swap": false,
+    "sched_policy": "baseline",
+    "sched_restarts": 2,
+    "sched_jitter": 0.0,
+    "sched_seed": 56,
+    "use_temp_deps_extras": true,
+    "emit_order": "vector_major"
+  },
+  "rows": [
+    {
+      "i": 0,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.0,
+        "sched_seed": 56,
+        "use_temp_deps_extras": true,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 1,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 26,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 2,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.02,
+        "sched_seed": 51,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 3,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.0,
+        "sched_seed": 22,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 4,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 10,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 5,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 21,
+        "use_temp_deps_extras": true,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 6,
+      "cycles": 1295,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.02,
+        "sched_seed": 49,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 7,
+      "cycles": 1321,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 3,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 8,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "nowaw",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.0,
+        "sched_seed": 10,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 9,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.02,
+        "sched_seed": 52,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 10,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.05,
+        "sched_seed": 49,
+        "use_temp_deps_extras": true,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 11,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.0,
+        "sched_seed": 29,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 12,
+      "cycles": 1472,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.0,
+        "sched_seed": 31,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 13,
+      "cycles": 1291,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 3,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 14,
+      "cycles": 1317,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.0,
+        "sched_seed": 19,
+        "use_temp_deps_extras": true,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 15,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 57,
+        "use_temp_deps_extras": true,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 16,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.02,
+        "sched_seed": 27,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 17,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.02,
+        "sched_seed": 24,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 18,
+      "cycles": 1317,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.02,
+        "sched_seed": 28,
+        "use_temp_deps_extras": true,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 19,
+      "cycles": 1486,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 52,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 20,
+      "cycles": 1500,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.05,
+        "sched_seed": 10,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 21,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.02,
+        "sched_seed": 15,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 22,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.02,
+        "sched_seed": 23,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 23,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "nowaw",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.0,
+        "sched_seed": 15,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 24,
+      "cycles": 1487,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.0,
+        "sched_seed": 29,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 25,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.02,
+        "sched_seed": 24,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 26,
+      "cycles": 1295,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.02,
+        "sched_seed": 56,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 27,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.02,
+        "sched_seed": 60,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 28,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.02,
+        "sched_seed": 61,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 29,
+      "cycles": 1320,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.0,
+        "sched_seed": 53,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 30,
+      "cycles": 1321,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.05,
+        "sched_seed": 32,
+        "use_temp_deps_extras": true,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 31,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 1,
+        "sched_jitter": 0.05,
+        "sched_seed": 2,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 32,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "nowaw",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.05,
+        "sched_seed": 33,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 33,
+      "cycles": 1295,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.0,
+        "sched_seed": 41,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 34,
+      "cycles": 1513,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.02,
+        "sched_seed": 37,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 35,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "nowaw",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.05,
+        "sched_seed": 50,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 36,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 27,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 37,
+      "cycles": 1493,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 1,
+        "sched_jitter": 0.02,
+        "sched_seed": 7,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 38,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.0,
+        "sched_seed": 4,
+        "use_temp_deps_extras": true,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 39,
+      "cycles": 1491,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 25,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 40,
+      "cycles": 1291,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.0,
+        "sched_seed": 63,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 41,
+      "cycles": 1327,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.0,
+        "sched_seed": 0,
+        "use_temp_deps_extras": true,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 42,
+      "cycles": 1292,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 1,
+        "sched_jitter": 0.05,
+        "sched_seed": 39,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 43,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "nowaw",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.05,
+        "sched_seed": 47,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 44,
+      "cycles": 1330,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.0,
+        "sched_seed": 39,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 45,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.02,
+        "sched_seed": 37,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 46,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 6,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 47,
+      "cycles": 1327,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.0,
+        "sched_seed": 60,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 48,
+      "cycles": 1506,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.02,
+        "sched_seed": 23,
+        "use_temp_deps_extras": true,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 49,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.05,
+        "sched_seed": 29,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 50,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.02,
+        "sched_seed": 22,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 51,
+      "cycles": 1482,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 44,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 52,
+      "cycles": 1317,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 1,
+        "sched_jitter": 0.02,
+        "sched_seed": 30,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 53,
+      "cycles": 1320,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.05,
+        "sched_seed": 6,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 54,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.02,
+        "sched_seed": 25,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 55,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.02,
+        "sched_seed": 40,
+        "use_temp_deps_extras": true,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 56,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.05,
+        "sched_seed": 44,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 57,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.0,
+        "sched_seed": 1,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 58,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.05,
+        "sched_seed": 15,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 59,
+      "cycles": 1489,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.05,
+        "sched_seed": 48,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 60,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.0,
+        "sched_seed": 54,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 61,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 1,
+        "sched_jitter": 0.05,
+        "sched_seed": 53,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 62,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "nowaw",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.0,
+        "sched_seed": 8,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 63,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.0,
+        "sched_seed": 41,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 64,
+      "cycles": 1316,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 42,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 65,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.0,
+        "sched_seed": 45,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 66,
+      "cycles": 1291,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.0,
+        "sched_seed": 29,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 67,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.05,
+        "sched_seed": 53,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 68,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.02,
+        "sched_seed": 12,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 69,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.02,
+        "sched_seed": 14,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 70,
+      "cycles": 1327,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.02,
+        "sched_seed": 46,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 71,
+      "cycles": 1496,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.0,
+        "sched_seed": 28,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 72,
+      "cycles": 1496,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.0,
+        "sched_seed": 19,
+        "use_temp_deps_extras": true,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 73,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 52,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 74,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.02,
+        "sched_seed": 50,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 75,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.02,
+        "sched_seed": 23,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 76,
+      "cycles": 1317,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.05,
+        "sched_seed": 50,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 77,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "nowaw",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 2,
+        "sched_jitter": 0.05,
+        "sched_seed": 39,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 78,
+      "cycles": 1487,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 1,
+        "sched_jitter": 0.0,
+        "sched_seed": 29,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 79,
+      "cycles": 1317,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.0,
+        "sched_seed": 59,
+        "use_temp_deps_extras": true,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 80,
+      "cycles": 1301,
+      "cfg": {
+        "sched_deps_variant": "nowaw",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.05,
+        "sched_seed": 37,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 81,
+      "cycles": 1489,
+      "cfg": {
+        "sched_deps_variant": "nowaw_nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 57,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 82,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": false,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 1,
+        "sched_jitter": 0.02,
+        "sched_seed": 53,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    },
+    {
+      "i": 83,
+      "cycles": 1320,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 16,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 2,
+        "sched_jitter": 0.02,
+        "sched_seed": 30,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 84,
+      "cycles": 1314,
+      "cfg": {
+        "sched_deps_variant": "waw0_nowar",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.05,
+        "sched_seed": 62,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 85,
+      "cycles": 1295,
+      "cfg": {
+        "sched_deps_variant": "full",
+        "temp_rename_mode": "window",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "bottleneck_valu",
+        "sched_restarts": 1,
+        "sched_jitter": 0.02,
+        "sched_seed": 60,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 86,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "round",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": false,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.05,
+        "sched_seed": 41,
+        "use_temp_deps_extras": true,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 87,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "nowaw",
+        "temp_rename_mode": "off",
+        "temp_rename_window": 8,
+        "sched_repair_passes": 1,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.02,
+        "sched_seed": 30,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 88,
+      "cycles": 1306,
+      "cfg": {
+        "sched_deps_variant": "nowar",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 0,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 4,
+        "sched_jitter": 0.0,
+        "sched_seed": 52,
+        "use_temp_deps_extras": false,
+        "emit_order": "auto"
+      }
+    },
+    {
+      "i": 89,
+      "cycles": 1290,
+      "cfg": {
+        "sched_deps_variant": "waw0",
+        "temp_rename_mode": "vec",
+        "temp_rename_window": 4,
+        "sched_repair_passes": 2,
+        "sched_repair_try_swap": true,
+        "sched_policy": "baseline",
+        "sched_restarts": 1,
+        "sched_jitter": 0.0,
+        "sched_seed": 12,
+        "use_temp_deps_extras": false,
+        "emit_order": "vector_major"
+      }
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "variant": "variant_lb1119_s9090.py",
+    "lb": 1119,
+    "bundle_cycles": 3673,
+    "counts": {
+      "alu": 13424,
+      "valu": 6705,
+      "load": 2121,
+      "store": 32,
+      "flow": 768
+    }
+  },
+  {
+    "variant": "variant_lb1119_s8080.py",
+    "lb": 1119,
+    "bundle_cycles": 3658,
+    "counts": {
+      "alu": 13424,
+      "valu": 6706,
+      "load": 2153,
+      "store": 32,
+      "flow": 800
+    }
+  },
+  {
+    "variant": "variant_lb1119_s1234.py",
+    "lb": 1119,
+    "bundle_cycles": 2236,
+    "counts": {
+      "alu": 13424,
+      "valu": 6712,
+      "load": 2124,
+      "store": 32,
+      "flow": 768
+    }
+  },
+  {
+    "variant": "variant_1285.py",
+    "lb": 1175,
+    "bundle_cycles": 1290,
+    "counts": {
+      "alu": 11472,
+      "valu": 7045,
+      "load": 2157,
+      "store": 32,
+      "flow": 800
+    }
+  }
+]

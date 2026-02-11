@@ -137,7 +137,14 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
     if hash_variant == "prog":
         # Ensure const-0 is available for mov-style ops and collect program constants.
         vec_consts.add(0)
-        prog = getattr(spec, "hash_prog", None) or []
+        prog = getattr(spec, "hash_prog", None)
+        if not prog:
+            preset = str(getattr(spec, "hash_prog_variant", "none") or "none")
+            if preset != "none":
+                from .hash_prog_presets import build_hash_prog_preset
+
+                prog = build_hash_prog_preset(preset)
+        prog = prog or []
         for inst in prog:
             for key in ("a", "b", "c"):
                 imm = inst.get(key)

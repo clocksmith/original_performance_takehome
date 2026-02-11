@@ -54,11 +54,14 @@ def apply_offload_stream(spec, ops: list[Op]) -> list[Op]:
         "node_xor": int(getattr(spec, "offload_budget_node_xor", 0)),
     }
     used = {k: 0 for k in budgets}
+    offload_budget_swaps = getattr(spec, "offload_budget_swaps", None) or {}
 
     offload_prefix_cap = int(getattr(spec, "offload_op1", 0))
     offloaded_prefix = 0
 
     offload_idxs: set[int] | None = None
+    offload_pos_by_cat: dict[str, set[int]] | None = None
+    seen_pos: dict[str, int] = {}
     if mode == "budgeted_spread":
         # Precompute which op indices to offload so that the (typically small)
         # set of *non-offloaded* ops in a category is distributed across the
@@ -99,6 +102,45 @@ def apply_offload_stream(spec, ops: list[Op]) -> list[Op]:
             for i in idxs:
                 if i not in keep_set:
                     offload_idxs.add(i)
+    elif mode == "budgeted" and offload_budget_swaps:
+        # Category-local offload positions for budgeted mode.
+        # Default is prefix positions [0..cap), with optional swaps to move a
+        # few offloads later in the stream while preserving exact counts.
+        totals = {k: 0 for k in budgets}
+        for op in ops:
+            if not op.offloadable:
+                continue
+            cat = _offload_category(op)
+            if cat in totals:
+                totals[cat] += 1
+
+        offload_pos_by_cat = {}
+        for cat, total in totals.items():
+            cap = min(int(budgets.get(cat, 0)), total)
+            if cap <= 0:
+                offload_pos_by_cat[cat] = set()
+                continue
+            pos = set(range(cap))
+            for swap in offload_budget_swaps.get(cat, ()):
+                if not isinstance(swap, (tuple, list)) or len(swap) != 2:
+                    continue
+                a = int(swap[0])
+                b = int(swap[1])
+                if a < 0 or b < 0 or a >= total or b >= total:
+                    continue
+                if a in pos and b not in pos:
+                    pos.remove(a)
+                    pos.add(b)
+            # Keep exact cardinality in case malformed swaps slipped through.
+            if len(pos) > cap:
+                pos = set(sorted(pos)[:cap])
+            elif len(pos) < cap:
+                for p in range(total):
+                    if p not in pos:
+                        pos.add(p)
+                        if len(pos) >= cap:
+                            break
+            offload_pos_by_cat[cat] = pos
 
     out: list[Op] = []
     offload_alu_vec = bool(getattr(spec, "offload_alu_vec", False))
@@ -110,10 +152,15 @@ def apply_offload_stream(spec, ops: list[Op]) -> list[Op]:
             elif mode == "budgeted":
                 cat = _offload_category(op)
                 if cat is not None:
-                    cap = budgets.get(cat, 0)
-                    do_offload = used[cat] < cap
-                    if do_offload:
-                        used[cat] += 1
+                    if offload_pos_by_cat is not None:
+                        pos = seen_pos.get(cat, 0)
+                        seen_pos[cat] = pos + 1
+                        do_offload = pos in offload_pos_by_cat.get(cat, set())
+                    else:
+                        cap = budgets.get(cat, 0)
+                        do_offload = used[cat] < cap
+                        if do_offload:
+                            used[cat] += 1
             else:
                 assert mode == "budgeted_spread"
                 do_offload = offload_idxs is not None and i in offload_idxs

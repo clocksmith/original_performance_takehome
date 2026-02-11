@@ -271,6 +271,12 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
     if hash_variant == "prog":
         hash_prog = getattr(spec, "hash_prog", None)
         if not hash_prog:
+            preset = str(getattr(spec, "hash_prog_variant", "none") or "none")
+            if preset != "none":
+                from .hash_prog_presets import build_hash_prog_preset
+
+                hash_prog = build_hash_prog_preset(preset)
+        if not hash_prog:
             raise ValueError("hash_variant='prog' requires spec.hash_prog")
     selection_modes_per_round = [_selection_mode(spec, r) for r in range(spec.rounds)]
     use_vector_major = any(

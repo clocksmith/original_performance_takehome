@@ -1,0 +1,643 @@
+{
+  "best10": [
+    {
+      "variant": "variant_1000.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.39
+    },
+    {
+      "variant": "variant_1024.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.389
+    },
+    {
+      "variant": "variant_1100.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.394
+    },
+    {
+      "variant": "variant_1285.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.397
+    },
+    {
+      "variant": "variant_1285_compact.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.401
+    },
+    {
+      "variant": "variant_assume_zero_idx.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.405
+    },
+    {
+      "variant": "variant_assume_zero_idx_1000.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.412
+    },
+    {
+      "variant": "variant_bitmask_11_14.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.402
+    },
+    {
+      "variant": "variant_bitmask_11_14_extra32.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.405
+    },
+    {
+      "variant": "variant_eq_more_cached.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.411
+    }
+  ],
+  "all": [
+    {
+      "variant": "variant_1000.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.39
+    },
+    {
+      "variant": "variant_1013.py",
+      "cycles": 1945,
+      "lb": 1174,
+      "counts": {
+        "alu": 14072,
+        "valu": 7044,
+        "load": 2065,
+        "store": 32,
+        "flow": 993
+      },
+      "sec": 0.195
+    },
+    {
+      "variant": "variant_1024.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.389
+    },
+    {
+      "variant": "variant_1100.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.394
+    },
+    {
+      "variant": "variant_1174.py",
+      "cycles": 1735,
+      "lb": 1387,
+      "counts": {
+        "alu": 7463,
+        "valu": 8318,
+        "load": 2066,
+        "store": 32,
+        "flow": 993
+      },
+      "sec": 0.22
+    },
+    {
+      "variant": "variant_1285.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.397
+    },
+    {
+      "variant": "variant_1285_compact.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.401
+    },
+    {
+      "variant": "variant_assume_zero_idx.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.405
+    },
+    {
+      "variant": "variant_assume_zero_idx_1000.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.412
+    },
+    {
+      "variant": "variant_bitmask_11_14.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.402
+    },
+    {
+      "variant": "variant_bitmask_11_14_extra32.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.405
+    },
+    {
+      "variant": "variant_eq_more_cached.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.411
+    },
+    {
+      "variant": "variant_extra23.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.42
+    },
+    {
+      "variant": "variant_hash_ir.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.409
+    },
+    {
+      "variant": "variant_hash_tmpop1.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.41
+    },
+    {
+      "variant": "variant_hash_tmpop1_tmpxor.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.413
+    },
+    {
+      "variant": "variant_hash_tmpxor.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.414
+    },
+    {
+      "variant": "variant_lb1119_s1234.py",
+      "cycles": 2236,
+      "lb": 1119,
+      "counts": {
+        "alu": 13424,
+        "valu": 6712,
+        "load": 2124,
+        "store": 32,
+        "flow": 768
+      },
+      "sec": 0.432
+    },
+    {
+      "variant": "variant_lb1119_s8080.py",
+      "cycles": 3658,
+      "lb": 1119,
+      "counts": {
+        "alu": 13424,
+        "valu": 6706,
+        "load": 2153,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.452
+    },
+    {
+      "variant": "variant_lb1119_s9090.py",
+      "cycles": 3673,
+      "lb": 1119,
+      "counts": {
+        "alu": 13424,
+        "valu": 6705,
+        "load": 2121,
+        "store": 32,
+        "flow": 768
+      },
+      "sec": 0.458
+    },
+    {
+      "variant": "variant_lb1120.py",
+      "cycles": 1735,
+      "lb": 1387,
+      "counts": {
+        "alu": 7463,
+        "valu": 8318,
+        "load": 2066,
+        "store": 32,
+        "flow": 993
+      },
+      "sec": 0.217
+    },
+    {
+      "variant": "variant_lb1120_tmp.py",
+      "cycles": 1735,
+      "lb": 1387,
+      "counts": {
+        "alu": 7463,
+        "valu": 8318,
+        "load": 2066,
+        "store": 32,
+        "flow": 993
+      },
+      "sec": 0.237
+    },
+    {
+      "variant": "variant_lb1122.py",
+      "cycles": 1735,
+      "lb": 1387,
+      "counts": {
+        "alu": 7463,
+        "valu": 8318,
+        "load": 2066,
+        "store": 32,
+        "flow": 993
+      },
+      "sec": 0.22
+    },
+    {
+      "variant": "variant_lb1125.py",
+      "cycles": 1735,
+      "lb": 1387,
+      "counts": {
+        "alu": 7463,
+        "valu": 8318,
+        "load": 2066,
+        "store": 32,
+        "flow": 993
+      },
+      "sec": 0.225
+    },
+    {
+      "variant": "variant_leaf_valu_select.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.42
+    },
+    {
+      "variant": "variant_leaf_valu_select_1000.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.42
+    },
+    {
+      "variant": "variant_max.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.42
+    },
+    {
+      "variant": "variant_no_extra_tempdeps.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.423
+    },
+    {
+      "variant": "variant_offload_more.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.423
+    },
+    {
+      "variant": "variant_offload_more_gang.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.424
+    },
+    {
+      "variant": "variant_one.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.427
+    },
+    {
+      "variant": "variant_optimized.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.424
+    },
+    {
+      "variant": "variant_partial_cache14_x8.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.426
+    },
+    {
+      "variant": "variant_round_major.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.429
+    },
+    {
+      "variant": "variant_spread.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.428
+    },
+    {
+      "variant": "variant_uncache14.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.422
+    },
+    {
+      "variant": "variant_uncache14_1000.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.425
+    },
+    {
+      "variant": "variant_uncache3.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.427
+    },
+    {
+      "variant": "variant_zero.py",
+      "cycles": 1290,
+      "lb": 1175,
+      "counts": {
+        "alu": 11472,
+        "valu": 7045,
+        "load": 2157,
+        "store": 32,
+        "flow": 800
+      },
+      "sec": 0.437
+    }
+  ]
+}

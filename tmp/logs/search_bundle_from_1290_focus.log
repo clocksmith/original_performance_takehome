@@ -1,0 +1,14 @@
+energy_search: 2026-02-11 09:43:35
+  mode=parity score_mode=bundle steps=1200 seed=5151
+  schedule_every=1 unscheduled_score=skip
+  mutate_count=4 mutate_sched=True
+  mutate_keys=['assume_zero_indices', 'base_cached_rounds', 'cached_nodes', 'depth4_rounds', 'emit_order', 'extra_vecs', 'hash_bitwise_style', 'hash_variant', 'hash_xor_style', 'idx_shifted', 'node_ptr_incremental', 'offload_budget_hash_op1', 'offload_budget_hash_op2', 'offload_budget_hash_shift', 'offload_budget_node_xor', 'offload_budget_parity', 'offload_budget_swaps', 'offload_hash_op1', 'offload_hash_op2', 'offload_hash_shift', 'offload_mode', 'offload_node_xor', 'offload_op1', 'offload_parity', 'partial_cache', 'ptr_setup_engine', 'reset_on_valu', 'sched_jitter', 'sched_policy', 'sched_restarts', 'sched_seed', 'selection_by_round', 'selection_mode', 'setup_style', 'shifts_on_valu', 'use_temp_deps', 'use_temp_deps_extras', 'valu_select', 'valu_select_precompute_diffs', 'valu_select_rounds', 'vector_block', 'x4']
+  offload_swap_cfg=cats=('parity', 'node_xor', 'hash_op2', 'hash_shift', 'hash_op1') span=768 max_per_cat=3
+  sched_seed_domain=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127]
+  sched_jitter_domain=[0.0, 0.02, 0.05, 0.1, 0.2]
+  sched_restarts_domain=[1, 2, 4, 8, 16, 32, 48]
+  sched_policy_domain=['baseline', 'bottleneck_valu', 'bottleneck_load', 'bottleneck_flow', 'mix']
+  sched_policies=['mix'] sched_restarts=10 sched_jitter=0.4
+  hazards=['raw', 'temp', 'war', 'waw'] latency_raw=1 latency_waw=1 latency_war=0 latency_temp=1 latency_default=1
+  gate=10.0 lambda=1.0 target=1120 penalty=250.0
+  log_file=tmp/search_bundle_from_1290_focus.log

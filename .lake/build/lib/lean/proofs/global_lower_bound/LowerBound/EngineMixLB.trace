@@ -1,0 +1,32 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["2b772ac1ed0ba5f9.olean"],
+  "i": "d6fa1f689bbc5e77.ilean",
+  "c": "7978b9ddbf733d56.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/xyz/deco/original_performance_takehome/.lake/packages/Cli/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/batteries/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/Qq/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/aesop/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/importGraph/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/plausible/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/packages/mathlib/.lake/build/lib/lean:/Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean /Users/xyz/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/xyz/deco/original_performance_takehome/proofs/global_lower_bound/LowerBound/EngineMixLB.lean -o /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/global_lower_bound/LowerBound/EngineMixLB.olean -i /Users/xyz/deco/original_performance_takehome/.lake/build/lib/lean/proofs/global_lower_bound/LowerBound/EngineMixLB.ilean -c /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/global_lower_bound/LowerBound/EngineMixLB.c --setup /Users/xyz/deco/original_performance_takehome/.lake/build/ir/proofs/global_lower_bound/LowerBound/EngineMixLB.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["proofs.global_lower_bound.LowerBound.EngineMixLB:deps",
+   [["deps",
+     [["original_performance_takehome/TakehomeProofs:extraDep",
+       [["@original_performance_takehome:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["proofs.global_lower_bound.LowerBound.MachineTraceEq transitive imports (legacy)",
+         "68d18e38e7d94598"],
+        ["proofs.global_lower_bound.LowerBound.MachineTraceEq:importAllArts",
+         "1b297a72cd4fa679"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/xyz/deco/original_performance_takehome/proofs/global_lower_bound/LowerBound/EngineMixLB.lean",
+   "a49d6cf961807f90"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "865e06d80ce71925"}

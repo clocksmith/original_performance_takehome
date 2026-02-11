@@ -12,6 +12,91 @@ from .schedule_dep import schedule_ops_dep
 from .offload import apply_offload_stream
 
 
+_DEP_SUFFIXES = ("_waw0all", "_waw0", "_nowar", "_nowaw")
+
+
+def _strip_dep_suffixes(policy: str) -> str:
+    out = policy
+    while True:
+        changed = False
+        for suffix in _DEP_SUFFIXES:
+            if out.endswith(suffix):
+                out = out[: -len(suffix)]
+                changed = True
+                break
+        if not changed:
+            break
+    return out
+
+
+def _apply_sched_dep_variant(policy: str, variant: str) -> str:
+    base = _strip_dep_suffixes(policy)
+    suffix_map = {
+        "full": "",
+        "nowar": "_nowar",
+        "nowaw": "_nowaw",
+        "nowaw_nowar": "_nowaw_nowar",
+        "waw0": "_waw0",
+        "waw0_nowar": "_waw0_nowar",
+        "waw0all": "_waw0all",
+        "waw0all_nowar": "_waw0all_nowar",
+    }
+    suffix = suffix_map.get(variant, "")
+    return f"{base}{suffix}"
+
+
+def _temp_tag_suffix(meta: dict, idx: int, mode: str, window: int) -> str:
+    if mode == "round":
+        return f"r{int(meta.get('round', -1))}"
+    if mode == "vec":
+        return f"r{int(meta.get('round', -1))}_v{int(meta.get('vec', -1))}"
+    if mode == "op":
+        return f"i{idx}"
+    if mode == "window":
+        w = max(1, int(window))
+        return f"w{idx // w}"
+    return ""
+
+
+def _rewrite_temp_tags(spec: SpecBase, ops: list[Op]) -> list[Op]:
+    mode = str(getattr(spec, "temp_rename_mode", "off") or "off")
+    if mode == "off":
+        return ops
+    window = int(getattr(spec, "temp_rename_window", 8) or 8)
+    out: list[Op] = []
+    for i, op in enumerate(ops):
+        meta = op.meta
+        if not meta or "temp" not in meta:
+            out.append(op)
+            continue
+        temp_meta = meta.get("temp")
+        if isinstance(temp_meta, str):
+            tags = [temp_meta]
+            as_list = False
+        else:
+            tags = list(temp_meta) if temp_meta else []
+            as_list = True
+        if not tags:
+            out.append(op)
+            continue
+        suffix = _temp_tag_suffix(meta, i, mode, window)
+        if not suffix:
+            out.append(op)
+            continue
+        new_tags = [f"{t}@{suffix}" for t in tags]
+        new_meta = dict(meta)
+        new_meta["temp"] = new_tags if as_list else new_tags[0]
+        out.append(
+            Op(
+                engine=op.engine,
+                slot=op.slot,
+                offloadable=op.offloadable,
+                meta=new_meta,
+            )
+        )
+    return out
+
+
 def _build_setup_prelude(spec: SpecBase, layout) -> list[dict[str, list[tuple]]]:
     setup_instrs: list[dict[str, list[tuple]]] = []
     assume_zero_indices = bool(getattr(spec, "assume_zero_indices", False))
@@ -146,6 +231,7 @@ def build_base_instrs(spec: SpecBase | None = None):
 
     # Apply offload in-order to build the final op stream.
     final_ops = apply_offload_stream(spec, ordered_ops)
+    final_ops = _rewrite_temp_tags(spec, final_ops)
 
     pad_cycles = getattr(spec, "valu_pad_cycles", 0)
     if pad_cycles:
@@ -158,14 +244,21 @@ def build_base_instrs(spec: SpecBase | None = None):
     sched_jitter = getattr(spec, "sched_jitter", 0.0)
     sched_restarts = getattr(spec, "sched_restarts", 1)
     sched_compact = bool(getattr(spec, "sched_compact", False))
-    sched_policy = getattr(spec, "sched_policy", "baseline")
+    sched_policy = _apply_sched_dep_variant(
+        str(getattr(spec, "sched_policy", "baseline")),
+        str(getattr(spec, "sched_deps_variant", "full")),
+    )
     sched_target_cycles = getattr(spec, "sched_target_cycles", None)
+    sched_repair_passes = int(getattr(spec, "sched_repair_passes", 0) or 0)
+    sched_repair_try_swap = bool(getattr(spec, "sched_repair_try_swap", False))
     instrs = schedule_ops_dep(
         final_ops,
         seed=sched_seed,
         jitter=sched_jitter,
         restarts=sched_restarts,
         compact=sched_compact,
+        repair_passes=sched_repair_passes,
+        repair_try_swap=sched_repair_try_swap,
         policy=sched_policy,
         target_cycles=sched_target_cycles,
     )

@@ -1,0 +1,32 @@
+energy_search swap+sched (300 steps): best_cycles=1290
+  log: tmp/search_swap_sched_300.log
+
+energy_search broad local knobs+swaps (250 steps): best_cycles=1290
+  log: tmp/search_broad_250.log
+
+energy_search swap+sched+sched_policy (200 steps): best_cycles=1290
+  log: tmp/search_swap_sched_policy_200.log
+
+energy_search swap-only (500 steps): best_cycles=1290
+  log: tmp/search_swap_only_500.log
+
+bounded scheduler grid on fixed 1290 op stream:
+  policies: baseline,bottleneck_valu,valu_first
+  restarts: 1,2,4
+  jitter: 0.0,0.05,0.1,0.15
+  seeds: 0..127
+  time budget: 360s
+  evaluated: 1005 configs
+  best: 1290 at (baseline, 1, 0.0, 0)
+
+full scheduler grid on fixed 1290 op stream:
+  policies: baseline,bottleneck_valu,valu_first,global_greedy
+  restarts: 1,2
+  jitter: 0.0,0.05,0.1,0.15
+  seeds: 0..63
+  total: 2048 configs
+  best: 1290 at (baseline, 1, 0.0, 0)
+  runtime: ~812.5s
+
+energy_search expanded knobs (emit_order/use_temp_deps_extras/sched_compact) + swaps (180 steps): best_cycles=1290
+  log: tmp/search_new_knobs_180.log

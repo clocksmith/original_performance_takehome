@@ -1,0 +1,20 @@
+[
+  {
+    "lb": 1120,
+    "step": 1956,
+    "bundle_cycles": 7595,
+    "file": "variant_lb1120.py"
+  },
+  {
+    "lb": 1122,
+    "step": 480,
+    "bundle_cycles": 2452,
+    "file": "variant_lb1122.py"
+  },
+  {
+    "lb": 1125,
+    "step": 250,
+    "bundle_cycles": 7513,
+    "file": "variant_lb1125.py"
+  }
+]

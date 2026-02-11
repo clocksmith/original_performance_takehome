@@ -12,5 +12,8 @@ import proofs.global_lower_bound.LowerBound.Adversary
 import proofs.global_lower_bound.LowerBound.ValuesLB
 import proofs.global_lower_bound.LowerBound.MachineTraceEq
 import proofs.global_lower_bound.LowerBound.CycleLB
+import proofs.global_lower_bound.LowerBound.EngineMixLB
+import proofs.global_lower_bound.LowerBound.EngineMixKernel
+import proofs.global_lower_bound.LowerBound.EngineMixMemBig
 import proofs.global_lower_bound.LowerBound.LowerBounds
 import proofs.global_lower_bound.LowerBound.MemBigRoundDistinct

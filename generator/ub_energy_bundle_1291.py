@@ -23,6 +23,13 @@ SPEC_UB_ENERGY_BUNDLE_1291 = replace(
     offload_budget_hash_op2=12,
     offload_budget_parity=416,
     offload_budget_node_xor=384,
+    # Directed offload-swap schedule found by targeted neighborhood search.
+    # Preserves per-category offload counts while improving bundle closure.
+    offload_budget_swaps={
+        "parity": ((218, 439),),
+        "node_xor": ((58, 511), (273, 458), (298, 474), (349, 444)),
+        "hash_op2": ((5, 989), (8, 34), (10, 312)),
+    },
     offload_hash_op1=False,
     offload_hash_shift=True,
     offload_hash_op2=True,

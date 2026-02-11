@@ -1,0 +1,17 @@
+energy_search: 2026-02-06 16:46:17
+  mode=parity score_mode=bundle steps=2000 seed=123
+  schedule_every=0 unscheduled_score=skip
+  mutate_count=2 mutate_sched=False
+  mutate_keys=['hash_bitwise_style', 'hash_variant', 'hash_xor_style', 'offload_budget_hash_op2', 'offload_budget_hash_shift', 'offload_budget_node_xor', 'offload_budget_parity', 'selection_by_round']
+  sched_policies=['mix'] sched_restarts=10 sched_jitter=0.4
+  hazards=['raw', 'temp', 'war', 'waw'] latency_raw=1 latency_waw=1 latency_war=0 latency_temp=1 latency_default=1
+  gate=10.0 lambda=1.0 target=0 penalty=100.0
+  log_file=tmp/energy_1291_tune_s123.log
+[  100] t=34.3s energy=1300.0 cycles=1300 lb=1180 best=1291.0
+[  200] t=68.7s energy=1303.0 cycles=1303 lb=1162 best=1291.0
+[  300] t=104.9s energy=1301.0 cycles=1301 lb=1182 best=1291.0
+[  400] t=142.6s energy=1298.0 cycles=1298 lb=1173 best=1291.0
+[  500] t=180.3s energy=1301.0 cycles=1301 lb=1171 best=1291.0
+[  600] t=219.1s energy=1296.0 cycles=1296 lb=1165 best=1291.0
+[  700] t=258.0s energy=1296.0 cycles=1296 lb=1182 best=1291.0
+[  800] t=296.8s energy=1299.0 cycles=1299 lb=1183 best=1291.0

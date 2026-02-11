@@ -35,6 +35,11 @@ class SpecBase:
     offload_budget_hash_op2: int = 0
     offload_budget_parity: int = 0
     offload_budget_node_xor: int = 0
+    # Optional per-category position swaps for offload_mode="budgeted".
+    # Positions are in category-local order among offloadable ops.
+    # Each pair (a, b) means: keep position a on VALU and offload position b instead,
+    # while preserving the same per-category offload budget.
+    offload_budget_swaps: dict[str, tuple[tuple[int, int], ...]] = field(default_factory=dict)
     offload_hash_op1: bool = True
     offload_hash_shift: bool = False
     offload_hash_op2: bool = False
@@ -86,6 +91,9 @@ class SpecBase:
     #   "a": src, "b": src, "c": src (muladd only), "stage": "shift|op1|op2" (optional)}.
     # Sources can be "val|tmp|tmp2" or integer constants (vector consts).
     hash_prog: list[dict] | None = None
+    # Named hash program preset used when hash_variant="prog" and hash_prog is None.
+    # Presets: none, baseline, swap_xor, tmp_xor_const, tmp_op1, pingpong.
+    hash_prog_variant: str = "none"
     # Use incremental pointer for cached node preload to reduce const loads.
     node_ptr_incremental: bool = False
     # Use 1-based idx representation to drop the +1 in update.
@@ -138,6 +146,12 @@ class SpecBase:
     sched_jitter: float = 0.0
     sched_restarts: int = 1
     sched_compact: bool = False
+    # Dependency-family suffix applied by builder to sched_policy.
+    # Variants: full, nowar, nowaw, nowaw_nowar, waw0, waw0_nowar, waw0all, waw0all_nowar.
+    sched_deps_variant: str = "full"
+    # Deterministic post-scheduler local repair.
+    sched_repair_passes: int = 0
+    sched_repair_try_swap: bool = False
     # Dependency scheduler policy (see generator/schedule_dep.py).
     # - "baseline": current critical-path list scheduling.
     # - "bottleneck_valu": bias non-VALU ops that unlock future VALU work.
@@ -150,6 +164,10 @@ class SpecBase:
     # extra serialization edges for shared selection scratch temps (extra_*).
     # Disabling this keeps only address-based deps for those temps.
     use_temp_deps_extras: bool = True
+    # Optional temp-tag rewriting before scheduling (affects only temp hazards).
+    # Modes: off, round, vec, op, window.
+    temp_rename_mode: str = "off"
+    temp_rename_window: int = 8
 
 
 SPEC_BASE = SpecBase()

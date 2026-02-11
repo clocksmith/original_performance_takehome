@@ -1,7 +1,9 @@
 # Anthropic's Original Performance Take-Home
 
 Quick summary:
-- **Current best**: 1291 cycles (bundle-valid), spec in `generator/ub_energy_bundle_1291.py` (wrapper: `ub_energy_bundle_1291.py`).
+- **Current best**: 1288 cycles (bundle-valid), spec in `generator/ub_energy_bundle_1291.py`.
+- **Bounds convergence**: formal universal lower bound is **256 cycles** (see `proofs/global_lower_bound/LowerBound.md`); current constructive upper bound is **1288 cycles**.
+- **Exactness criterion**: if constructive UB and formal LB meet, the exact optimum is proven.
 - **True metric**: bundle cycles from `generator/schedule_dep.py` (graph DP / per-engine LBs are optimistic proxies).
 - **Verify**: `python3 tests/submission_tests.py`
 - **Scripts**: `scripts/energy_search.py`, `scripts/graph_dp_auto_search.py`, `scripts/pareto_dp.py`, `scripts/export_doppler_energy.py`
@@ -24,7 +26,7 @@ cycle count and accepts or rejects.
 
 This separation is the point: deep domain knowledge goes into the
 generator and scheduler once, then search explores the combinatorial
-space that no human would manually enumerate. The best result (1291
+space that no human would manually enumerate. The best result (1288
 cycles) uses budgeted offload plus `bitmask` selection globally with per-round
 `mask_precompute` for rounds 11-14, no depth-4 caching, and
 `vector_block=0` — a combination that's counterintuitive and unlikely

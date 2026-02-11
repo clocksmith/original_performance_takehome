@@ -19,6 +19,7 @@ import os
 import random
 import sys
 import time
+from collections import defaultdict
 from dataclasses import replace, fields
 from typing import Any
 
@@ -27,15 +28,109 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from generator.spec_base import SPEC_BASE, SpecBase
-from problem import SLOT_LIMITS
+from problem import SLOT_LIMITS, VLEN
 from scripts.graph_dp_auto_search import build_final_ops, schedule_graph_with_restarts
 from generator.build_kernel_base import build_base_instrs
 from generator.scratch_layout import ScratchAlloc, build_layout
+from generator.schedule_dep import _build_deps as _sched_build_deps
 
 CAPS = {k: v for k, v in SLOT_LIMITS.items() if k != "debug"}
 CANONICAL_DEPTH = {0: 0, 11: 0, 1: 1, 12: 1, 2: 2, 13: 2, 3: 3, 14: 3}
 CANONICAL_ROUNDS = set(CANONICAL_DEPTH.keys())
 MIN_CACHED_NODES = {0: 1, 1: 3, 2: 7, 3: 15, 4: 31, 5: 63}
+OFFLOAD_SWAP_CATEGORIES = ("hash_shift", "hash_op1", "hash_op2", "parity", "node_xor")
+
+
+def _offload_budget_for_category(spec, cat: str) -> int:
+    attr = f"offload_budget_{cat}"
+    if not hasattr(spec, attr):
+        return 0
+    try:
+        return int(getattr(spec, attr))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _normalize_offload_budget_swaps(value: Any) -> dict[str, tuple[tuple[int, int], ...]]:
+    if not isinstance(value, dict):
+        return {}
+    out: dict[str, tuple[tuple[int, int], ...]] = {}
+    for cat, raw_pairs in value.items():
+        if cat not in OFFLOAD_SWAP_CATEGORIES:
+            continue
+        if not isinstance(raw_pairs, (list, tuple)):
+            continue
+        pairs: list[tuple[int, int]] = []
+        for raw in raw_pairs:
+            if not isinstance(raw, (list, tuple)) or len(raw) != 2:
+                continue
+            try:
+                a = int(raw[0])
+                b = int(raw[1])
+            except (TypeError, ValueError):
+                continue
+            if a < 0 or b < 0:
+                continue
+            pairs.append((a, b))
+        out[cat] = tuple(pairs)
+    return out
+
+
+def _mutate_offload_budget_swaps(
+    spec,
+    rnd: random.Random,
+    *,
+    categories: tuple[str, ...],
+    span: int,
+    max_swaps_per_cat: int,
+):
+    cur: dict[str, list[tuple[int, int]]] = {
+        cat: list(pairs)
+        for cat, pairs in _normalize_offload_budget_swaps(
+            getattr(spec, "offload_budget_swaps", {})
+        ).items()
+    }
+
+    if not categories:
+        return replace(spec, offload_budget_swaps={})
+
+    action_roll = rnd.random()
+    if action_roll < 0.08:
+        return replace(spec, offload_budget_swaps={})
+
+    active_cats = [cat for cat in categories if _offload_budget_for_category(spec, cat) > 0]
+    if not active_cats:
+        return replace(spec, offload_budget_swaps={})
+    cat = rnd.choice(active_cats)
+
+    if action_roll < 0.16:
+        cur.pop(cat, None)
+        return replace(spec, offload_budget_swaps={k: tuple(v) for k, v in cur.items() if v})
+
+    cat_pairs = cur.get(cat, [])
+    if action_roll < 0.32 and cat_pairs:
+        cat_pairs.pop(rnd.randrange(len(cat_pairs)))
+        if cat_pairs:
+            cur[cat] = cat_pairs
+        else:
+            cur.pop(cat, None)
+        return replace(spec, offload_budget_swaps={k: tuple(v) for k, v in cur.items() if v})
+
+    cap = _offload_budget_for_category(spec, cat)
+    if cap <= 0:
+        return replace(spec, offload_budget_swaps={k: tuple(v) for k, v in cur.items() if v})
+    a = rnd.randrange(cap)
+    b = rnd.randrange(cap, cap + max(1, span))
+
+    filtered = [p for p in cat_pairs if p[0] != a]
+    filtered.append((a, b))
+    if max_swaps_per_cat > 0 and len(filtered) > max_swaps_per_cat:
+        rnd.shuffle(filtered)
+        filtered = filtered[:max_swaps_per_cat]
+    cur[cat] = filtered
+    return replace(spec, offload_budget_swaps={k: tuple(v) for k, v in cur.items() if v})
+
+
 def dependency_model_for_spec(spec) -> dict[str, Any]:
     return {
         "includes_raw": True,
@@ -123,6 +218,20 @@ def parse_float_list(s: str) -> list[float]:
             continue
         seen.add(v)
         out.append(v)
+    return out
+
+
+def parse_int_or_none_list(s: str) -> list[int | None]:
+    out: list[int | None] = []
+    for token in parse_list(s):
+        t = token.strip().lower()
+        if t in {"none", "null"}:
+            out.append(None)
+            continue
+        try:
+            out.append(int(token))
+        except ValueError:
+            continue
     return out
 
 
@@ -276,6 +385,118 @@ def _count_ops(ops) -> dict[str, int]:
     return counts
 
 
+def _op_cost(op) -> int:
+    if op.engine == "alu" and isinstance(op.slot, tuple) and op.slot and op.slot[0] == "alu_vec":
+        return VLEN
+    return 1
+
+
+def _fast_bundle_precheck(ops, *, caps: dict[str, int] | None = None) -> dict[str, Any]:
+    """
+    Fast feasibility estimate for bundled closure.
+
+    Returns:
+      - quick_cycles: cycle count from a deterministic ready-list simulation
+      - lb: per-engine throughput lower bound
+      - critical_path: dep-only latency lower bound
+      - starvation_ratio: cycles with no issuable work while unscheduled ops remain
+      - max_idle_ratio: max engine idle ratio in quick schedule
+      - predicted_gap: estimated bundle-lb gap
+    """
+    if caps is None:
+        caps = CAPS
+
+    n = len(ops)
+    if n == 0:
+        return {
+            "quick_cycles": 0,
+            "lb": 0,
+            "critical_path": 0,
+            "starvation_ratio": 0.0,
+            "max_idle_ratio": 0.0,
+            "predicted_gap": 0,
+        }
+
+    counts = _count_ops(ops)
+    lb = lower_bound_cycles(counts, caps=caps)
+
+    deps, children = _sched_build_deps(ops)
+    indeg = [len(d) for d in deps]
+    earliest = [0] * n
+    cp = [0] * n
+
+    ready_by_engine: dict[str, list[int]] = defaultdict(list)
+    unscheduled = set(range(n))
+    for i in range(n):
+        if indeg[i] == 0:
+            ready_by_engine[ops[i].engine].append(i)
+
+    engine_used = {e: 0 for e in caps}
+    starvation_cycles = 0
+    cycle = 0
+    max_cycles = max(1, lb * 6)
+
+    def _sort_key(i: int) -> tuple[int, int]:
+        return (cp[i], len(children[i]))
+
+    while unscheduled and cycle < max_cycles:
+        issued: list[int] = []
+        for eng, cap in caps.items():
+            if cap <= 0:
+                continue
+            ready = [i for i in ready_by_engine.get(eng, []) if i in unscheduled and earliest[i] <= cycle]
+            if not ready:
+                continue
+            ready.sort(key=_sort_key, reverse=True)
+            used = 0
+            for i in ready:
+                cost = _op_cost(ops[i])
+                if used + cost > cap:
+                    continue
+                used += cost
+                issued.append(i)
+            engine_used[eng] += used
+
+        if not issued:
+            starvation_cycles += 1
+            cycle += 1
+            continue
+
+        for i in issued:
+            if i not in unscheduled:
+                continue
+            unscheduled.remove(i)
+            if i in ready_by_engine.get(ops[i].engine, []):
+                ready_by_engine[ops[i].engine].remove(i)
+            for c, lat in children[i]:
+                indeg[c] -= 1
+                earliest[c] = max(earliest[c], cycle + lat)
+                cp[c] = max(cp[c], cp[i] + lat)
+                if indeg[c] == 0:
+                    ready_by_engine[ops[c].engine].append(c)
+        cycle += 1
+
+    quick_cycles = cycle if not unscheduled else max_cycles + len(unscheduled) // max(1, sum(caps.values()))
+    critical_path = max(cp) + 1 if cp else 0
+    starvation_ratio = (starvation_cycles / quick_cycles) if quick_cycles else 0.0
+    max_idle_ratio = 0.0
+    for eng, cap in caps.items():
+        denom = quick_cycles * cap
+        if denom <= 0:
+            continue
+        util = engine_used.get(eng, 0) / denom
+        max_idle_ratio = max(max_idle_ratio, max(0.0, 1.0 - util))
+    predicted_gap = max(quick_cycles - lb, critical_path - lb)
+    return {
+        "quick_cycles": int(quick_cycles),
+        "lb": int(lb),
+        "critical_path": int(critical_path),
+        "starvation_ratio": float(starvation_ratio),
+        "max_idle_ratio": float(max_idle_ratio),
+        "predicted_gap": int(max(0, predicted_gap)),
+    }
+
+
 def lower_bound_cycles(counts: dict[str, int], *, caps: dict[str, int] | None = None) -> int:
     if caps is None:
         caps = CAPS
@@ -349,6 +570,13 @@ def _compute_parity_hash(spec, *, sched_seed: int, sched_jitter: float, sched_re
 
 def _constraint_energy(spec) -> tuple[float, list[str]]:
     violations: list[str] = []
+
+    if getattr(spec, "hash_variant", "direct") == "prog":
+        prog = getattr(spec, "hash_prog", None)
+        prog_variant = str(getattr(spec, "hash_prog_variant", "none") or "none")
+        if not prog and prog_variant in {"none", "null", ""}:
+            violations.append("hash_variant=prog requires hash_prog or hash_prog_variant")
+            return float("inf"), violations
 
     try:
         build_layout(spec, ScratchAlloc())
@@ -505,6 +733,7 @@ def score_spec(
     score_mode: str,
     dep_model: dict[str, Any] | None,
     caps: dict[str, int] | None,
+    bundle_gap_threshold: int,
 ) -> dict[str, Any]:
     constraint_penalty, constraint_violations = _constraint_energy(spec)
     if math.isinf(constraint_penalty) or constraint_penalty > constraint_threshold:
@@ -535,9 +764,26 @@ def score_spec(
         }
     counts = _count_ops(ops)
     lb = lower_bound_cycles(counts, caps=caps)
+    precheck = _fast_bundle_precheck(ops, caps=caps)
     cycles = lb
     best_policy: str | None = None
     if score_mode == "bundle":
+        if bundle_gap_threshold >= 0 and precheck["predicted_gap"] > bundle_gap_threshold:
+            return {
+                "energy": float("inf"),
+                "cycles": 0,
+                "lb": lb,
+                "counts": counts,
+                "gap": 0,
+                "error": (
+                    f"bundle precheck rejected: predicted_gap={precheck['predicted_gap']} "
+                    f"> threshold={bundle_gap_threshold}"
+                ),
+                "constraint_penalty": constraint_penalty,
+                "constraint_violations": constraint_violations,
+                "policy": None,
+                "precheck": precheck,
+            }
         if schedule:
             spec_for_bundle = replace(
                 spec,
@@ -545,24 +791,56 @@ def score_spec(
                 sched_jitter=sched_jitter,
                 sched_restarts=sched_restarts,
             )
-            cycles = bundle_cycles(spec_for_bundle)
+            try:
+                cycles = bundle_cycles(spec_for_bundle)
+            except (RuntimeError, ValueError, IndexError, KeyError) as exc:
+                return {
+                    "energy": float("inf"),
+                    "cycles": 0,
+                    "lb": lb,
+                    "counts": counts,
+                    "gap": 0,
+                    "error": str(exc),
+                    "constraint_penalty": constraint_penalty,
+                    "constraint_violations": constraint_violations,
+                    "policy": None,
+                    "precheck": precheck,
+                }
     elif score_mode == "graph":
         if schedule:
             best_cycles: int | None = None
+            last_error: str | None = None
             for policy in sched_policies:
-                candidate = schedule_graph_with_restarts(
-                    ops,
-                    restarts=sched_restarts,
-                    seed=sched_seed,
-                    jitter=sched_jitter,
-                    policy=policy,
-                    dep_model=dep_model,
-                    caps=caps,
-                )
+                try:
+                    candidate = schedule_graph_with_restarts(
+                        ops,
+                        restarts=sched_restarts,
+                        seed=sched_seed,
+                        jitter=sched_jitter,
+                        policy=policy,
+                        dep_model=dep_model,
+                        caps=caps,
+                    )
+                except (RuntimeError, ValueError, IndexError, KeyError) as exc:
+                    last_error = str(exc)
+                    continue
                 if best_cycles is None or candidate < best_cycles:
                     best_cycles = candidate
                     best_policy = policy
-            cycles = best_cycles if best_cycles is not None else lb
+            if best_cycles is None:
+                return {
+                    "energy": float("inf"),
+                    "cycles": 0,
+                    "lb": lb,
+                    "counts": counts,
+                    "gap": 0,
+                    "error": last_error or "graph scheduling failed for all policies",
+                    "constraint_penalty": constraint_penalty,
+                    "constraint_violations": constraint_violations,
+                    "policy": None,
+                    "precheck": precheck,
+                }
+            cycles = best_cycles
     elif score_mode == "lb":
         cycles = lb
     else:
@@ -578,10 +856,18 @@ def score_spec(
         "constraint_penalty": constraint_penalty,
         "constraint_violations": constraint_violations,
         "policy": best_policy,
+        "precheck": precheck,
     }
 
 
-def mutate_spec(spec, rnd: random.Random, domains: dict[str, list[Any]], *, key: str | None = None):
+def mutate_spec(
+    spec,
+    rnd: random.Random,
+    domains: dict[str, list[Any]],
+    *,
+    key: str | None = None,
+    swap_cfg: dict[str, Any] | None = None,
+):
     if not domains:
         return spec
     if key is None:
@@ -609,14 +895,30 @@ def mutate_spec(spec, rnd: random.Random, domains: dict[str, list[Any]], *, key:
     if key == "partial_cache":
         depth_map, x_map = value
         return replace(spec, cached_round_depth=depth_map, cached_round_x=x_map)
+    if key == "offload_budget_swaps":
+        if not bool(value):
+            return replace(spec, offload_budget_swaps={})
+        cfg = swap_cfg or {}
+        return _mutate_offload_budget_swaps(
+            spec,
+            rnd,
+            categories=tuple(cfg.get("categories", ())),
+            span=int(cfg.get("span", 512)),
+            max_swaps_per_cat=int(cfg.get("max_swaps_per_cat", 1)),
+        )
     return replace(spec, **{key: value})
 
 
 def mutate_spec_multi(
-    spec, rnd: random.Random, domains: dict[str, list[Any]], *, count: int
+    spec,
+    rnd: random.Random,
+    domains: dict[str, list[Any]],
+    *,
+    count: int,
+    swap_cfg: dict[str, Any] | None = None,
 ):
     if count <= 1:
-        return mutate_spec(spec, rnd, domains)
+        return mutate_spec(spec, rnd, domains, swap_cfg=swap_cfg)
     keys = list(domains.keys())
     if not keys:
         return spec
@@ -627,7 +929,7 @@ def mutate_spec_multi(
         chosen = rnd.sample(keys, count)
     out = spec
     for key in chosen:
-        out = mutate_spec(out, rnd, domains, key=key)
+        out = mutate_spec(out, rnd, domains, key=key, swap_cfg=swap_cfg)
     return out
 
 
@@ -643,6 +945,9 @@ def _spec_from_dict(seed: dict[str, Any]) -> SpecBase:
     overrides: dict[str, Any] = {}
     for key, value in seed.items():
         if key not in field_names:
+            continue
+        if key == "offload_budget_swaps":
+            overrides[key] = _normalize_offload_budget_swaps(value)
             continue
         if key in tuple_fields and isinstance(value, list):
             overrides[key] = tuple(value)
@@ -693,6 +998,8 @@ def main() -> None:
     ap.add_argument("--report-every", type=int, default=50)
     ap.add_argument("--schedule-every", type=int, default=10,
                     help="schedule every N steps (0 = always schedule)")
+    ap.add_argument("--bundle-gap-threshold", type=int, default=220,
+                    help="Skip bundled scheduling if fast precheck predicts LB->bundle gap above this value (-1 disables).")
     ap.add_argument("--unscheduled-score", type=str, default="auto",
                     choices=["auto", "lb", "skip"],
                     help="behavior on unscheduled steps (auto=skip for bundle, lb otherwise)")
@@ -727,12 +1034,21 @@ def main() -> None:
 
     ap.add_argument("--selection", type=str, default="eq,bitmask,bitmask_valu,mask,mask_precompute")
     ap.add_argument("--idx-shifted", type=str, default="0,1")
+    ap.add_argument("--assume-zero-indices", type=str, default="0,1")
     ap.add_argument("--vector-block", type=str, default="0,4,8,16,32")
     ap.add_argument("--extra-vecs", type=str, default="0,1,2,3,4")
     ap.add_argument("--reset-on-valu", type=str, default="0,1")
     ap.add_argument("--shifts-on-valu", type=str, default="0,1")
     ap.add_argument("--use-temp-deps", type=str, default="0,1",
                     help="include temp hazards in the dependency model (0/1 domain)")
+    ap.add_argument("--use-temp-deps-extras", type=str, default="0,1",
+                    help="include extra temp hazard tags for shared selection scratch (0/1 domain)")
+    ap.add_argument("--emit-order", type=str, default="auto,vector_major,round_major,block",
+                    help="op emission order: auto|vector_major|round_major|block")
+    ap.add_argument("--temp-rename-mode", type=str, default="off,round,vec,window,op",
+                    help="temp hazard renaming mode: off|round|vec|window|op")
+    ap.add_argument("--temp-rename-window", type=str, default="4,8,16",
+                    help="window size for temp-rename-mode=window")
     ap.add_argument("--cached-nodes", type=str, default="none,7,15,31,63")
     ap.add_argument("--base-cached-presets", type=str, default="top4,skip_r3,skip_r3_r13,loadbound")
     ap.add_argument("--depth4-rounds", type=str, default="4|15|4,15|none")
@@ -748,6 +1064,8 @@ def main() -> None:
     ap.add_argument("--offload-op1", type=str, default="0,200,400,800,1200,1600")
     ap.add_argument("--offload-mode", type=str, default="prefix,budgeted",
                     help="offload mode: prefix|budgeted (comma-separated domain)")
+    ap.add_argument("--offload-alu-vec", type=str, default="0,1",
+                    help="emit offloaded vector ops as ALU_VEC pseudo ops (0/1)")
     ap.add_argument("--offload-budget-hash-shift", type=str, default="0,12,48,96,192,384,768,1536",
                     help="budgeted offload cap for hash shift ops (vector ops count)")
     ap.add_argument("--offload-budget-hash-op1", type=str, default="0,12,48,96,192,384,768,1536",
@@ -758,6 +1076,14 @@ def main() -> None:
                     help="budgeted offload cap for parity ops (vector ops count)")
     ap.add_argument("--offload-budget-node-xor", type=str, default="0,32,64,128,256,384,512",
                     help="budgeted offload cap for node_xor ops (vector ops count)")
+    ap.add_argument("--offload-budget-swaps", type=str, default="0,1",
+                    help="mutate offload_budget_swaps (0 disables, 1 enables)")
+    ap.add_argument("--offload-swap-cats", type=str, default="parity,node_xor,hash_op2,hash_shift,hash_op1",
+                    help="categories eligible for offload_budget_swaps mutation")
+    ap.add_argument("--offload-swap-span", type=int, default=512,
+                    help="destination window size for generated category-local swap positions")
+    ap.add_argument("--offload-swap-max-per-cat", type=int, default=2,
+                    help="cap on retained swap pairs per category during mutation")
     ap.add_argument("--offload-hash-op1", type=str, default="0,1")
     ap.add_argument("--offload-hash-shift", type=str, default="0,1")
     ap.add_argument("--offload-hash-op2", type=str, default="0,1")
@@ -771,8 +1097,10 @@ def main() -> None:
                     help="round whitelist for valu_select lowering (none=all rounds)")
     ap.add_argument("--ptr-setup-engine", type=str, default="flow,alu")
     ap.add_argument("--setup-style", type=str, default="packed,inline")
-    ap.add_argument("--hash-variant", type=str, default="direct,ir",
-                    help="hash implementation variant: direct|ir (comma-separated domain)")
+    ap.add_argument("--hash-variant", type=str, default="direct,ir,prog",
+                    help="hash implementation variant: direct|ir|prog (comma-separated domain)")
+    ap.add_argument("--hash-prog-variant", type=str, default="none,baseline,swap_xor,tmp_xor_const,tmp_op1,pingpong",
+                    help="hash program preset when hash_variant=prog")
     ap.add_argument("--hash-bitwise-style", type=str, default="inplace,tmp_op1",
                     help="hash lowering for bitwise stages: inplace|tmp_op1 (comma-separated domain)")
     ap.add_argument("--hash-xor-style", type=str, default="baseline,swap,tmp_xor_const",
@@ -781,6 +1109,8 @@ def main() -> None:
     ap.add_argument("--sched-restarts", type=int, default=10)
     ap.add_argument("--sched-jitter", type=float, default=0.4)
     ap.add_argument("--sched-policy", type=str, default="mix")
+    ap.add_argument("--sched-compact-domain", type=str, default="",
+                    help="Mutation domain for sched_compact (0,1).")
     ap.add_argument("--mutate-sched", action="store_true",
                     help="Include sched_seed/jitter/restarts in the mutation domain.")
     ap.add_argument("--sched-seed-domain", type=str, default="",
@@ -789,6 +1119,16 @@ def main() -> None:
                     help="Mutation domain for sched_jitter (e.g., '0,0.05,0.1').")
     ap.add_argument("--sched-restarts-domain", type=str, default="",
                     help="Mutation domain for sched_restarts (e.g., '1,2,4,8,16,32').")
+    ap.add_argument("--sched-policy-domain", type=str, default="",
+                    help="Mutation domain for spec.sched_policy in bundle mode (e.g., 'baseline,bottleneck_valu').")
+    ap.add_argument("--sched-target-domain", type=str, default="",
+                    help="Mutation domain for spec.sched_target_cycles (e.g., 'none,1100,1150,1200').")
+    ap.add_argument("--sched-deps-variant", type=str, default="full,nowar,nowaw,nowaw_nowar,waw0,waw0_nowar",
+                    help="Dependency suffix family for scheduler policy.")
+    ap.add_argument("--sched-repair-passes", type=str, default="0,1,2",
+                    help="Deterministic post-schedule repair passes.")
+    ap.add_argument("--sched-repair-swap", type=str, default="0,1",
+                    help="Enable adjacent swap/pack repair step (0/1).")
     ap.add_argument("--log-file", type=str, default="",
                     help="Optional file to write progress logs.")
     args = ap.parse_args()
@@ -854,7 +1194,21 @@ def main() -> None:
     sched_seed_domain = parse_int_list(args.sched_seed_domain) if args.sched_seed_domain else []
     sched_jitter_domain = parse_float_list(args.sched_jitter_domain) if args.sched_jitter_domain else []
     sched_restarts_domain = parse_int_list(args.sched_restarts_domain) if args.sched_restarts_domain else []
-    mutate_sched = bool(args.mutate_sched or sched_seed_domain or sched_jitter_domain or sched_restarts_domain)
+    sched_policy_domain = parse_list(args.sched_policy_domain) if args.sched_policy_domain else []
+    sched_target_domain = parse_int_or_none_list(args.sched_target_domain) if args.sched_target_domain else []
+    sched_deps_variant_domain = parse_list(args.sched_deps_variant)
+    sched_repair_passes_domain = parse_int_list(args.sched_repair_passes)
+    sched_repair_swap_domain = parse_bool_list(args.sched_repair_swap)
+    sched_compact_domain = parse_bool_list(args.sched_compact_domain) if args.sched_compact_domain else []
+    mutate_sched = bool(
+        args.mutate_sched
+        or sched_seed_domain
+        or sched_jitter_domain
+        or sched_restarts_domain
+        or sched_policy_domain
+        or sched_target_domain
+        or sched_compact_domain
+    )
     if args.mutate_sched:
         if not sched_seed_domain:
             sched_seed_domain = list(range(0, 64))
@@ -882,12 +1236,18 @@ def main() -> None:
 
     selection_modes = parse_list(args.selection)
     idx_shifted_list = parse_bool_list(args.idx_shifted)
+    assume_zero_indices_list = parse_bool_list(args.assume_zero_indices)
     vector_blocks = parse_int_list(args.vector_block)
     extra_vecs_list = parse_int_list(args.extra_vecs)
     reset_on_valu_list = parse_bool_list(args.reset_on_valu)
     shifts_on_valu_list = parse_bool_list(args.shifts_on_valu)
     use_temp_deps_list = parse_bool_list(args.use_temp_deps)
+    use_temp_deps_extras_list = parse_bool_list(args.use_temp_deps_extras)
+    emit_order_list = parse_list(args.emit_order)
+    temp_rename_mode_list = parse_list(args.temp_rename_mode)
+    temp_rename_window_list = parse_int_list(args.temp_rename_window)
     hash_variant_list = parse_list(args.hash_variant)
+    hash_prog_variant_list = parse_list(args.hash_prog_variant)
     hash_bitwise_style_list = parse_list(args.hash_bitwise_style)
     hash_xor_style_list = parse_list(args.hash_xor_style)
 
@@ -912,15 +1272,37 @@ def main() -> None:
     partial_cache_list = parse_partial_cache(args.partial_cache)
     valu_select_precompute_diffs_list = parse_bool_list(args.valu_select_precompute_diffs)
     valu_select_rounds_list = parse_round_sets_or_none(args.valu_select_rounds)
+    offload_budget_swaps_list = parse_bool_list(args.offload_budget_swaps)
+    swap_cats_raw = tuple(parse_list(args.offload_swap_cats))
+    swap_cats = tuple(cat for cat in swap_cats_raw if cat in OFFLOAD_SWAP_CATEGORIES)
+    if swap_cats_raw and not swap_cats:
+        raise SystemExit(
+            "offload-swap-cats has no valid categories; "
+            f"valid: {', '.join(OFFLOAD_SWAP_CATEGORIES)}"
+        )
+    if args.offload_swap_span < 1:
+        raise SystemExit("offload-swap-span must be >= 1")
+    if args.offload_swap_max_per_cat < 1:
+        raise SystemExit("offload-swap-max-per-cat must be >= 1")
+    swap_cfg = {
+        "categories": swap_cats,
+        "span": args.offload_swap_span,
+        "max_swaps_per_cat": args.offload_swap_max_per_cat,
+    }
 
     domains = {
         "selection_mode": selection_modes,
         "idx_shifted": idx_shifted_list,
+        "assume_zero_indices": assume_zero_indices_list,
         "vector_block": vector_blocks,
         "extra_vecs": extra_vecs_list,
         "reset_on_valu": reset_on_valu_list,
         "shifts_on_valu": shifts_on_valu_list,
         "use_temp_deps": use_temp_deps_list,
+        "use_temp_deps_extras": use_temp_deps_extras_list,
+        "emit_order": emit_order_list,
+        "temp_rename_mode": temp_rename_mode_list,
+        "temp_rename_window": temp_rename_window_list,
         "cached_nodes": cached_nodes_list,
         "base_cached_rounds": base_presets,
         "depth4_rounds": depth4_sets,
@@ -931,6 +1313,7 @@ def main() -> None:
         "partial_cache": partial_cache_list,
         "offload_op1": parse_int_list(args.offload_op1),
         "offload_mode": parse_list(args.offload_mode),
+        "offload_alu_vec": parse_bool_list(args.offload_alu_vec),
         "offload_budget_hash_shift": parse_int_list(args.offload_budget_hash_shift),
         "offload_budget_hash_op1": parse_int_list(args.offload_budget_hash_op1),
         "offload_budget_hash_op2": parse_int_list(args.offload_budget_hash_op2),
@@ -948,9 +1331,15 @@ def main() -> None:
         "ptr_setup_engine": parse_list(args.ptr_setup_engine),
         "setup_style": parse_list(args.setup_style),
         "hash_variant": hash_variant_list,
+        "hash_prog_variant": hash_prog_variant_list,
         "hash_bitwise_style": hash_bitwise_style_list,
         "hash_xor_style": hash_xor_style_list,
+        "sched_deps_variant": sched_deps_variant_domain,
+        "sched_repair_passes": sched_repair_passes_domain,
+        "sched_repair_try_swap": sched_repair_swap_domain,
     }
+    if any(offload_budget_swaps_list):
+        domains["offload_budget_swaps"] = offload_budget_swaps_list
     if mutate_sched:
         if sched_seed_domain:
             domains["sched_seed"] = sched_seed_domain
@@ -958,9 +1347,18 @@ def main() -> None:
             domains["sched_jitter"] = sched_jitter_domain
         if sched_restarts_domain:
             domains["sched_restarts"] = sched_restarts_domain
+        if sched_policy_domain:
+            domains["sched_policy"] = sched_policy_domain
+        if sched_target_domain:
+            domains["sched_target_cycles"] = sched_target_domain
+        if sched_compact_domain:
+            domains["sched_compact"] = sched_compact_domain
 
     # Avoid wasting mutations on knobs that are effectively frozen (0/1 choice).
-    domains = {k: v for k, v in domains.items() if v and len(v) > 1}
+    domains = {
+        k: v for k, v in domains.items()
+        if v and (len(v) > 1 or k == "offload_budget_swaps")
+    }
 
     spec = SPEC_BASE
     if args.seed_spec:
@@ -985,6 +1383,7 @@ def main() -> None:
         score_mode=args.score_mode,
         dep_model=dep_model_for_args(spec),
         caps=caps_override,
+        bundle_gap_threshold=args.bundle_gap_threshold,
     )
     curr_score = best_score
     temp = args.temp_start
@@ -995,19 +1394,38 @@ def main() -> None:
     log(f"  schedule_every={args.schedule_every} unscheduled_score={unscheduled_score}")
     log(f"  mutate_count={args.mutate_count} mutate_sched={mutate_sched}")
     log(f"  mutate_keys={sorted(domains.keys())}")
+    if "offload_budget_swaps" in domains:
+        log(
+            "  offload_swap_cfg="
+            f"cats={swap_cfg['categories']} span={swap_cfg['span']} "
+            f"max_per_cat={swap_cfg['max_swaps_per_cat']}"
+        )
     if mutate_sched:
         log(f"  sched_seed_domain={sched_seed_domain}")
         log(f"  sched_jitter_domain={sched_jitter_domain}")
         log(f"  sched_restarts_domain={sched_restarts_domain}")
+        if sched_policy_domain:
+            log(f"  sched_policy_domain={sched_policy_domain}")
+        if sched_compact_domain:
+            log(f"  sched_compact_domain={sched_compact_domain}")
     log(f"  sched_policies={sched_policies} sched_restarts={args.sched_restarts} sched_jitter={args.sched_jitter}")
     log(f"  hazards={sorted(hazard_set)} latency_raw={args.latency_raw} latency_waw={args.latency_waw} "
         f"latency_war={args.latency_war} latency_temp={args.latency_temp} latency_default={args.latency_default}")
-    log(f"  gate={args.constraint_threshold} lambda={args.lambda_cycles} target={args.target} penalty={args.penalty}")
+    log(
+        f"  gate={args.constraint_threshold} bundle_gap_threshold={args.bundle_gap_threshold} "
+        f"lambda={args.lambda_cycles} target={args.target} penalty={args.penalty}"
+    )
     if args.log_file:
         log(f"  log_file={args.log_file}")
 
     for step in range(1, args.steps + 1):
-        cand = mutate_spec_multi(spec, rnd, domains, count=args.mutate_count)
+        cand = mutate_spec_multi(
+            spec,
+            rnd,
+            domains,
+            count=args.mutate_count,
+            swap_cfg=swap_cfg,
+        )
         do_schedule = args.schedule_every == 0 or (step % args.schedule_every == 0)
         if not do_schedule and unscheduled_score == "skip":
             continue
@@ -1026,6 +1444,7 @@ def main() -> None:
             score_mode=args.score_mode,
             dep_model=dep_model_for_args(cand),
             caps=caps_override,
+            bundle_gap_threshold=args.bundle_gap_threshold,
         )
         delta = cand_score["energy"] - curr_score["energy"]
         accept = delta <= 0

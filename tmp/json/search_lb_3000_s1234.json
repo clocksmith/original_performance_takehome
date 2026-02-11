@@ -1,0 +1,156 @@
+{
+  "score": {
+    "energy": 5869.0,
+    "cycles": 1119,
+    "lb": 1119,
+    "counts": {
+      "alu": 13424,
+      "valu": 6712,
+      "load": 2124,
+      "store": 32,
+      "flow": 768
+    },
+    "gap": 19,
+    "constraint_penalty": 0.0,
+    "constraint_violations": [],
+    "policy": null
+  },
+  "spec": {
+    "rounds": 16,
+    "vectors": 32,
+    "vlen": 8,
+    "depth4_rounds": 0,
+    "x4": 0,
+    "x5": 0,
+    "flow_setup": 64,
+    "reset_on_valu": false,
+    "shifts_on_valu": false,
+    "offload_op1": 800,
+    "offload_mode": "budgeted",
+    "offload_alu_vec": false,
+    "offload_budget_hash_shift": 192,
+    "offload_budget_hash_op1": 768,
+    "offload_budget_hash_op2": 12,
+    "offload_budget_parity": 128,
+    "offload_budget_node_xor": 64,
+    "offload_budget_swaps": {
+      "hash_op2": [
+        [
+          23,
+          888
+        ],
+        [
+          26,
+          647
+        ],
+        [
+          43,
+          1045
+        ],
+        [
+          12,
+          584
+        ]
+      ],
+      "parity": [
+        [
+          164,
+          853
+        ],
+        [
+          311,
+          1311
+        ]
+      ],
+      "hash_op1": [
+        [
+          83,
+          942
+        ]
+      ],
+      "hash_shift": [
+        [
+          40,
+          367
+        ],
+        [
+          179,
+          894
+        ],
+        [
+          37,
+          436
+        ]
+      ]
+    },
+    "offload_hash_op1": true,
+    "offload_hash_shift": true,
+    "offload_hash_op2": true,
+    "offload_parity": true,
+    "offload_node_xor": true,
+    "use_bitmask_selection": true,
+    "selection_mode": "bitmask",
+    "binsearch_select": false,
+    "selection_mode_by_round": {
+      "11": "bitmask",
+      "12": "bitmask",
+      "13": "bitmask",
+      "14": "bitmask"
+    },
+    "valu_select": true,
+    "valu_select_leaf_pairs": false,
+    "valu_select_rounds": [
+      15
+    ],
+    "valu_select_precompute_diffs": true,
+    "fuse_stages": false,
+    "hash_variant": "direct",
+    "hash_xor_style": "baseline",
+    "hash_xor_style_by_stage": {},
+    "hash_bitwise_style": "inplace",
+    "hash_bitwise_style_by_stage": {},
+    "hash_prog": null,
+    "node_ptr_incremental": false,
+    "idx_shifted": true,
+    "assume_zero_indices": true,
+    "ptr_setup_engine": "flow",
+    "setup_style": "inline",
+    "include_setup": true,
+    "proof_assume_shifted_input": false,
+    "proof_reset_single_op": false,
+    "proof_skip_const_zero": false,
+    "valu_pad_cycles": 0,
+    "emit_order": "block",
+    "vector_block": 4,
+    "extra_vecs": 4,
+    "cached_nodes": 15,
+    "base_cached_rounds": [
+      0,
+      1,
+      2,
+      3,
+      11,
+      12,
+      13,
+      14
+    ],
+    "depth4_cached_rounds": [],
+    "cached_round_aliases": {},
+    "cached_round_depth": {},
+    "cached_round_x": {},
+    "valu_cap": 6,
+    "alu_cap": 12,
+    "flow_cap": 1,
+    "load_cap": 2,
+    "store_cap": 2,
+    "total_cycles": 1312,
+    "sched_seed": 9,
+    "sched_jitter": 0.1,
+    "sched_restarts": 2,
+    "sched_compact": false,
+    "sched_policy": "baseline",
+    "sched_target_cycles": null,
+    "use_temp_deps": true,
+    "use_temp_deps_extras": true
+  }
+}

@@ -1,5 +1,6 @@
 import proofs.global_lower_bound.LowerBound.MachineTraceEq
 import proofs.global_lower_bound.LowerBound.Adversary
+import proofs.global_lower_bound.LowerBound.MemBigRoundDistinct
 import proofs.global_lower_bound.LowerBound.CycleLB
 
 namespace ProofGlobalLowerBound
@@ -265,6 +266,101 @@ theorem global_cycle_lower_bound_kernel_machine_roundDistinct_512
     loadLowerCycles_readWordCountMachine_le_cycleCountMachine_of_StraightLine_safeExec
       (p := p) (hstraight := hstraight) (mem := mem) (hsafe := hsafeExec mem hsafe)
   exact le_trans h512 hcycles
+
+lemma outputDiffers_memBig : OutputDiffers memBig := by
+  intro i
+  have hspec : spec_kernel memBig i = iterHash ROUNDS 0 := spec_kernel_memBig i
+  have hval : memAt memBig (memAt memBig PTR_INP_VAL + i) = 0 := by
+    have hptrV : memAt memBig PTR_INP_VAL = BIG_VAL_BASE := (memBig_ptrs).2.2
+    simpa [hptrV] using memBig_val0 i
+  simpa [hspec, hval] using iterHash_ne_zero
+
+lemma writesOutput_memBig_of_correctMachine
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel) :
+    WritesOutput p memBig := by
+  have hcorrect' : CorrectOn spec_kernel p MemSafeKernel :=
+    CorrectOnMachine_to_CorrectOn spec_kernel p MemSafeKernel hcorrect
+      (fun m _hm => MachineTraceAgrees_of_StraightLine p hstraight m)
+  exact writesOutput_of_correct_outputDiffers p hcorrect' memBig memBig_safe outputDiffers_memBig
+
+theorem global_cycle_lower_bound_kernel_machine_memBig_256
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
+    256 ≤ cycleCountMachine p memBig := by
+  have hwrites : WritesOutput p memBig :=
+    writesOutput_memBig_of_correctMachine p hstraight hcorrect
+  exact global_cycle_lower_bound_kernel_machine_roundDistinct_256 p hstraight hcorrect hsafeExec
+    memBig memBig_safe hwrites memBig_rounds memBig_roundDistinct_1
+
+def memBigValBump (i : Fin BATCH_SIZE) : Memory :=
+  memUpdate memBig (BIG_VAL_BASE + i) (memAt memBig (BIG_VAL_BASE + i) + 1)
+
+theorem spec_kernel_memBigValBump_ne_all :
+    ∀ i : Fin BATCH_SIZE,
+      spec_kernel (memBigValBump i) i ≠ spec_kernel memBig i := by
+  native_decide
+
+theorem spec_kernel_memBigValBump_ne (i : Fin BATCH_SIZE) :
+    spec_kernel (memBigValBump i) i ≠ spec_kernel memBig i :=
+  spec_kernel_memBigValBump_ne_all i
+
+lemma memBigTreeAddrs_subset_readWordsMachine_of_correctMachine
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
+    memBigTreeAddrs ⊆ (readWordsMachine p memBig).toFinset := by
+  have hwrites : WritesOutput p memBig :=
+    writesOutput_memBig_of_correctMachine p hstraight hcorrect
+  intro a ha
+  rcases Finset.mem_image.1 ha with ⟨t, _ht, rfl⟩
+  have haddr : AddrSafe memBig (BIG_FOREST_BASE + idxAtR t.1 t.2) :=
+    memBig_tree_addr_safe t.1 t.2
+  have hsens :
+      ∃ i : Fin BATCH_SIZE,
+        spec_kernel
+            (memUpdate memBig (BIG_FOREST_BASE + idxAtR t.1 t.2)
+              (memAt memBig (BIG_FOREST_BASE + idxAtR t.1 t.2) + 1)) i
+          ≠ spec_kernel memBig i := by
+    refine ⟨t.2, ?_⟩
+    simpa [memBigForestBump] using (spec_kernel_memBigForestBump_ne t.1 t.2)
+  exact List.mem_toFinset.2 <|
+    must_read_addr_machine p hstraight hcorrect hsafeExec
+      memBig memBig_safe hwrites (BIG_FOREST_BASE + idxAtR t.1 t.2) haddr hsens
+
+lemma memBigValAddrs_subset_readWordsMachine_of_correctMachine
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
+    memBigValAddrs ⊆ (readWordsMachine p memBig).toFinset := by
+  have hwrites : WritesOutput p memBig :=
+    writesOutput_memBig_of_correctMachine p hstraight hcorrect
+  intro a ha
+  rcases Finset.mem_image.1 ha with ⟨i, _hi, rfl⟩
+  have haddr : AddrSafe memBig (BIG_VAL_BASE + i) := memBig_val_addr_safe i
+  have hsens :
+      ∃ j : Fin BATCH_SIZE,
+        spec_kernel
+            (memUpdate memBig (BIG_VAL_BASE + i)
+              (memAt memBig (BIG_VAL_BASE + i) + 1)) j
+          ≠ spec_kernel memBig j := by
+    refine ⟨i, ?_⟩
+    simpa [memBigValBump] using (spec_kernel_memBigValBump_ne i)
+  exact List.mem_toFinset.2 <|
+    must_read_addr_machine p hstraight hcorrect hsafeExec
+      memBig memBig_safe hwrites (BIG_VAL_BASE + i) haddr hsens
+
+lemma memBigAllAddrs_subset_readWordsMachine_of_correctMachine
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
+    memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset := by
+  intro a ha
+  rcases Finset.mem_union.1 ha with htree | hval
+  · exact memBigTreeAddrs_subset_readWordsMachine_of_correctMachine p hstraight hcorrect hsafeExec htree
+  · exact memBigValAddrs_subset_readWordsMachine_of_correctMachine p hstraight hcorrect hsafeExec hval
+
 theorem global_load_lower_bound_kernel_machine_big_272
     (p : Program) (_hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
     (hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset) :
@@ -302,6 +398,16 @@ theorem global_cycle_lower_bound_kernel_machine_big_272
     loadLowerCycles_readWordCountMachine_le_cycleCountMachine_of_StraightLine_safeExec
       (p := p) (hstraight := hstraight) (mem := memBig) (hsafe := hsafeExec memBig memBig_safe)
   exact le_trans h272 hcycles
+
+theorem global_cycle_lower_bound_kernel_machine_memBig_272
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
+    272 ≤ cycleCountMachine p memBig := by
+  have hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset :=
+    memBigAllAddrs_subset_readWordsMachine_of_correctMachine p hstraight hcorrect hsafeExec
+  exact global_cycle_lower_bound_kernel_machine_big_272 p hstraight hcorrect hsafeExec hsubset
+
 theorem global_load_lower_bound_kernel_machine_exists_big_256
     (p : Program) (_hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
     (hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset) :

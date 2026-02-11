@@ -1,0 +1,236 @@
+{
+  "best_cycles": 1290,
+  "best_cfg": {
+    "dep": "full",
+    "temp_mode": "off",
+    "temp_window": 8,
+    "repair_passes": 0,
+    "seed_cycles": [
+      1290,
+      1290
+    ]
+  },
+  "elapsed_s": 276.41275000572205,
+  "top20": [
+    {
+      "dep": "full",
+      "temp_mode": "off",
+      "temp_window": 8,
+      "repair_passes": 0,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "full",
+      "temp_mode": "off",
+      "temp_window": 8,
+      "repair_passes": 1,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "full",
+      "temp_mode": "round",
+      "temp_window": 8,
+      "repair_passes": 0,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "full",
+      "temp_mode": "round",
+      "temp_window": 8,
+      "repair_passes": 1,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "full",
+      "temp_mode": "vec",
+      "temp_window": 8,
+      "repair_passes": 0,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "full",
+      "temp_mode": "vec",
+      "temp_window": 8,
+      "repair_passes": 1,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "nowaw",
+      "temp_mode": "off",
+      "temp_window": 8,
+      "repair_passes": 0,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "nowaw",
+      "temp_mode": "off",
+      "temp_window": 8,
+      "repair_passes": 1,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "nowaw",
+      "temp_mode": "round",
+      "temp_window": 8,
+      "repair_passes": 0,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "nowaw",
+      "temp_mode": "round",
+      "temp_window": 8,
+      "repair_passes": 1,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "nowaw",
+      "temp_mode": "vec",
+      "temp_window": 8,
+      "repair_passes": 0,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "nowaw",
+      "temp_mode": "vec",
+      "temp_window": 8,
+      "repair_passes": 1,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "waw0",
+      "temp_mode": "off",
+      "temp_window": 8,
+      "repair_passes": 0,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "waw0",
+      "temp_mode": "off",
+      "temp_window": 8,
+      "repair_passes": 1,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "waw0",
+      "temp_mode": "round",
+      "temp_window": 8,
+      "repair_passes": 0,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "waw0",
+      "temp_mode": "round",
+      "temp_window": 8,
+      "repair_passes": 1,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "waw0",
+      "temp_mode": "vec",
+      "temp_window": 8,
+      "repair_passes": 0,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "waw0",
+      "temp_mode": "vec",
+      "temp_window": 8,
+      "repair_passes": 1,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "waw0all",
+      "temp_mode": "off",
+      "temp_window": 8,
+      "repair_passes": 0,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    },
+    {
+      "dep": "waw0all",
+      "temp_mode": "off",
+      "temp_window": 8,
+      "repair_passes": 1,
+      "seed_cycles": [
+        1290,
+        1290
+      ],
+      "best": 1290
+    }
+  ]
+}

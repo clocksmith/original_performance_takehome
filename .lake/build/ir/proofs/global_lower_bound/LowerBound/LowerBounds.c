@@ -1,6 +1,6 @@
 // Lean compiler output
 // Module: proofs.global_lower_bound.LowerBound.LowerBounds
-// Imports: public import Init public import proofs.global_lower_bound.LowerBound.MachineTraceEq public import proofs.global_lower_bound.LowerBound.Adversary public import proofs.global_lower_bound.LowerBound.CycleLB
+// Imports: public import Init public import proofs.global_lower_bound.LowerBound.MachineTraceEq public import proofs.global_lower_bound.LowerBound.Adversary public import proofs.global_lower_bound.LowerBound.MemBigRoundDistinct public import proofs.global_lower_bound.LowerBound.CycleLB
 #include <lean/lean.h>
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunused-parameter"
@@ -13,16 +13,23 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_memBigValBump___boxed(lean_object*);
 LEAN_EXPORT uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel__eq__16___nativeDecide__1__1;
 static uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBound__eq__16___nativeDecide__1__1___closed__0;
+lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel(lean_object*, lean_object*);
 LEAN_EXPORT uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1;
 LEAN_EXPORT uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1;
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel;
 static uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernel__eq__16___nativeDecide__1__1___closed__0;
 LEAN_EXPORT uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus__eq__272___nativeDecide__1__1;
+LEAN_EXPORT uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel__memBigValBump__ne__all___nativeDecide__1__1___lam__0(lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_memBigValBump(lean_object*);
+extern lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_memBig;
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal;
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_loadLowerCycles(lean_object*);
+LEAN_EXPORT uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel__memBigValBump__ne__all___nativeDecide__1__1;
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus;
+lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_memAt(lean_object*, lean_object*);
 lean_object* lp_original__performance__takehome_ProofCommon_ceilDiv(lean_object*, lean_object*);
 static uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__256___nativeDecide__1__1___closed__1;
 static uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelPlus__eq__272___nativeDecide__1__1___closed__0;
@@ -40,8 +47,12 @@ static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_glo
 static lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK__eq__512___nativeDecide__1__1___closed__0;
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelK(lean_object*);
 uint8_t lean_nat_dec_le(lean_object*, lean_object*);
+uint8_t l_Nat_decidableForallFin___redArg(lean_object*, lean_object*);
 static uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal___closed__0;
+lean_object* lean_nat_add(lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_loadLowerCycles___boxed(lean_object*);
+lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_memUpdate(lean_object*, lean_object*, lean_object*);
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel__memBigValBump__ne__all___nativeDecide__1__1___lam__0___boxed(lean_object*);
 LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_loadLowerCycles(lean_object* x_1) {
 _start:
 {
@@ -270,9 +281,80 @@ return x_2;
 }
 }
 }
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_memBigValBump(lean_object* x_1) {
+_start:
+{
+lean_object* x_2; lean_object* x_3; lean_object* x_4; lean_object* x_5; lean_object* x_6; lean_object* x_7; lean_object* x_8; 
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_memBig;
+x_3 = lean_cstr_to_nat("8796093284615");
+x_4 = lean_nat_add(x_3, x_1);
+lean_inc(x_4);
+x_5 = lp_original__performance__takehome_ProofGlobalLowerBound_memAt(x_2, x_4);
+x_6 = lean_unsigned_to_nat(1u);
+x_7 = lean_nat_add(x_5, x_6);
+lean_dec(x_5);
+x_8 = lp_original__performance__takehome_ProofGlobalLowerBound_memUpdate(x_2, x_4, x_7);
+return x_8;
+}
+}
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_memBigValBump___boxed(lean_object* x_1) {
+_start:
+{
+lean_object* x_2; 
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_memBigValBump(x_1);
+lean_dec(x_1);
+return x_2;
+}
+}
+LEAN_EXPORT uint8_t lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel__memBigValBump__ne__all___nativeDecide__1__1___lam__0(lean_object* x_1) {
+_start:
+{
+lean_object* x_2; lean_object* x_3; lean_object* x_4; lean_object* x_5; uint8_t x_6; 
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_memBigValBump(x_1);
+x_3 = lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel(x_2, x_1);
+x_4 = lp_original__performance__takehome_ProofGlobalLowerBound_memBig;
+x_5 = lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel(x_4, x_1);
+x_6 = lean_nat_dec_eq(x_3, x_5);
+lean_dec(x_5);
+lean_dec(x_3);
+if (x_6 == 0)
+{
+uint8_t x_7; 
+x_7 = 1;
+return x_7;
+}
+else
+{
+uint8_t x_8; 
+x_8 = 0;
+return x_8;
+}
+}
+}
+LEAN_EXPORT lean_object* lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel__memBigValBump__ne__all___nativeDecide__1__1___lam__0___boxed(lean_object* x_1) {
+_start:
+{
+uint8_t x_2; lean_object* x_3; 
+x_2 = lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel__memBigValBump__ne__all___nativeDecide__1__1___lam__0(x_1);
+lean_dec(x_1);
+x_3 = lean_box(x_2);
+return x_3;
+}
+}
+static uint8_t _init_lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel__memBigValBump__ne__all___nativeDecide__1__1() {
+_start:
+{
+lean_object* x_1; lean_object* x_2; uint8_t x_3; 
+x_1 = lean_alloc_closure((void*)(lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel__memBigValBump__ne__all___nativeDecide__1__1___lam__0___boxed), 1, 0);
+x_2 = lean_unsigned_to_nat(256u);
+x_3 = l_Nat_decidableForallFin___redArg(x_2, x_1);
+return x_3;
+}
+}
 lean_object* initialize_Init(uint8_t builtin);
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_MachineTraceEq(uint8_t builtin);
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_Adversary(uint8_t builtin);
+lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_MemBigRoundDistinct(uint8_t builtin);
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_CycleLB(uint8_t builtin);
 static bool _G_initialized = false;
 LEAN_EXPORT lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_LowerBounds(uint8_t builtin) {
@@ -286,6 +368,9 @@ res = initialize_original__performance__takehome_proofs_global__lower__bound_Low
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_Adversary(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_MemBigRoundDistinct(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_CycleLB(builtin);
@@ -320,6 +405,7 @@ lean_mark_persistent(lp_original__performance__takehome_ProofGlobalLowerBound_co
 lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal___closed__0 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal___closed__0();
 lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal = _init_lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal();
 lean_mark_persistent(lp_original__performance__takehome_ProofGlobalLowerBound_globalLowerBoundKernelFinal);
+lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel__memBigValBump__ne__all___nativeDecide__1__1 = _init_lp_original__performance__takehome_ProofGlobalLowerBound_spec__kernel__memBigValBump__ne__all___nativeDecide__1__1();
 return lean_io_result_mk_ok(lean_box(0));
 }
 #ifdef __cplusplus

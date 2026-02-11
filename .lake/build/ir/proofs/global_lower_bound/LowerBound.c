@@ -1,6 +1,6 @@
 // Lean compiler output
 // Module: proofs.global_lower_bound.LowerBound
-// Imports: public import Init public import proofs.global_lower_bound.LowerBound.Defs public import proofs.global_lower_bound.LowerBound.TraceEq public import proofs.global_lower_bound.LowerBound.Specs public import proofs.global_lower_bound.LowerBound.Adversary public import proofs.global_lower_bound.LowerBound.ValuesLB public import proofs.global_lower_bound.LowerBound.MachineTraceEq public import proofs.global_lower_bound.LowerBound.CycleLB public import proofs.global_lower_bound.LowerBound.LowerBounds public import proofs.global_lower_bound.LowerBound.MemBigRoundDistinct
+// Imports: public import Init public import proofs.global_lower_bound.LowerBound.Defs public import proofs.global_lower_bound.LowerBound.TraceEq public import proofs.global_lower_bound.LowerBound.Specs public import proofs.global_lower_bound.LowerBound.Adversary public import proofs.global_lower_bound.LowerBound.ValuesLB public import proofs.global_lower_bound.LowerBound.MachineTraceEq public import proofs.global_lower_bound.LowerBound.CycleLB public import proofs.global_lower_bound.LowerBound.EngineMixLB public import proofs.global_lower_bound.LowerBound.EngineMixKernel public import proofs.global_lower_bound.LowerBound.EngineMixMemBig public import proofs.global_lower_bound.LowerBound.LowerBounds public import proofs.global_lower_bound.LowerBound.MemBigRoundDistinct
 #include <lean/lean.h>
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunused-parameter"
@@ -21,6 +21,9 @@ lean_object* initialize_original__performance__takehome_proofs_global__lower__bo
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_ValuesLB(uint8_t builtin);
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_MachineTraceEq(uint8_t builtin);
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_CycleLB(uint8_t builtin);
+lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_EngineMixLB(uint8_t builtin);
+lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_EngineMixKernel(uint8_t builtin);
+lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_EngineMixMemBig(uint8_t builtin);
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_LowerBounds(uint8_t builtin);
 lean_object* initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_MemBigRoundDistinct(uint8_t builtin);
 static bool _G_initialized = false;
@@ -50,6 +53,15 @@ res = initialize_original__performance__takehome_proofs_global__lower__bound_Low
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_CycleLB(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_EngineMixLB(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_EngineMixKernel(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_EngineMixMemBig(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 res = initialize_original__performance__takehome_proofs_global__lower__bound_LowerBound_LowerBounds(builtin);
