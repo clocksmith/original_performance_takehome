@@ -1,0 +1,36 @@
+Run date: 2026-02-13
+Seed spec: tmp/json/seed_1288_current.json
+
+[UB batch] swap_cardinality
+cmd: python3 tmp/scripts/search_swap_cardinality.py --steps 600 --seed 314159 --report-every 100 --out tmp/json/strategy_swap_cardinality_s314159_600.json
+best_cycles: 1288
+best_spec_json: tmp/json/strategy_swap_cardinality_s314159_600.json
+correctness_retest: no new best (<1288) produced
+
+[UB batch] scheduler_frontier_fixed_ops
+cmd: python3 tmp/scripts/sweep_fixed_ops_sched.py --seed 505 --samples 40 --report-every 10 --out tmp/json/strategy_sched_frontier_s505_40.json
+best_cycles: 1288
+best_spec_json: tmp/json/strategy_sched_frontier_s505_40.json
+correctness_retest: no new best (<1288) produced
+
+[UB batch] hash_cache_index_micro
+cmd: python3 tmp/scripts/sweep_hash_cache_index_micro.py --top-k 6 --report-every 32 --out tmp/json/strategy_hash_cache_micro_top6.json
+best_cycles: 1288
+best_spec_json: tmp/json/strategy_hash_cache_micro_top6.json
+correctness_retest: no new best (<1288) produced
+
+[UB process pivot] transformation_pipeline_compact
+cmd: PYTHONPATH=.:tests python3 tmp/scripts/transformation_pipeline.py --beam-width 2 --eq-window 80 --rounds 1 --structure-seed 77 --structure-mutants 4 --out tmp/json/strategy_transform_pipeline_s77_compact.json
+best_cycles: 1288
+best_spec_json: tmp/json/strategy_transform_pipeline_s77_compact.json
+correctness_retest: no new best (<1288) produced
+
+[Validation]
+cmd: python3 tests/submission_tests.py SpeedTests.test_opus45_improved_harness
+result: PASS, CYCLES=1288
+
+[LB]
+proof edit: proofs/global_lower_bound/LowerBound/EngineMixMemBig.lean
+added theorem: global_engine_cycle_lower_bound_kernel_machine_exists_memBig_272
+proof doc sync: proofs/global_lower_bound/LowerBound.md
+lean build: not runnable in environment (lake not installed)

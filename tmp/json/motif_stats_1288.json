@@ -1,0 +1,1179 @@
+{
+  "spec_ref": "generator.ub_energy_bundle_1291:SPEC_UB_ENERGY_BUNDLE_1291",
+  "schedule_policy_effective": "baseline",
+  "summary": {
+    "ordered_ops": 15738,
+    "final_ops": 21506,
+    "scheduled_bundle_cycles": 1288,
+    "offloaded_ops": 6592
+  },
+  "total_engine_counts": {
+    "load": 2157,
+    "flow": 800,
+    "valu": 7045,
+    "alu": 11472,
+    "store": 32
+  },
+  "total_kind_top": [
+    {
+      "key": "alu:&",
+      "count": 4352
+    },
+    {
+      "key": "alu:^",
+      "count": 3168
+    },
+    {
+      "key": "alu:==",
+      "count": 2816
+    },
+    {
+      "key": "valu:^",
+      "count": 2676
+    },
+    {
+      "key": "load:load_offset",
+      "count": 2048
+    },
+    {
+      "key": "valu:multiply_add",
+      "count": 1984
+    },
+    {
+      "key": "alu:<",
+      "count": 1024
+    },
+    {
+      "key": "valu:>>",
+      "count": 1016
+    },
+    {
+      "key": "valu:+",
+      "count": 800
+    },
+    {
+      "key": "flow:vselect",
+      "count": 736
+    },
+    {
+      "key": "valu:<<",
+      "count": 508
+    },
+    {
+      "key": "flow:add_imm",
+      "count": 64
+    },
+    {
+      "key": "load:vload",
+      "count": 64
+    },
+    {
+      "key": "alu:>>",
+      "count": 64
+    },
+    {
+      "key": "alu:<<",
+      "count": 32
+    },
+    {
+      "key": "valu:&",
+      "count": 32
+    },
+    {
+      "key": "store:vstore",
+      "count": 32
+    },
+    {
+      "key": "valu:vbroadcast",
+      "count": 29
+    },
+    {
+      "key": "load:const",
+      "count": 27
+    },
+    {
+      "key": "load:load",
+      "count": 18
+    }
+  ],
+  "total_motif_counts": {
+    "setup": 186,
+    "misc": 64,
+    "round_misc": 7680,
+    "hash_linear": 1536,
+    "hash_shift": 1620,
+    "hash_op1": 1536,
+    "hash_op2": 1620,
+    "muladd_misc": 448,
+    "selection_vselect": 704,
+    "selection_cmp": 3840,
+    "uncached_node_load": 2048,
+    "idx_reset": 32,
+    "node_xor": 128,
+    "parity": 32,
+    "final_store": 32
+  },
+  "motif_lb": {
+    "setup": {
+      "alu": 2,
+      "valu": 11,
+      "load": 23,
+      "store": 0,
+      "flow": 64,
+      "debug": 0,
+      "lb": 64
+    },
+    "misc": {
+      "alu": 0,
+      "valu": 0,
+      "load": 32,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 32
+    },
+    "round_misc": {
+      "alu": 619,
+      "valu": 43,
+      "load": 0,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 619
+    },
+    "hash_linear": {
+      "alu": 0,
+      "valu": 256,
+      "load": 0,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 256
+    },
+    "hash_shift": {
+      "alu": 8,
+      "valu": 254,
+      "load": 0,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 254
+    },
+    "hash_op1": {
+      "alu": 0,
+      "valu": 256,
+      "load": 0,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 256
+    },
+    "hash_op2": {
+      "alu": 8,
+      "valu": 254,
+      "load": 0,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 254
+    },
+    "muladd_misc": {
+      "alu": 0,
+      "valu": 75,
+      "load": 0,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 75
+    },
+    "selection_vselect": {
+      "alu": 0,
+      "valu": 0,
+      "load": 0,
+      "store": 0,
+      "flow": 704,
+      "debug": 0,
+      "lb": 704
+    },
+    "selection_cmp": {
+      "alu": 320,
+      "valu": 0,
+      "load": 0,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 320
+    },
+    "uncached_node_load": {
+      "alu": 0,
+      "valu": 0,
+      "load": 1024,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 1024
+    },
+    "idx_reset": {
+      "alu": 0,
+      "valu": 0,
+      "load": 0,
+      "store": 0,
+      "flow": 32,
+      "debug": 0,
+      "lb": 32
+    },
+    "node_xor": {
+      "alu": 0,
+      "valu": 22,
+      "load": 0,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 22
+    },
+    "parity": {
+      "alu": 0,
+      "valu": 6,
+      "load": 0,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 6
+    },
+    "final_store": {
+      "alu": 0,
+      "valu": 0,
+      "load": 0,
+      "store": 16,
+      "flow": 0,
+      "debug": 0,
+      "lb": 16
+    }
+  },
+  "motif_cycle_presence": {
+    "setup": 94,
+    "misc": 64,
+    "round_misc": 1076,
+    "hash_linear": 964,
+    "hash_op1": 1031,
+    "hash_shift": 1006,
+    "hash_op2": 967,
+    "muladd_misc": 420,
+    "selection_vselect": 704,
+    "selection_cmp": 560,
+    "node_xor": 120,
+    "parity": 32,
+    "uncached_node_load": 1024,
+    "idx_reset": 32,
+    "final_store": 31
+  },
+  "engine_cycle_presence": {
+    "load": 1105,
+    "valu": 1276,
+    "alu": 1173,
+    "flow": 800,
+    "store": 31
+  },
+  "round_lb": {
+    "0": {
+      "alu": 40,
+      "valu": 70,
+      "load": 0,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 70
+    },
+    "1": {
+      "alu": 60,
+      "valu": 71,
+      "load": 0,
+      "store": 0,
+      "flow": 32,
+      "debug": 0,
+      "lb": 71
+    },
+    "2": {
+      "alu": 82,
+      "valu": 71,
+      "load": 0,
+      "store": 0,
+      "flow": 96,
+      "debug": 0,
+      "lb": 96
+    },
+    "3": {
+      "alu": 146,
+      "valu": 71,
+      "load": 0,
+      "store": 0,
+      "flow": 224,
+      "debug": 0,
+      "lb": 224
+    },
+    "4": {
+      "alu": 36,
+      "valu": 77,
+      "load": 128,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 128
+    },
+    "5": {
+      "alu": 37,
+      "valu": 77,
+      "load": 128,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 128
+    },
+    "6": {
+      "alu": 36,
+      "valu": 77,
+      "load": 128,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 128
+    },
+    "7": {
+      "alu": 36,
+      "valu": 77,
+      "load": 128,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 128
+    },
+    "8": {
+      "alu": 36,
+      "valu": 77,
+      "load": 128,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 128
+    },
+    "9": {
+      "alu": 37,
+      "valu": 77,
+      "load": 128,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 128
+    },
+    "10": {
+      "alu": 16,
+      "valu": 71,
+      "load": 128,
+      "store": 0,
+      "flow": 32,
+      "debug": 0,
+      "lb": 128
+    },
+    "11": {
+      "alu": 36,
+      "valu": 71,
+      "load": 0,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 71
+    },
+    "12": {
+      "alu": 58,
+      "valu": 71,
+      "load": 0,
+      "store": 0,
+      "flow": 32,
+      "debug": 0,
+      "lb": 71
+    },
+    "13": {
+      "alu": 99,
+      "valu": 72,
+      "load": 0,
+      "store": 0,
+      "flow": 96,
+      "debug": 0,
+      "lb": 99
+    },
+    "14": {
+      "alu": 185,
+      "valu": 72,
+      "load": 0,
+      "store": 0,
+      "flow": 224,
+      "debug": 0,
+      "lb": 224
+    },
+    "15": {
+      "alu": 17,
+      "valu": 71,
+      "load": 128,
+      "store": 0,
+      "flow": 0,
+      "debug": 0,
+      "lb": 128
+    }
+  },
+  "round_motif_top": {
+    "0": [
+      {
+        "key": "round_misc",
+        "count": 432
+      },
+      {
+        "key": "hash_shift",
+        "count": 117
+      },
+      {
+        "key": "hash_op2",
+        "count": 117
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      },
+      {
+        "key": "node_xor",
+        "count": 8
+      },
+      {
+        "key": "parity",
+        "count": 2
+      }
+    ],
+    "1": [
+      {
+        "key": "round_misc",
+        "count": 680
+      },
+      {
+        "key": "hash_shift",
+        "count": 117
+      },
+      {
+        "key": "hash_op2",
+        "count": 110
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "selection_vselect",
+        "count": 32
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      },
+      {
+        "key": "node_xor",
+        "count": 9
+      }
+    ],
+    "2": [
+      {
+        "key": "round_misc",
+        "count": 688
+      },
+      {
+        "key": "selection_cmp",
+        "count": 256
+      },
+      {
+        "key": "hash_shift",
+        "count": 117
+      },
+      {
+        "key": "hash_op2",
+        "count": 110
+      },
+      {
+        "key": "selection_vselect",
+        "count": 96
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      }
+    ],
+    "3": [
+      {
+        "key": "round_misc",
+        "count": 944
+      },
+      {
+        "key": "selection_cmp",
+        "count": 768
+      },
+      {
+        "key": "selection_vselect",
+        "count": 224
+      },
+      {
+        "key": "hash_shift",
+        "count": 117
+      },
+      {
+        "key": "hash_op2",
+        "count": 110
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      }
+    ],
+    "4": [
+      {
+        "key": "round_misc",
+        "count": 464
+      },
+      {
+        "key": "uncached_node_load",
+        "count": 256
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_shift",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "hash_op2",
+        "count": 96
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      },
+      {
+        "key": "node_xor",
+        "count": 8
+      }
+    ],
+    "5": [
+      {
+        "key": "round_misc",
+        "count": 472
+      },
+      {
+        "key": "uncached_node_load",
+        "count": 256
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_shift",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "hash_op2",
+        "count": 96
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      },
+      {
+        "key": "node_xor",
+        "count": 8
+      }
+    ],
+    "6": [
+      {
+        "key": "round_misc",
+        "count": 464
+      },
+      {
+        "key": "uncached_node_load",
+        "count": 256
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_shift",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "hash_op2",
+        "count": 96
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      },
+      {
+        "key": "node_xor",
+        "count": 8
+      }
+    ],
+    "7": [
+      {
+        "key": "round_misc",
+        "count": 464
+      },
+      {
+        "key": "uncached_node_load",
+        "count": 256
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_shift",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "hash_op2",
+        "count": 96
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      },
+      {
+        "key": "node_xor",
+        "count": 8
+      }
+    ],
+    "8": [
+      {
+        "key": "round_misc",
+        "count": 456
+      },
+      {
+        "key": "uncached_node_load",
+        "count": 256
+      },
+      {
+        "key": "hash_op2",
+        "count": 103
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_shift",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      },
+      {
+        "key": "node_xor",
+        "count": 8
+      }
+    ],
+    "9": [
+      {
+        "key": "round_misc",
+        "count": 464
+      },
+      {
+        "key": "uncached_node_load",
+        "count": 256
+      },
+      {
+        "key": "hash_op2",
+        "count": 103
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_shift",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      },
+      {
+        "key": "node_xor",
+        "count": 8
+      }
+    ],
+    "10": [
+      {
+        "key": "uncached_node_load",
+        "count": 256
+      },
+      {
+        "key": "round_misc",
+        "count": 224
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_shift",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "hash_op2",
+        "count": 96
+      },
+      {
+        "key": "idx_reset",
+        "count": 32
+      },
+      {
+        "key": "node_xor",
+        "count": 8
+      }
+    ],
+    "11": [
+      {
+        "key": "round_misc",
+        "count": 424
+      },
+      {
+        "key": "hash_op2",
+        "count": 103
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_shift",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      },
+      {
+        "key": "node_xor",
+        "count": 8
+      },
+      {
+        "key": "parity",
+        "count": 3
+      }
+    ],
+    "12": [
+      {
+        "key": "round_misc",
+        "count": 432
+      },
+      {
+        "key": "selection_cmp",
+        "count": 256
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_shift",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "hash_op2",
+        "count": 96
+      },
+      {
+        "key": "selection_vselect",
+        "count": 32
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      }
+    ],
+    "13": [
+      {
+        "key": "selection_cmp",
+        "count": 768
+      },
+      {
+        "key": "round_misc",
+        "count": 416
+      },
+      {
+        "key": "selection_vselect",
+        "count": 96
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_shift",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "hash_op2",
+        "count": 96
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      }
+    ],
+    "14": [
+      {
+        "key": "selection_cmp",
+        "count": 1792
+      },
+      {
+        "key": "round_misc",
+        "count": 424
+      },
+      {
+        "key": "selection_vselect",
+        "count": 224
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_shift",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "hash_op2",
+        "count": 96
+      },
+      {
+        "key": "muladd_misc",
+        "count": 32
+      }
+    ],
+    "15": [
+      {
+        "key": "uncached_node_load",
+        "count": 256
+      },
+      {
+        "key": "round_misc",
+        "count": 232
+      },
+      {
+        "key": "hash_linear",
+        "count": 96
+      },
+      {
+        "key": "hash_shift",
+        "count": 96
+      },
+      {
+        "key": "hash_op1",
+        "count": 96
+      },
+      {
+        "key": "hash_op2",
+        "count": 96
+      },
+      {
+        "key": "node_xor",
+        "count": 7
+      }
+    ]
+  },
+  "temp_tag_top": [
+    {
+      "key": "extra:1",
+      "count": 88
+    },
+    {
+      "key": "extra:0",
+      "count": 85
+    },
+    {
+      "key": "extra:2",
+      "count": 83
+    },
+    {
+      "key": "tmp_read:3:0",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:1",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:2",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:3",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:4",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:5",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:6",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:7",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:8",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:9",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:10",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:11",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:12",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:13",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:14",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:15",
+      "count": 4
+    },
+    {
+      "key": "tmp_read:3:16",
+      "count": 4
+    }
+  ],
+  "spec": {
+    "rounds": 16,
+    "vectors": 32,
+    "vlen": 8,
+    "depth4_rounds": 0,
+    "x4": 0,
+    "x5": 0,
+    "flow_setup": 64,
+    "reset_on_valu": false,
+    "shifts_on_valu": true,
+    "offload_op1": 800,
+    "offload_mode": "budgeted",
+    "offload_alu_vec": false,
+    "offload_budget_hash_shift": 12,
+    "offload_budget_hash_op1": 0,
+    "offload_budget_hash_op2": 12,
+    "offload_budget_parity": 416,
+    "offload_budget_node_xor": 384,
+    "offload_budget_swaps": {
+      "parity": [
+        [
+          218,
+          439
+        ]
+      ],
+      "node_xor": [
+        [
+          58,
+          511
+        ],
+        [
+          273,
+          458
+        ],
+        [
+          298,
+          474
+        ],
+        [
+          349,
+          444
+        ]
+      ],
+      "hash_op2": [
+        [
+          5,
+          989
+        ],
+        [
+          8,
+          34
+        ],
+        [
+          10,
+          312
+        ]
+      ]
+    },
+    "offload_hash_op1": false,
+    "offload_hash_shift": true,
+    "offload_hash_op2": true,
+    "offload_parity": true,
+    "offload_node_xor": true,
+    "use_bitmask_selection": true,
+    "selection_mode": "bitmask",
+    "binsearch_select": false,
+    "selection_mode_by_round": {
+      "11": "eq",
+      "12": "eq",
+      "13": "eq",
+      "14": "eq"
+    },
+    "valu_select": false,
+    "valu_select_leaf_pairs": false,
+    "valu_select_rounds": null,
+    "valu_select_precompute_diffs": true,
+    "fuse_stages": false,
+    "hash_variant": "direct",
+    "hash_xor_style": "baseline",
+    "hash_xor_style_by_stage": {},
+    "hash_bitwise_style": "inplace",
+    "hash_bitwise_style_by_stage": {},
+    "hash_prog": null,
+    "hash_prog_variant": "none",
+    "node_ptr_incremental": false,
+    "idx_shifted": true,
+    "assume_zero_indices": false,
+    "ptr_setup_engine": "flow",
+    "setup_style": "inline",
+    "include_setup": true,
+    "proof_assume_shifted_input": false,
+    "proof_reset_single_op": false,
+    "proof_skip_const_zero": false,
+    "valu_pad_cycles": 0,
+    "emit_order": "auto",
+    "vector_block": 0,
+    "extra_vecs": 3,
+    "cached_nodes": 15,
+    "base_cached_rounds": [
+      0,
+      1,
+      2,
+      3,
+      11,
+      12,
+      13,
+      14
+    ],
+    "depth4_cached_rounds": [],
+    "cached_round_aliases": {},
+    "cached_round_depth": {},
+    "cached_round_x": {},
+    "valu_cap": 6,
+    "alu_cap": 12,
+    "flow_cap": 1,
+    "load_cap": 2,
+    "store_cap": 2,
+    "total_cycles": 1312,
+    "sched_seed": 9,
+    "sched_jitter": 0.1,
+    "sched_restarts": 2,
+    "sched_compact": false,
+    "sched_deps_variant": "full",
+    "sched_repair_passes": 0,
+    "sched_repair_try_swap": false,
+    "sched_policy": "baseline",
+    "sched_target_cycles": null,
+    "use_temp_deps": true,
+    "use_temp_deps_extras": true,
+    "temp_rename_mode": "off",
+    "temp_rename_window": 8
+  }
+}

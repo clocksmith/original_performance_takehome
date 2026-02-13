@@ -1,0 +1,2660 @@
+{
+  "baseline": {
+    "equiv_ok": true,
+    "equiv_msg": "ok",
+    "stats": {
+      "min_cycles": 1296,
+      "median_cycles": 1299.0,
+      "mean_cycles": 1298.0,
+      "stddev_cycles": 1.4142135623730951,
+      "max_cycles": 1299,
+      "wins": 0,
+      "losses": 0,
+      "ties": 9,
+      "total": 9
+    },
+    "engine_mix": {
+      "alu": 11280,
+      "valu": 7069,
+      "flow": 800,
+      "load": 2157,
+      "store": 32
+    },
+    "seed_spec": "tmp/json/seed_1299_oob.json"
+  },
+  "campaign_policy": {
+    "dual_track": [
+      "transform",
+      "legacy"
+    ],
+    "pair_search": {
+      "enabled": true,
+      "pair_allow_self": false,
+      "pair_evaluated": 20,
+      "pair_max": 20
+    },
+    "promotion_criteria": [
+      "equivalence pass",
+      "median cycles < baseline median",
+      "wins >= losses across fixed replay grid",
+      "max cycles <= baseline max + 1"
+    ],
+    "rollback_trigger": "if two consecutive batches have zero promoted candidates, roll back to baseline-only replay and expand mechanism set before next run"
+  },
+  "results": [
+    {
+      "name": "dep_split_round",
+      "track": "transform",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1296,
+        "median_cycles": 1299.0,
+        "mean_cycles": 1298.0,
+        "stddev_cycles": 1.4142135623730951,
+        "max_cycles": 1299,
+        "wins": 0,
+        "losses": 0,
+        "ties": 9,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [],
+      "spec_json": "tmp/json/operator_specs/dep_split_round.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_round.json tmp/scripts/replay_dep_split_round.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_round.py"
+    },
+    {
+      "name": "dep_split_window4",
+      "track": "transform",
+      "equiv_ok": false,
+      "equiv_msg": "output mismatch (seed=101)",
+      "decision": "equivalence_failed",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1301,
+        "median_cycles": 1301.0,
+        "mean_cycles": 1301.3333333333333,
+        "stddev_cycles": 0.4714045207910317,
+        "max_cycles": 1302,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1302,
+          "delta": 6
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1302,
+          "delta": 6
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1302,
+          "delta": 6
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_window4.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_window4.json tmp/scripts/replay_dep_split_window4.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_window4.py"
+    },
+    {
+      "name": "round_template_block",
+      "track": "transform",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1344,
+        "median_cycles": 1351.0,
+        "mean_cycles": 1353.0,
+        "stddev_cycles": 5.811865258054231,
+        "max_cycles": 1365,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1365,
+          "delta": 66
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1359,
+          "delta": 60
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1355,
+          "delta": 59
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1354,
+          "delta": 55
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1350,
+          "delta": 54
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1349,
+          "delta": 53
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1351,
+          "delta": 52
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1350,
+          "delta": 51
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/round_template_block.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/round_template_block.json tmp/scripts/replay_round_template_block.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_round_template_block.py"
+    },
+    {
+      "name": "round_template_round_major",
+      "track": "transform",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1465,
+        "median_cycles": 1471.0,
+        "mean_cycles": 1473.111111111111,
+        "stddev_cycles": 5.877347180194753,
+        "max_cycles": 1485,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1485,
+          "delta": 186
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1478,
+          "delta": 179
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1478,
+          "delta": 179
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1471,
+          "delta": 175
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1470,
+          "delta": 174
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1473,
+          "delta": 174
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1471,
+          "delta": 172
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1467,
+          "delta": 171
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/round_template_round_major.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/round_template_round_major.json tmp/scripts/replay_round_template_round_major.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_round_template_round_major.py"
+    },
+    {
+      "name": "select_load_fusion_leaf",
+      "track": "transform",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1325,
+        "median_cycles": 1333.0,
+        "mean_cycles": 1330.3333333333333,
+        "stddev_cycles": 3.7712361663282534,
+        "max_cycles": 1333,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 231,
+        "flow": -224,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1333,
+          "delta": 34
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1333,
+          "delta": 34
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1333,
+          "delta": 34
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1333,
+          "delta": 34
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1333,
+          "delta": 34
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1333,
+          "delta": 34
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1325,
+          "delta": 29
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1325,
+          "delta": 29
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/select_load_fusion_leaf.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/select_load_fusion_leaf.json tmp/scripts/replay_select_load_fusion_leaf.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_select_load_fusion_leaf.py"
+    },
+    {
+      "name": "select_load_fusion_sparse",
+      "track": "transform",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1296,
+        "median_cycles": 1299.0,
+        "mean_cycles": 1298.0,
+        "stddev_cycles": 1.4142135623730951,
+        "max_cycles": 1299,
+        "wins": 0,
+        "losses": 0,
+        "ties": 9,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [],
+      "spec_json": "tmp/json/operator_specs/select_load_fusion_sparse.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/select_load_fusion_sparse.json tmp/scripts/replay_select_load_fusion_sparse.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_select_load_fusion_sparse.py"
+    },
+    {
+      "name": "hash_tmp_style",
+      "track": "transform",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1328,
+        "median_cycles": 1334.0,
+        "mean_cycles": 1333.7777777777778,
+        "stddev_cycles": 6.956655929999346,
+        "max_cycles": 1352,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1352,
+          "delta": 53
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1334,
+          "delta": 35
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1334,
+          "delta": 35
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1334,
+          "delta": 35
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1334,
+          "delta": 35
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1332,
+          "delta": 33
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1328,
+          "delta": 32
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1328,
+          "delta": 32
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/hash_tmp_style.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/hash_tmp_style.json tmp/scripts/replay_hash_tmp_style.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_hash_tmp_style.py"
+    },
+    {
+      "name": "hash_prog_tmp",
+      "track": "transform",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1307,
+        "median_cycles": 1307.0,
+        "mean_cycles": 1307.5555555555557,
+        "stddev_cycles": 0.8314794192830981,
+        "max_cycles": 1309,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 1,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1309,
+          "delta": 13
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1309,
+          "delta": 13
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1308,
+          "delta": 12
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1307,
+          "delta": 8
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1307,
+          "delta": 8
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1307,
+          "delta": 8
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1307,
+          "delta": 8
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1307,
+          "delta": 8
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/hash_prog_tmp.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/hash_prog_tmp.json tmp/scripts/replay_hash_prog_tmp.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_hash_prog_tmp.py"
+    },
+    {
+      "name": "cache_alias_mid",
+      "track": "transform",
+      "equiv_ok": false,
+      "equiv_msg": "output mismatch (seed=101)",
+      "decision": "equivalence_failed",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 2935,
+        "median_cycles": 2935.0,
+        "mean_cycles": 3010.3333333333335,
+        "stddev_cycles": 106.53742169877316,
+        "max_cycles": 3161,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 2816,
+        "valu": -224,
+        "flow": 480,
+        "load": -1792,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 3161,
+          "delta": 1865
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 3161,
+          "delta": 1865
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 3161,
+          "delta": 1865
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 2935,
+          "delta": 1636
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 2935,
+          "delta": 1636
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 2935,
+          "delta": 1636
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 2935,
+          "delta": 1636
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 2935,
+          "delta": 1636
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/cache_alias_mid.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/cache_alias_mid.json tmp/scripts/replay_cache_alias_mid.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_cache_alias_mid.py"
+    },
+    {
+      "name": "dep_split_round__then__dep_split_window4",
+      "track": "transform_pair",
+      "equiv_ok": false,
+      "equiv_msg": "output mismatch (seed=101)",
+      "decision": "equivalence_failed",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1301,
+        "median_cycles": 1301.0,
+        "mean_cycles": 1301.3333333333333,
+        "stddev_cycles": 0.4714045207910317,
+        "max_cycles": 1302,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1302,
+          "delta": 6
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1302,
+          "delta": 6
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1302,
+          "delta": 6
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_round__then__dep_split_window4.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_round__then__dep_split_window4.json tmp/scripts/replay_dep_split_round__then__dep_split_window4.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_round__then__dep_split_window4.py"
+    },
+    {
+      "name": "dep_split_round__then__round_template_block",
+      "track": "transform_pair",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1341,
+        "median_cycles": 1353.0,
+        "mean_cycles": 1352.3333333333333,
+        "stddev_cycles": 6.110100926607787,
+        "max_cycles": 1360,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1360,
+          "delta": 61
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1358,
+          "delta": 59
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1357,
+          "delta": 58
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1357,
+          "delta": 58
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1353,
+          "delta": 57
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1352,
+          "delta": 56
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1348,
+          "delta": 49
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1345,
+          "delta": 49
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_round__then__round_template_block.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_round__then__round_template_block.json tmp/scripts/replay_dep_split_round__then__round_template_block.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_round__then__round_template_block.py"
+    },
+    {
+      "name": "dep_split_round__then__round_template_round_major",
+      "track": "transform_pair",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1459,
+        "median_cycles": 1471.0,
+        "mean_cycles": 1470.4444444444443,
+        "stddev_cycles": 4.645454435637083,
+        "max_cycles": 1476,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1476,
+          "delta": 177
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1474,
+          "delta": 175
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1474,
+          "delta": 175
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1472,
+          "delta": 173
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1469,
+          "delta": 173
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1469,
+          "delta": 173
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1471,
+          "delta": 172
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1470,
+          "delta": 171
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_round__then__round_template_round_major.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_round__then__round_template_round_major.json tmp/scripts/replay_dep_split_round__then__round_template_round_major.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_round__then__round_template_round_major.py"
+    },
+    {
+      "name": "dep_split_round__then__select_load_fusion_leaf",
+      "track": "transform_pair",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1325,
+        "median_cycles": 1333.0,
+        "mean_cycles": 1330.3333333333333,
+        "stddev_cycles": 3.7712361663282534,
+        "max_cycles": 1333,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 231,
+        "flow": -224,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1333,
+          "delta": 34
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1333,
+          "delta": 34
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1333,
+          "delta": 34
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1333,
+          "delta": 34
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1333,
+          "delta": 34
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1333,
+          "delta": 34
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1325,
+          "delta": 29
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1325,
+          "delta": 29
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_round__then__select_load_fusion_leaf.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_round__then__select_load_fusion_leaf.json tmp/scripts/replay_dep_split_round__then__select_load_fusion_leaf.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_round__then__select_load_fusion_leaf.py"
+    },
+    {
+      "name": "dep_split_round__then__select_load_fusion_sparse",
+      "track": "transform_pair",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1296,
+        "median_cycles": 1299.0,
+        "mean_cycles": 1298.0,
+        "stddev_cycles": 1.4142135623730951,
+        "max_cycles": 1299,
+        "wins": 0,
+        "losses": 0,
+        "ties": 9,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [],
+      "spec_json": "tmp/json/operator_specs/dep_split_round__then__select_load_fusion_sparse.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_round__then__select_load_fusion_sparse.json tmp/scripts/replay_dep_split_round__then__select_load_fusion_sparse.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_round__then__select_load_fusion_sparse.py"
+    },
+    {
+      "name": "dep_split_round__then__hash_tmp_style",
+      "track": "transform_pair",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1328,
+        "median_cycles": 1334.0,
+        "mean_cycles": 1333.7777777777778,
+        "stddev_cycles": 6.956655929999346,
+        "max_cycles": 1352,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1352,
+          "delta": 53
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1334,
+          "delta": 35
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1334,
+          "delta": 35
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1334,
+          "delta": 35
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1334,
+          "delta": 35
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1332,
+          "delta": 33
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1328,
+          "delta": 32
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1328,
+          "delta": 32
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_round__then__hash_tmp_style.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_round__then__hash_tmp_style.json tmp/scripts/replay_dep_split_round__then__hash_tmp_style.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_round__then__hash_tmp_style.py"
+    },
+    {
+      "name": "dep_split_round__then__hash_prog_tmp",
+      "track": "transform_pair",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1307,
+        "median_cycles": 1307.0,
+        "mean_cycles": 1307.5555555555557,
+        "stddev_cycles": 0.8314794192830981,
+        "max_cycles": 1309,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 1,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1309,
+          "delta": 13
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1309,
+          "delta": 13
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1308,
+          "delta": 12
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1307,
+          "delta": 8
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1307,
+          "delta": 8
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1307,
+          "delta": 8
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1307,
+          "delta": 8
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1307,
+          "delta": 8
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_round__then__hash_prog_tmp.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_round__then__hash_prog_tmp.json tmp/scripts/replay_dep_split_round__then__hash_prog_tmp.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_round__then__hash_prog_tmp.py"
+    },
+    {
+      "name": "dep_split_round__then__cache_alias_mid",
+      "track": "transform_pair",
+      "equiv_ok": false,
+      "equiv_msg": "output mismatch (seed=101)",
+      "decision": "equivalence_failed",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 2935,
+        "median_cycles": 2935.0,
+        "mean_cycles": 3010.3333333333335,
+        "stddev_cycles": 106.53742169877316,
+        "max_cycles": 3161,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 2816,
+        "valu": -224,
+        "flow": 480,
+        "load": -1792,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 3161,
+          "delta": 1865
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 3161,
+          "delta": 1865
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 3161,
+          "delta": 1865
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 2935,
+          "delta": 1636
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 2935,
+          "delta": 1636
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 2935,
+          "delta": 1636
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 2935,
+          "delta": 1636
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 2935,
+          "delta": 1636
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_round__then__cache_alias_mid.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_round__then__cache_alias_mid.json tmp/scripts/replay_dep_split_round__then__cache_alias_mid.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_round__then__cache_alias_mid.py"
+    },
+    {
+      "name": "dep_split_window4__then__dep_split_round",
+      "track": "transform_pair",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1296,
+        "median_cycles": 1299.0,
+        "mean_cycles": 1298.0,
+        "stddev_cycles": 1.4142135623730951,
+        "max_cycles": 1299,
+        "wins": 0,
+        "losses": 0,
+        "ties": 9,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [],
+      "spec_json": "tmp/json/operator_specs/dep_split_window4__then__dep_split_round.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_window4__then__dep_split_round.json tmp/scripts/replay_dep_split_window4__then__dep_split_round.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_window4__then__dep_split_round.py"
+    },
+    {
+      "name": "dep_split_window4__then__round_template_block",
+      "track": "transform_pair",
+      "equiv_ok": false,
+      "equiv_msg": "output mismatch (seed=101)",
+      "decision": "equivalence_failed",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1338,
+        "median_cycles": 1351.0,
+        "mean_cycles": 1351.2222222222222,
+        "stddev_cycles": 6.4769296185731875,
+        "max_cycles": 1362,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1362,
+          "delta": 63
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1356,
+          "delta": 60
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1356,
+          "delta": 57
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1351,
+          "delta": 55
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1352,
+          "delta": 53
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1351,
+          "delta": 52
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1350,
+          "delta": 51
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1345,
+          "delta": 49
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_window4__then__round_template_block.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_window4__then__round_template_block.json tmp/scripts/replay_dep_split_window4__then__round_template_block.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_window4__then__round_template_block.py"
+    },
+    {
+      "name": "dep_split_window4__then__round_template_round_major",
+      "track": "transform_pair",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1459,
+        "median_cycles": 1471.0,
+        "mean_cycles": 1470.4444444444443,
+        "stddev_cycles": 4.645454435637083,
+        "max_cycles": 1476,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1476,
+          "delta": 177
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1474,
+          "delta": 175
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1474,
+          "delta": 175
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1472,
+          "delta": 173
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1469,
+          "delta": 173
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1469,
+          "delta": 173
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1471,
+          "delta": 172
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1470,
+          "delta": 171
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_window4__then__round_template_round_major.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_window4__then__round_template_round_major.json tmp/scripts/replay_dep_split_window4__then__round_template_round_major.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_window4__then__round_template_round_major.py"
+    },
+    {
+      "name": "dep_split_window4__then__select_load_fusion_leaf",
+      "track": "transform_pair",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1327,
+        "median_cycles": 1330.0,
+        "mean_cycles": 1329.3333333333333,
+        "stddev_cycles": 1.247219128924647,
+        "max_cycles": 1330,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 231,
+        "flow": -224,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1330,
+          "delta": 34
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1330,
+          "delta": 31
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1330,
+          "delta": 31
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1330,
+          "delta": 31
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1327,
+          "delta": 31
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1327,
+          "delta": 31
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1330,
+          "delta": 31
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1330,
+          "delta": 31
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_window4__then__select_load_fusion_leaf.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_window4__then__select_load_fusion_leaf.json tmp/scripts/replay_dep_split_window4__then__select_load_fusion_leaf.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_window4__then__select_load_fusion_leaf.py"
+    },
+    {
+      "name": "dep_split_window4__then__select_load_fusion_sparse",
+      "track": "transform_pair",
+      "equiv_ok": false,
+      "equiv_msg": "output mismatch (seed=101)",
+      "decision": "equivalence_failed",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1301,
+        "median_cycles": 1301.0,
+        "mean_cycles": 1301.3333333333333,
+        "stddev_cycles": 0.4714045207910317,
+        "max_cycles": 1302,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1302,
+          "delta": 6
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1302,
+          "delta": 6
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1302,
+          "delta": 6
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1301,
+          "delta": 2
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_window4__then__select_load_fusion_sparse.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_window4__then__select_load_fusion_sparse.json tmp/scripts/replay_dep_split_window4__then__select_load_fusion_sparse.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_window4__then__select_load_fusion_sparse.py"
+    },
+    {
+      "name": "dep_split_window4__then__hash_tmp_style",
+      "track": "transform_pair",
+      "equiv_ok": false,
+      "equiv_msg": "output mismatch (seed=101)",
+      "decision": "equivalence_failed",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1323,
+        "median_cycles": 1331.0,
+        "mean_cycles": 1329.888888888889,
+        "stddev_cycles": 5.820355934981687,
+        "max_cycles": 1337,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1337,
+          "delta": 38
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1337,
+          "delta": 38
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1337,
+          "delta": 38
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1331,
+          "delta": 32
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1331,
+          "delta": 32
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1327,
+          "delta": 28
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1323,
+          "delta": 27
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1323,
+          "delta": 27
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_window4__then__hash_tmp_style.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_window4__then__hash_tmp_style.json tmp/scripts/replay_dep_split_window4__then__hash_tmp_style.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_window4__then__hash_tmp_style.py"
+    },
+    {
+      "name": "dep_split_window4__then__hash_prog_tmp",
+      "track": "transform_pair",
+      "equiv_ok": false,
+      "equiv_msg": "output mismatch (seed=101)",
+      "decision": "equivalence_failed",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1297,
+        "median_cycles": 1302.0,
+        "mean_cycles": 1300.3333333333333,
+        "stddev_cycles": 2.3570226039551585,
+        "max_cycles": 1302,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 1,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1302,
+          "delta": 3
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1302,
+          "delta": 3
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1302,
+          "delta": 3
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1302,
+          "delta": 3
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1302,
+          "delta": 3
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1302,
+          "delta": 3
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1297,
+          "delta": 1
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1297,
+          "delta": 1
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_window4__then__hash_prog_tmp.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_window4__then__hash_prog_tmp.json tmp/scripts/replay_dep_split_window4__then__hash_prog_tmp.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_window4__then__hash_prog_tmp.py"
+    },
+    {
+      "name": "dep_split_window4__then__cache_alias_mid",
+      "track": "transform_pair",
+      "equiv_ok": false,
+      "equiv_msg": "output mismatch (seed=101)",
+      "decision": "equivalence_failed",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 3124,
+        "median_cycles": 3124.0,
+        "mean_cycles": 3131.0,
+        "stddev_cycles": 9.899494936611665,
+        "max_cycles": 3145,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 2816,
+        "valu": -224,
+        "flow": 480,
+        "load": -1792,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 3145,
+          "delta": 1849
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 3145,
+          "delta": 1849
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 3145,
+          "delta": 1849
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 3124,
+          "delta": 1825
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 3124,
+          "delta": 1825
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 3124,
+          "delta": 1825
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 3124,
+          "delta": 1825
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 3124,
+          "delta": 1825
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/dep_split_window4__then__cache_alias_mid.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/dep_split_window4__then__cache_alias_mid.json tmp/scripts/replay_dep_split_window4__then__cache_alias_mid.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_dep_split_window4__then__cache_alias_mid.py"
+    },
+    {
+      "name": "round_template_block__then__dep_split_round",
+      "track": "transform_pair",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1341,
+        "median_cycles": 1353.0,
+        "mean_cycles": 1352.3333333333333,
+        "stddev_cycles": 6.110100926607787,
+        "max_cycles": 1360,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1360,
+          "delta": 61
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1358,
+          "delta": 59
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1357,
+          "delta": 58
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1357,
+          "delta": 58
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1353,
+          "delta": 57
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1352,
+          "delta": 56
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1348,
+          "delta": 49
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1345,
+          "delta": 49
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/round_template_block__then__dep_split_round.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/round_template_block__then__dep_split_round.json tmp/scripts/replay_round_template_block__then__dep_split_round.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_round_template_block__then__dep_split_round.py"
+    },
+    {
+      "name": "round_template_block__then__dep_split_window4",
+      "track": "transform_pair",
+      "equiv_ok": false,
+      "equiv_msg": "output mismatch (seed=101)",
+      "decision": "equivalence_failed",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1338,
+        "median_cycles": 1351.0,
+        "mean_cycles": 1351.2222222222222,
+        "stddev_cycles": 6.4769296185731875,
+        "max_cycles": 1362,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1362,
+          "delta": 63
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1356,
+          "delta": 60
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1356,
+          "delta": 57
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1351,
+          "delta": 55
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1352,
+          "delta": 53
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1351,
+          "delta": 52
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1350,
+          "delta": 51
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1345,
+          "delta": 49
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/round_template_block__then__dep_split_window4.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/round_template_block__then__dep_split_window4.json tmp/scripts/replay_round_template_block__then__dep_split_window4.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_round_template_block__then__dep_split_window4.py"
+    },
+    {
+      "name": "round_template_block__then__round_template_round_major",
+      "track": "transform_pair",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1465,
+        "median_cycles": 1471.0,
+        "mean_cycles": 1473.111111111111,
+        "stddev_cycles": 5.877347180194753,
+        "max_cycles": 1485,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1485,
+          "delta": 186
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1478,
+          "delta": 179
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1478,
+          "delta": 179
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1471,
+          "delta": 175
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1470,
+          "delta": 174
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1473,
+          "delta": 174
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1471,
+          "delta": 172
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1467,
+          "delta": 171
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/round_template_block__then__round_template_round_major.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/round_template_block__then__round_template_round_major.json tmp/scripts/replay_round_template_block__then__round_template_round_major.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_round_template_block__then__round_template_round_major.py"
+    },
+    {
+      "name": "round_template_block__then__select_load_fusion_leaf",
+      "track": "transform_pair",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1365,
+        "median_cycles": 1375.0,
+        "mean_cycles": 1373.2222222222222,
+        "stddev_cycles": 5.115939748098373,
+        "max_cycles": 1382,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 231,
+        "flow": -224,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1382,
+          "delta": 83
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1377,
+          "delta": 81
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1377,
+          "delta": 78
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1375,
+          "delta": 76
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1372,
+          "delta": 76
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1375,
+          "delta": 76
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1368,
+          "delta": 69
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1365,
+          "delta": 69
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/round_template_block__then__select_load_fusion_leaf.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/round_template_block__then__select_load_fusion_leaf.json tmp/scripts/replay_round_template_block__then__select_load_fusion_leaf.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_round_template_block__then__select_load_fusion_leaf.py"
+    },
+    {
+      "name": "legacy_budget_parity_-32",
+      "track": "legacy",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1296,
+        "median_cycles": 1299.0,
+        "mean_cycles": 1298.0,
+        "stddev_cycles": 1.4142135623730951,
+        "max_cycles": 1299,
+        "wins": 0,
+        "losses": 0,
+        "ties": 9,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [],
+      "spec_json": "tmp/json/operator_specs/legacy_budget_parity_-32.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/legacy_budget_parity_-32.json tmp/scripts/replay_legacy_budget_parity_-32.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_legacy_budget_parity_-32.py"
+    },
+    {
+      "name": "legacy_budget_node_xor_-32",
+      "track": "legacy",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1296,
+        "median_cycles": 1299.0,
+        "mean_cycles": 1298.0,
+        "stddev_cycles": 1.4142135623730951,
+        "max_cycles": 1299,
+        "wins": 0,
+        "losses": 0,
+        "ties": 9,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [],
+      "spec_json": "tmp/json/operator_specs/legacy_budget_node_xor_-32.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/legacy_budget_node_xor_-32.json tmp/scripts/replay_legacy_budget_node_xor_-32.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_legacy_budget_node_xor_-32.py"
+    },
+    {
+      "name": "legacy_budget_parity_+32",
+      "track": "legacy",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1296,
+        "median_cycles": 1299.0,
+        "mean_cycles": 1298.0,
+        "stddev_cycles": 1.4142135623730951,
+        "max_cycles": 1299,
+        "wins": 0,
+        "losses": 0,
+        "ties": 9,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [],
+      "spec_json": "tmp/json/operator_specs/legacy_budget_parity__32.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/legacy_budget_parity__32.json tmp/scripts/replay_legacy_budget_parity__32.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_legacy_budget_parity__32.py"
+    },
+    {
+      "name": "legacy_budget_node_xor_+32",
+      "track": "legacy",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1296,
+        "median_cycles": 1299.0,
+        "mean_cycles": 1298.0,
+        "stddev_cycles": 1.4142135623730951,
+        "max_cycles": 1299,
+        "wins": 0,
+        "losses": 0,
+        "ties": 9,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [],
+      "spec_json": "tmp/json/operator_specs/legacy_budget_node_xor__32.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/legacy_budget_node_xor__32.json tmp/scripts/replay_legacy_budget_node_xor__32.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_legacy_budget_node_xor__32.py"
+    },
+    {
+      "name": "legacy_hash_shift_off",
+      "track": "legacy",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1296,
+        "median_cycles": 1299.0,
+        "mean_cycles": 1298.0,
+        "stddev_cycles": 1.4142135623730951,
+        "max_cycles": 1299,
+        "wins": 0,
+        "losses": 0,
+        "ties": 9,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [],
+      "spec_json": "tmp/json/operator_specs/legacy_hash_shift_off.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/legacy_hash_shift_off.json tmp/scripts/replay_legacy_hash_shift_off.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_legacy_hash_shift_off.py"
+    },
+    {
+      "name": "legacy_hash_op2_off",
+      "track": "legacy",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1296,
+        "median_cycles": 1299.0,
+        "mean_cycles": 1298.0,
+        "stddev_cycles": 1.4142135623730951,
+        "max_cycles": 1299,
+        "wins": 0,
+        "losses": 0,
+        "ties": 9,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [],
+      "spec_json": "tmp/json/operator_specs/legacy_hash_op2_off.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/legacy_hash_op2_off.json tmp/scripts/replay_legacy_hash_op2_off.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_legacy_hash_op2_off.py"
+    },
+    {
+      "name": "legacy_ptr_setup_alu",
+      "track": "legacy",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1311,
+        "median_cycles": 1311.0,
+        "mean_cycles": 1312.0,
+        "stddev_cycles": 1.4142135623730951,
+        "max_cycles": 1314,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 64,
+        "valu": 0,
+        "flow": -64,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1314,
+          "delta": 18
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1314,
+          "delta": 18
+        },
+        {
+          "policy": "valu_first",
+          "seed": 17,
+          "base": 1296,
+          "cand": 1314,
+          "delta": 18
+        },
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1311,
+          "delta": 12
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1311,
+          "delta": 12
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1311,
+          "delta": 12
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1311,
+          "delta": 12
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1311,
+          "delta": 12
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/legacy_ptr_setup_alu.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/legacy_ptr_setup_alu.json tmp/scripts/replay_legacy_ptr_setup_alu.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_legacy_ptr_setup_alu.py"
+    },
+    {
+      "name": "legacy_node_ptr_inc",
+      "track": "legacy",
+      "equiv_ok": true,
+      "equiv_msg": "ok",
+      "decision": "median_not_better",
+      "promoted": false,
+      "stats": {
+        "min_cycles": 1302,
+        "median_cycles": 1312.0,
+        "mean_cycles": 1308.6666666666667,
+        "stddev_cycles": 4.714045207910317,
+        "max_cycles": 1312,
+        "wins": 0,
+        "losses": 9,
+        "ties": 0,
+        "total": 9
+      },
+      "engine_mix_delta": {
+        "alu": 0,
+        "valu": 0,
+        "flow": 0,
+        "load": 0,
+        "store": 0
+      },
+      "failure_cases": [
+        {
+          "policy": "baseline",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1312,
+          "delta": 13
+        },
+        {
+          "policy": "baseline",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1312,
+          "delta": 13
+        },
+        {
+          "policy": "baseline",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1312,
+          "delta": 13
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 0,
+          "base": 1299,
+          "cand": 1312,
+          "delta": 13
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 9,
+          "base": 1299,
+          "cand": 1312,
+          "delta": 13
+        },
+        {
+          "policy": "bottleneck_valu",
+          "seed": 17,
+          "base": 1299,
+          "cand": 1312,
+          "delta": 13
+        },
+        {
+          "policy": "valu_first",
+          "seed": 0,
+          "base": 1296,
+          "cand": 1302,
+          "delta": 6
+        },
+        {
+          "policy": "valu_first",
+          "seed": 9,
+          "base": 1296,
+          "cand": 1302,
+          "delta": 6
+        }
+      ],
+      "spec_json": "tmp/json/operator_specs/legacy_node_ptr_inc.json",
+      "replay_cmd": "python3 scripts/materialize_variant.py tmp/json/operator_specs/legacy_node_ptr_inc.json tmp/scripts/replay_legacy_node_ptr_inc.py && python3 tests/submission_tests.py --kernel-builder tmp/scripts/replay_legacy_node_ptr_inc.py"
+    }
+  ],
+  "promoted_count": 0,
+  "top_promoted": []
+}

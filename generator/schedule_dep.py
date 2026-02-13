@@ -1104,6 +1104,187 @@ def _swap_pack_adjacent(ops: list[Op], instrs_ops: list[dict[str, list[Any]]]) -
     return [dict(b) for b in out]
 
 
+def _squeeze_window(
+    ops: list[Op],
+    instrs_ops: list[dict[str, list[Any]]],
+    *,
+    window: int = 8,
+) -> list[dict[str, list[Op]]]:
+    """
+    Deterministic forward-fill repair.
+
+    For each cycle, greedily pull same-engine ops from the next `window` cycles
+    into currently underfilled slots, subject to deps and same-cycle write safety.
+    This can discover local improvements missed by purely op-centric pull-left order.
+    """
+    op_to_idx: dict[int, int] = {id(op): i for i, op in enumerate(ops)}
+    t: list[int] = [-1] * len(ops)
+    for cycle, bundle in enumerate(instrs_ops):
+        for slots in bundle.values():
+            for op in slots:
+                if not isinstance(op, Op):
+                    raise TypeError("squeeze repair requires return_ops=True schedule")
+                idx = op_to_idx.get(id(op))
+                if idx is not None:
+                    t[idx] = cycle
+
+    deps, children = _build_deps(ops)
+    writes_list = [_reads_writes(op)[1] for op in ops]
+
+    def _op_cost(op: Op) -> int:
+        if op.engine == "alu" and isinstance(op.slot, tuple) and op.slot and op.slot[0] == "alu_vec":
+            return VLEN
+        return 1
+
+    max_cycle = max((x for x in t if x >= 0), default=-1)
+    if max_cycle < 1:
+        return instrs_ops  # nothing to repair
+
+    engine_counts: list[dict[str, int]] = [defaultdict(int) for _ in range(max_cycle + 1)]
+    writes_count: list[dict[int, int]] = [defaultdict(int) for _ in range(max_cycle + 1)]
+    by_cycle: list[list[int]] = [[] for _ in range(max_cycle + 1)]
+    for i, ti in enumerate(t):
+        if ti < 0:
+            continue
+        by_cycle[ti].append(i)
+        eng = ops[i].engine
+        engine_counts[ti][eng] += _op_cost(ops[i])
+        for w in writes_list[i]:
+            writes_count[ti][w] += 1
+
+    def earliest_cycle(i: int) -> int:
+        e = 0
+        for p, lat in deps[i]:
+            tp = t[p]
+            if tp < 0:
+                continue
+            e = max(e, tp + lat)
+        return e
+
+    def latest_cycle(i: int) -> int:
+        li = max_cycle
+        for ch, lat in children[i]:
+            tc = t[ch]
+            if tc < 0:
+                continue
+            li = min(li, tc - lat)
+        return li
+
+    def can_place(i: int, c: int) -> bool:
+        eng = ops[i].engine
+        if engine_counts[c].get(eng, 0) + _op_cost(ops[i]) > SLOT_LIMITS[eng]:
+            return False
+        ws = writes_list[i]
+        if any(writes_count[c].get(w, 0) > 0 for w in ws):
+            return False
+        return True
+
+    def remove_from_cycle(i: int, c: int) -> None:
+        eng = ops[i].engine
+        engine_counts[c][eng] -= _op_cost(ops[i])
+        if engine_counts[c][eng] <= 0:
+            engine_counts[c].pop(eng, None)
+        for w in writes_list[i]:
+            writes_count[c][w] -= 1
+            if writes_count[c][w] <= 0:
+                writes_count[c].pop(w, None)
+        by_cycle[c].remove(i)
+
+    def add_to_cycle(i: int, c: int) -> None:
+        eng = ops[i].engine
+        engine_counts[c][eng] += _op_cost(ops[i])
+        for w in writes_list[i]:
+            writes_count[c][w] += 1
+        by_cycle[c].append(i)
+        t[i] = c
+
+    engines = [eng for eng in SLOT_LIMITS.keys() if eng != "debug"]
+    for c in range(0, max_cycle):
+        hi = min(max_cycle, c + max(1, int(window)))
+        for eng in engines:
+            cap = SLOT_LIMITS[eng]
+            if cap <= 0:
+                continue
+            # Keep filling cycle c for this engine while feasible candidates exist.
+            while engine_counts[c].get(eng, 0) < cap:
+                picked_i: int | None = None
+                picked_from = -1
+                # Nearest-cycle-first pull for better locality.
+                for cf in range(c + 1, hi + 1):
+                    if engine_counts[cf].get(eng, 0) <= 0:
+                        continue
+                    for i in by_cycle[cf]:
+                        if ops[i].engine != eng:
+                            continue
+                        if earliest_cycle(i) > c:
+                            continue
+                        if not can_place(i, c):
+                            continue
+                        picked_i = i
+                        picked_from = cf
+                        break
+                    if picked_i is not None:
+                        break
+                if picked_i is not None and picked_from >= 0:
+                    remove_from_cycle(picked_i, picked_from)
+                    add_to_cycle(picked_i, c)
+                    continue
+
+                # Second chance: one-step displacement.
+                # If placement in c is blocked only by one same-cycle writer,
+                # try moving that blocker to a later cycle within the window.
+                moved = False
+                for cf in range(c + 1, hi + 1):
+                    if engine_counts[cf].get(eng, 0) <= 0:
+                        continue
+                    for i in by_cycle[cf]:
+                        if ops[i].engine != eng:
+                            continue
+                        if earliest_cycle(i) > c:
+                            continue
+                        # Identify single conflicting writer in cycle c.
+                        ws_i = set(writes_list[i])
+                        conflicts = [
+                            j for j in by_cycle[c]
+                            if set(writes_list[j]).intersection(ws_i)
+                        ]
+                        if len(conflicts) != 1:
+                            continue
+                        j = conflicts[0]
+                        if ops[j].engine != eng:
+                            continue
+                        # Find a later destination for blocker j.
+                        for c2 in range(c + 1, hi + 1):
+                            if c2 == cf:
+                                continue
+                            if c2 < earliest_cycle(j) or c2 > latest_cycle(j):
+                                continue
+                            # Simulate j: c -> c2 then i: cf -> c.
+                            remove_from_cycle(j, c)
+                            ok_j = can_place(j, c2)
+                            ok_i = can_place(i, c)
+                            if ok_j and ok_i:
+                                remove_from_cycle(i, cf)
+                                add_to_cycle(j, c2)
+                                add_to_cycle(i, c)
+                                moved = True
+                                break
+                            add_to_cycle(j, c)
+                        if moved:
+                            break
+                    if moved:
+                        break
+                if not moved:
+                    break
+
+    new_max = max((ti for ti in t if ti >= 0), default=-1)
+    out: list[dict[str, list[Op]]] = [defaultdict(list) for _ in range(new_max + 1)]  # type: ignore[list-item]
+    for i, ti in enumerate(t):
+        if ti >= 0:
+            out[ti][ops[i].engine].append(ops[i])
+    return [dict(b) for b in out]
+
+
 def _repair_schedule(
     ops: list[Op],
     instrs_ops: list[dict[str, list[Any]]],
@@ -1124,6 +1305,13 @@ def _repair_schedule(
                 cur = cand
                 cur_cycles = cand_cycles
                 improved = True
+        # Forward-fill underutilized early cycles from a local future window.
+        cand3 = _squeeze_window(ops, cur, window=8)
+        cand3_cycles = _count_cycles(_strip_ops(cand3))
+        if cand3_cycles < cur_cycles:
+            cur = cand3
+            cur_cycles = cand3_cycles
+            improved = True
         if try_swap:
             cand2 = _swap_pack_adjacent(ops, cur)
             cand2_cycles = _count_cycles(_strip_ops(cand2))

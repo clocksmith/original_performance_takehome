@@ -157,6 +157,20 @@ Remaining optional work
   - `global_load_lower_bound_kernel_machine_roundDistinct_256`
   - `global_load_lower_bound_kernel_machine_roundDistinct_512`
 
+  We also provide a composition theorem that combines:
+  - `RoundDistinctNodes mem 1` (round/lane-sensitive addresses),
+  - value-sensitivity assumptions (`KernelLayout`, `KernelSensitive`,
+    `OutputDiffers`), and
+  - an explicit disjointness condition between the adversary list and
+    `outputAddrs mem`,
+  to obtain the stronger `272` bound:
+
+  - `exists_readWordSet_card_272_of_roundDistinct_values_disjoint`
+  - `global_load_lower_bound_kernel_machine_adversaryList_values_disjoint_272`
+  - `global_cycle_lower_bound_kernel_machine_adversaryList_values_disjoint_272`
+  - `global_load_lower_bound_kernel_machine_roundDistinct_values_disjoint_272`
+  - `global_cycle_lower_bound_kernel_machine_roundDistinct_values_disjoint_272`
+
 - Concrete large-tree adversary (unconditional 256/272 bounds)
   We also define a specific large-tree memory `memBig` with:
   - huge `nNodes` and memory size,
@@ -175,8 +189,21 @@ Remaining optional work
   `BATCH_SIZE * (ROUNDS + 1)` distinct addresses must be read on `memBig`,
   giving a **formal, unconditional 272‑cycle lower bound**:
 
+  - `global_load_lower_bound_machine_of_subset_card_272`
+    (generic bridge: any finite set `s` with `s ⊆ readWordsMachine` and
+    `s.card = BATCH_SIZE * (ROUNDS + 1)` yields the same 272 load bound)
   - `global_load_lower_bound_kernel_machine_big_272`
   - `global_load_lower_bound_kernel_machine_exists_big_272` (explicit ∃mem wrapper)
+  - `global_cycle_lower_bound_kernel_machine_big_272`
+  - `global_cycle_lower_bound_kernel_machine_exists_big_272` (explicit ∃mem wrapper)
+
+  Engine-mix composition is now wired to the same generic subset-card bridge:
+  - `global_engine_cycle_lower_bound_kernel_machine_of_subset_card`
+  - `global_engine_cycle_lower_bound_kernel_machine_of_subset_card_272`
+  - `global_engine_cycle_lower_bound_kernel_machine_adversaryList_values_disjoint_272`
+  - `global_engine_cycle_lower_bound_kernel_machine_roundDistinct_values_disjoint_272`
+  - `global_engine_cycle_lower_bound_kernel_machine_memBig_272`
+  - `global_engine_cycle_lower_bound_kernel_machine_exists_memBig_272`
 
 - Definition of “valid inputs”
   When this document says “global for all inputs,” it means:

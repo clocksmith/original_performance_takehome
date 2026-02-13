@@ -73,6 +73,14 @@ def _split_hash_stages() -> tuple[list[LinearStage], list[BitwiseStage]]:
     return linear, bitwise
 
 
+def _linear_shift_from_mult(mult: int) -> int | None:
+    # Linear stages are encoded as mult = 1 + 2^k.
+    x = int(mult) - 1
+    if x <= 0 or (x & (x - 1)) != 0:
+        return None
+    return x.bit_length() - 1
+
+
 def _vaddr(base: int) -> tuple[int, ...]:
     return tuple(base + i for i in range(VLEN))
 
@@ -1440,22 +1448,69 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
         if hash_xor_style_global not in {"baseline", "swap", "tmp_xor_const"}:
             raise ValueError(f"unknown hash_xor_style {hash_xor_style_global!r}")
         hash_xor_style_by_stage = getattr(spec, "hash_xor_style_by_stage", None) or {}
+        hash_linear_style = getattr(spec, "hash_linear_style", "muladd")
+        if hash_linear_style not in {"muladd", "shift_add"}:
+            raise ValueError(f"unknown hash_linear_style {hash_linear_style!r}")
         if hash_variant == "ir":
             assert hash_ir_prog is not None
             assert _HashLinear is not None and _HashBitwise is not None
 
             for st in hash_ir_prog:
                 if isinstance(st, _HashLinear):
-                    mult_v = layout.const_v[st.mult]
-                    add_v = layout.const_v[st.add]
-                    _add_vmuladd(
-                        valu_ops,
-                        val,
-                        val,
-                        mult_v,
-                        add_v,
-                        meta={"round": r, "vec": v, "stage": "linear", "hash_stage": st.stage_idx},
-                    )
+                    if hash_linear_style == "shift_add":
+                        sh = _linear_shift_from_mult(st.mult)
+                        if sh is None:
+                            mult_v = layout.const_v[st.mult]
+                            add_v = layout.const_v[st.add]
+                            _add_vmuladd(
+                                valu_ops,
+                                val,
+                                val,
+                                mult_v,
+                                add_v,
+                                meta={"round": r, "vec": v, "stage": "linear", "hash_stage": st.stage_idx},
+                            )
+                        else:
+                            add_v = layout.const_v[st.add]
+                            sh_v = layout.const_v[sh]
+                            _add_valu(
+                                valu_ops,
+                                "<<",
+                                tmp,
+                                val,
+                                sh_v,
+                                meta={"round": r, "vec": v, "stage": "shift", "hash_stage": st.stage_idx},
+                                offloadable=getattr(spec, "offload_hash_shift", False),
+                            )
+                            _add_valu(
+                                valu_ops,
+                                "+",
+                                val,
+                                val,
+                                add_v,
+                                meta={"round": r, "vec": v, "stage": "op1", "hash_stage": st.stage_idx},
+                                offloadable=getattr(spec, "offload_hash_op1", True),
+                            )
+                            _add_valu(
+                                valu_ops,
+                                "+",
+                                val,
+                                val,
+                                tmp,
+                                meta={"round": r, "vec": v, "stage": "op2", "hash_stage": st.stage_idx},
+                                offloadable=getattr(spec, "offload_hash_op2", False),
+                            )
+                    else:
+                        mult_v = layout.const_v[st.mult]
+                        add_v = layout.const_v[st.add]
+                        _add_vmuladd(
+                            valu_ops,
+                            val,
+                            val,
+                            mult_v,
+                            add_v,
+                            meta={"round": r, "vec": v, "stage": "linear", "hash_stage": st.stage_idx},
+                        )
                     continue
 
                 assert isinstance(st, _HashBitwise)
@@ -1612,9 +1667,46 @@ def build_ops(spec, layout, ordered_ops: list[Op] | None = None) -> OpLists:
                 if op1 == "+" and op2 == "+":
                     stage = linear[lin_i]
                     lin_i += 1
-                    mult_v = layout.const_v[stage.mult]
-                    add_v = layout.const_v[stage.add]
-                    _add_vmuladd(valu_ops, val, val, mult_v, add_v, meta={"round": r, "vec": v, "stage": "linear"})
+                    if hash_linear_style == "shift_add":
+                        sh = _linear_shift_from_mult(stage.mult)
+                        if sh is None:
+                            mult_v = layout.const_v[stage.mult]
+                            add_v = layout.const_v[stage.add]
+                            _add_vmuladd(valu_ops, val, val, mult_v, add_v, meta={"round": r, "vec": v, "stage": "linear"})
+                        else:
+                            add_v = layout.const_v[stage.add]
+                            sh_v = layout.const_v[sh]
+                            _add_valu(
+                                valu_ops,
+                                "<<",
+                                tmp,
+                                val,
+                                sh_v,
+                                meta={"round": r, "vec": v, "stage": "shift"},
+                                offloadable=getattr(spec, "offload_hash_shift", False),
+                            )
+                            _add_valu(
+                                valu_ops,
+                                "+",
+                                val,
+                                val,
+                                add_v,
+                                meta={"round": r, "vec": v, "stage": "op1"},
+                                offloadable=getattr(spec, "offload_hash_op1", True),
+                            )
+                            _add_valu(
+                                valu_ops,
+                                "+",
+                                val,
+                                val,
+                                tmp,
+                                meta={"round": r, "vec": v, "stage": "op2"},
+                                offloadable=getattr(spec, "offload_hash_op2", False),
+                            )
+                    else:
+                        mult_v = layout.const_v[stage.mult]
+                        add_v = layout.const_v[stage.add]
+                        _add_vmuladd(valu_ops, val, val, mult_v, add_v, meta={"round": r, "vec": v, "stage": "linear"})
                 else:
                     stage = bitwise[bit_i]
                     bit_i += 1

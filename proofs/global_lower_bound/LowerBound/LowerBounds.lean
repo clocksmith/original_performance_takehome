@@ -235,6 +235,231 @@ lemma loadLowerCycles_readWordCountMachine_le_cycleCountMachine_of_StraightLine_
     readWordCountMachine, readWordCountMachineFuel, readWordsMachine, readWordsMachineFuel,
     readOpsMachine, readOpsMachineFuel, runMachineTrace, runMachineTraceFuel] using h
 
+lemma finset_card_le_readWordCountMachine_of_subset
+    (p : Program) (mem : Memory) (s : Finset Nat)
+    (hsubset : s ⊆ (readWordsMachine p mem).toFinset) :
+    s.card ≤ readWordCountMachine p mem := by
+  have hcard :
+      s.card ≤ (readWordsMachine p mem).toFinset.card := by
+    exact Finset.card_le_card hsubset
+  have hlen :
+      (readWordsMachine p mem).toFinset.card ≤ (readWordsMachine p mem).length := by
+    simpa using (List.toFinset_card_le (l := readWordsMachine p mem))
+  have hcard_len : s.card ≤ (readWordsMachine p mem).length := le_trans hcard hlen
+  simpa [readWordCountMachine] using hcard_len
+
+theorem global_load_lower_bound_machine_of_subset_card
+    (p : Program) (mem : Memory) (s : Finset Nat)
+    (hsubset : s ⊆ (readWordsMachine p mem).toFinset) :
+    loadLowerCycles s.card ≤ loadLowerCycles (readWordCountMachine p mem) := by
+  exact loadLowerCycles_mono
+    (finset_card_le_readWordCountMachine_of_subset p mem s hsubset)
+
+theorem global_load_lower_bound_machine_of_subset_card_272
+    (p : Program) (mem : Memory) (s : Finset Nat)
+    (hsubset : s ⊆ (readWordsMachine p mem).toFinset)
+    (hcard : s.card = BATCH_SIZE * (ROUNDS + 1)) :
+    272 ≤ loadLowerCycles (readWordCountMachine p mem) := by
+  have hmono :
+      loadLowerCycles s.card ≤ loadLowerCycles (readWordCountMachine p mem) :=
+    global_load_lower_bound_machine_of_subset_card p mem s hsubset
+  have hmono' :
+      globalLowerBoundKernelPlus ≤ loadLowerCycles (readWordCountMachine p mem) := by
+    simpa [globalLowerBoundKernelPlus, hcard] using hmono
+  simpa [globalLowerBoundKernelPlus_eq_272] using hmono'
+
+theorem global_cycle_lower_bound_machine_of_subset_card_272
+    (p : Program) (hstraight : StraightLine p) (mem : Memory)
+    (hsafe : SafeExec p mem) (s : Finset Nat)
+    (hsubset : s ⊆ (readWordsMachine p mem).toFinset)
+    (hcard : s.card = BATCH_SIZE * (ROUNDS + 1)) :
+    272 ≤ cycleCountMachine p mem := by
+  have h272 : 272 ≤ loadLowerCycles (readWordCountMachine p mem) :=
+    global_load_lower_bound_machine_of_subset_card_272 p mem s hsubset hcard
+  have hcycles :
+      loadLowerCycles (readWordCountMachine p mem) ≤ cycleCountMachine p mem :=
+    loadLowerCycles_readWordCountMachine_le_cycleCountMachine_of_StraightLine_safeExec
+      (p := p) (hstraight := hstraight) (mem := mem) (hsafe := hsafe)
+  exact le_trans h272 hcycles
+
+theorem exists_readWordSet_card_272_of_roundDistinct_values_disjoint
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
+    ∀ mem, MemSafeKernel mem → KernelLayout mem → KernelSensitive mem → OutputDiffers mem →
+      memAt mem 0 = ROUNDS → RoundDistinctNodes mem 1 →
+      (∀ L, AdversaryList mem L → L.length = BATCH_SIZE * ROUNDS →
+        Disjoint L.toFinset (outputAddrs mem)) →
+      ∃ s : Finset Nat,
+        s ⊆ (readWordsMachine p mem).toFinset ∧
+        s.card = BATCH_SIZE * (ROUNDS + 1) := by
+  intro mem hsafe hlayout hks hdiff hrounds hrd hdisjoint
+  have hcorrect' : CorrectOn spec_kernel p MemSafeKernel :=
+    CorrectOnMachine_to_CorrectOn spec_kernel p MemSafeKernel hcorrect
+      (fun m _hm => MachineTraceAgrees_of_StraightLine p hstraight m)
+  have hwrites : WritesOutput p mem :=
+    writesOutput_of_correct_outputDiffers p hcorrect' mem hsafe hdiff
+  have hk : AdversaryK mem 1 := adversaryK_of_roundDistinct mem 1 hrd
+  rcases hk with ⟨L, hL, hlenK⟩
+  rcases hL with ⟨hLnodup, hLsafe, hLsens⟩
+  have hlen : L.length = BATCH_SIZE * ROUNDS := by
+    simpa [hrounds, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using hlenK
+  have hsubsetRound : L.toFinset ⊆ (readWordsMachine p mem).toFinset := by
+    intro a ha
+    have haL : a ∈ L := by
+      simpa [List.mem_toFinset] using ha
+    have haddr : AddrSafe mem a := hLsafe a haL
+    have hsens :
+        ∃ i : Fin BATCH_SIZE,
+          spec_kernel (memUpdate mem a (memAt mem a + 1)) i ≠ spec_kernel mem i :=
+      hLsens a haL
+    have hread : a ∈ readWordsMachine p mem :=
+      must_read_addr_machine p hstraight hcorrect hsafeExec mem hsafe hwrites a haddr hsens
+    simpa [List.mem_toFinset] using hread
+  have hsubsetVals : outputAddrs mem ⊆ (readWordsMachine p mem).toFinset := by
+    intro a ha
+    rcases Finset.mem_image.1 ha with ⟨i, _hi, rfl⟩
+    have hread :
+        (memAt mem PTR_INP_VAL + i) ∈ readWordsMachine p mem :=
+      must_read_kernel_values_for_mem_machine p hstraight hcorrect hsafeExec
+        mem hsafe hlayout hks hdiff i
+    simpa [List.mem_toFinset] using hread
+  have hdisj : Disjoint L.toFinset (outputAddrs mem) := hdisjoint L ⟨hLnodup, hLsafe, hLsens⟩ hlen
+  have hsubsetUnion :
+      (L.toFinset ∪ outputAddrs mem) ⊆ (readWordsMachine p mem).toFinset := by
+    intro a ha
+    rcases Finset.mem_union.1 ha with hround | hval
+    · exact hsubsetRound hround
+    · exact hsubsetVals hval
+  have hcardUnion : (L.toFinset ∪ outputAddrs mem).card = BATCH_SIZE * (ROUNDS + 1) := by
+    have hcardU :
+        (L.toFinset ∪ outputAddrs mem).card = L.toFinset.card + (outputAddrs mem).card := by
+      simpa using (Finset.card_union_of_disjoint hdisj)
+    have hcardL : L.toFinset.card = L.length := List.toFinset_card_of_nodup hLnodup
+    have hcardVals : (outputAddrs mem).card = BATCH_SIZE := outputAddrs_card mem
+    calc
+      (L.toFinset ∪ outputAddrs mem).card
+          = L.toFinset.card + (outputAddrs mem).card := hcardU
+      _ = L.length + BATCH_SIZE := by simp [hcardL, hcardVals]
+      _ = BATCH_SIZE * ROUNDS + BATCH_SIZE := by simp [hlen]
+      _ = BATCH_SIZE * (ROUNDS + 1) := by
+            simp [Nat.mul_add, Nat.mul_one, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm]
+  exact ⟨L.toFinset ∪ outputAddrs mem, hsubsetUnion, hcardUnion⟩
+
+theorem global_load_lower_bound_kernel_machine_adversaryList_values_disjoint_272
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
+    ∀ mem, MemSafeKernel mem → KernelLayout mem → KernelSensitive mem → OutputDiffers mem →
+      ∀ L, AdversaryList mem L → L.length = BATCH_SIZE * ROUNDS →
+        Disjoint L.toFinset (outputAddrs mem) →
+        272 ≤ loadLowerCycles (readWordCountMachine p mem) := by
+  intro mem hsafe hlayout hks hdiff L hL hlen hdisj
+  rcases hL with ⟨hLnodup, hLsafe, hLsens⟩
+  have hcorrect' : CorrectOn spec_kernel p MemSafeKernel :=
+    CorrectOnMachine_to_CorrectOn spec_kernel p MemSafeKernel hcorrect
+      (fun m _hm => MachineTraceAgrees_of_StraightLine p hstraight m)
+  have hwrites : WritesOutput p mem :=
+    writesOutput_of_correct_outputDiffers p hcorrect' mem hsafe hdiff
+  have hsubsetRound : L.toFinset ⊆ (readWordsMachine p mem).toFinset := by
+    intro a ha
+    have haL : a ∈ L := by
+      simpa [List.mem_toFinset] using ha
+    have haddr : AddrSafe mem a := hLsafe a haL
+    have hsens :
+        ∃ i : Fin BATCH_SIZE,
+          spec_kernel (memUpdate mem a (memAt mem a + 1)) i ≠ spec_kernel mem i :=
+      hLsens a haL
+    have hread : a ∈ readWordsMachine p mem :=
+      must_read_addr_machine p hstraight hcorrect hsafeExec mem hsafe hwrites a haddr hsens
+    simpa [List.mem_toFinset] using hread
+  have hsubsetVals : outputAddrs mem ⊆ (readWordsMachine p mem).toFinset := by
+    intro a ha
+    rcases Finset.mem_image.1 ha with ⟨i, _hi, rfl⟩
+    have hread :
+        (memAt mem PTR_INP_VAL + i) ∈ readWordsMachine p mem :=
+      must_read_kernel_values_for_mem_machine p hstraight hcorrect hsafeExec
+        mem hsafe hlayout hks hdiff i
+    simpa [List.mem_toFinset] using hread
+  have hsubsetUnion :
+      (L.toFinset ∪ outputAddrs mem) ⊆ (readWordsMachine p mem).toFinset := by
+    intro a ha
+    rcases Finset.mem_union.1 ha with hround | hval
+    · exact hsubsetRound hround
+    · exact hsubsetVals hval
+  have hcardUnion : (L.toFinset ∪ outputAddrs mem).card = BATCH_SIZE * (ROUNDS + 1) := by
+    have hcardU :
+        (L.toFinset ∪ outputAddrs mem).card = L.toFinset.card + (outputAddrs mem).card := by
+      simpa using (Finset.card_union_of_disjoint hdisj)
+    have hcardL : L.toFinset.card = L.length := List.toFinset_card_of_nodup hLnodup
+    have hcardVals : (outputAddrs mem).card = BATCH_SIZE := outputAddrs_card mem
+    calc
+      (L.toFinset ∪ outputAddrs mem).card
+          = L.toFinset.card + (outputAddrs mem).card := hcardU
+      _ = L.length + BATCH_SIZE := by simp [hcardL, hcardVals]
+      _ = BATCH_SIZE * ROUNDS + BATCH_SIZE := by simp [hlen]
+      _ = BATCH_SIZE * (ROUNDS + 1) := by
+            simp [Nat.mul_add, Nat.mul_one, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm]
+  exact global_load_lower_bound_machine_of_subset_card_272
+    p mem (L.toFinset ∪ outputAddrs mem) hsubsetUnion hcardUnion
+
+theorem global_cycle_lower_bound_kernel_machine_adversaryList_values_disjoint_272
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
+    ∀ mem, MemSafeKernel mem → KernelLayout mem → KernelSensitive mem → OutputDiffers mem →
+      ∀ L, AdversaryList mem L → L.length = BATCH_SIZE * ROUNDS →
+        Disjoint L.toFinset (outputAddrs mem) →
+        272 ≤ cycleCountMachine p mem := by
+  intro mem hsafe hlayout hks hdiff L hL hlen hdisj
+  have hload :
+      272 ≤ loadLowerCycles (readWordCountMachine p mem) :=
+    global_load_lower_bound_kernel_machine_adversaryList_values_disjoint_272
+      p hstraight hcorrect hsafeExec mem hsafe hlayout hks hdiff L hL hlen hdisj
+  have hcycles :
+      loadLowerCycles (readWordCountMachine p mem) ≤ cycleCountMachine p mem :=
+    loadLowerCycles_readWordCountMachine_le_cycleCountMachine_of_StraightLine_safeExec
+      (p := p) (hstraight := hstraight) (mem := mem) (hsafe := hsafeExec mem hsafe)
+  exact le_trans hload hcycles
+
+theorem global_load_lower_bound_kernel_machine_roundDistinct_values_disjoint_272
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
+    ∀ mem, MemSafeKernel mem → KernelLayout mem → KernelSensitive mem → OutputDiffers mem →
+      memAt mem 0 = ROUNDS → RoundDistinctNodes mem 1 →
+      (∀ L, AdversaryList mem L → L.length = BATCH_SIZE * ROUNDS →
+        Disjoint L.toFinset (outputAddrs mem)) →
+      272 ≤ loadLowerCycles (readWordCountMachine p mem) := by
+  intro mem hsafe hlayout hks hdiff hrounds hrd hdisjoint
+  have hk : AdversaryK mem 1 := adversaryK_of_roundDistinct mem 1 hrd
+  rcases hk with ⟨L, hL, hlenK⟩
+  have hlen : L.length = BATCH_SIZE * ROUNDS := by
+    simpa [hrounds, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using hlenK
+  have hdisj : Disjoint L.toFinset (outputAddrs mem) := hdisjoint L hL hlen
+  exact global_load_lower_bound_kernel_machine_adversaryList_values_disjoint_272
+    p hstraight hcorrect hsafeExec mem hsafe hlayout hks hdiff L hL hlen hdisj
+
+theorem global_cycle_lower_bound_kernel_machine_roundDistinct_values_disjoint_272
+    (p : Program) (hstraight : StraightLine p)
+    (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem) :
+    ∀ mem, MemSafeKernel mem → KernelLayout mem → KernelSensitive mem → OutputDiffers mem →
+      memAt mem 0 = ROUNDS → RoundDistinctNodes mem 1 →
+      (∀ L, AdversaryList mem L → L.length = BATCH_SIZE * ROUNDS →
+        Disjoint L.toFinset (outputAddrs mem)) →
+      272 ≤ cycleCountMachine p mem := by
+  intro mem hsafe hlayout hks hdiff hrounds hrd hdisjoint
+  have hload :
+      272 ≤ loadLowerCycles (readWordCountMachine p mem) :=
+    global_load_lower_bound_kernel_machine_roundDistinct_values_disjoint_272
+      p hstraight hcorrect hsafeExec mem hsafe hlayout hks hdiff hrounds hrd hdisjoint
+  have hcycles :
+      loadLowerCycles (readWordCountMachine p mem) ≤ cycleCountMachine p mem :=
+    loadLowerCycles_readWordCountMachine_le_cycleCountMachine_of_StraightLine_safeExec
+      (p := p) (hstraight := hstraight) (mem := mem) (hsafe := hsafeExec mem hsafe)
+  exact le_trans hload hcycles
+
 theorem global_cycle_lower_bound_kernel_machine_roundDistinct_256
     (p : Program) (hstraight : StraightLine p)
     (hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
@@ -365,17 +590,8 @@ theorem global_load_lower_bound_kernel_machine_big_272
     (p : Program) (_hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
     (hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset) :
     272 ≤ loadLowerCycles (readWordCountMachine p memBig) := by
-  have hmin : BATCH_SIZE * (ROUNDS + 1) ≤ readWordCountMachine p memBig :=
-    min_required_words_kernel_machine_memBig_all p hsubset
-  have hmono :
-      loadLowerCycles (BATCH_SIZE * (ROUNDS + 1)) ≤
-        loadLowerCycles (readWordCountMachine p memBig) :=
-    loadLowerCycles_mono hmin
-  have hmono' :
-      globalLowerBoundKernelPlus ≤ loadLowerCycles (readWordCountMachine p memBig) := by
-    simpa [globalLowerBoundKernelPlus] using hmono
-  -- `globalLowerBoundKernelPlus = 272`
-  simpa [globalLowerBoundKernelPlus_eq_272] using hmono'
+  exact global_load_lower_bound_machine_of_subset_card_272
+    p memBig memBigAllAddrs hsubset memBigAllAddrs_card
 
 theorem global_load_lower_bound_kernel_machine_big_256
     (p : Program) (_hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
@@ -391,13 +607,9 @@ theorem global_cycle_lower_bound_kernel_machine_big_272
     (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem)
     (hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset) :
     272 ≤ cycleCountMachine p memBig := by
-  have h272 : 272 ≤ loadLowerCycles (readWordCountMachine p memBig) :=
-    global_load_lower_bound_kernel_machine_big_272 p hcorrect hsubset
-  have hcycles :
-      loadLowerCycles (readWordCountMachine p memBig) ≤ cycleCountMachine p memBig :=
-    loadLowerCycles_readWordCountMachine_le_cycleCountMachine_of_StraightLine_safeExec
-      (p := p) (hstraight := hstraight) (mem := memBig) (hsafe := hsafeExec memBig memBig_safe)
-  exact le_trans h272 hcycles
+  exact global_cycle_lower_bound_machine_of_subset_card_272
+    p hstraight memBig (hsafeExec memBig memBig_safe)
+    memBigAllAddrs hsubset memBigAllAddrs_card
 
 theorem global_cycle_lower_bound_kernel_machine_memBig_272
     (p : Program) (hstraight : StraightLine p)
@@ -419,6 +631,14 @@ theorem global_load_lower_bound_kernel_machine_exists_big_272
     (hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset) :
     ∃ mem, 272 ≤ loadLowerCycles (readWordCountMachine p mem) := by
   exact ⟨memBig, global_load_lower_bound_kernel_machine_big_272 p _hcorrect hsubset⟩
+
+theorem global_cycle_lower_bound_kernel_machine_exists_big_272
+    (p : Program) (hstraight : StraightLine p)
+    (_hcorrect : CorrectOnMachine spec_kernel p MemSafeKernel)
+    (hsafeExec : ∀ mem, MemSafeKernel mem → SafeExec p mem)
+    (hsubset : memBigAllAddrs ⊆ (readWordsMachine p memBig).toFinset) :
+    ∃ mem, 272 ≤ cycleCountMachine p mem := by
+  exact ⟨memBig, global_cycle_lower_bound_kernel_machine_big_272 p hstraight _hcorrect hsafeExec hsubset⟩
 lemma globalLowerBound_eq :
     globalLowerBound = ceilDiv (ceilDiv MIN_REQUIRED_WORDS VLEN) LOAD_CAP := by
   rfl

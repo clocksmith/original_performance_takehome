@@ -1,0 +1,168 @@
+{
+  "best_cycles": 1288,
+  "choice": [
+    0,
+    0
+  ],
+  "hash_prog": [
+    {
+      "op": "muladd",
+      "dst": "val",
+      "a": "val",
+      "b": 4097,
+      "c": 2127912214,
+      "stage": "linear"
+    },
+    {
+      "op": ">>",
+      "dst": "tmp",
+      "a": "val",
+      "b": 19,
+      "stage": "shift"
+    },
+    {
+      "op": "^",
+      "dst": "val",
+      "a": "val",
+      "b": 3345072700,
+      "stage": "op1"
+    },
+    {
+      "op": "^",
+      "dst": "val",
+      "a": "val",
+      "b": "tmp",
+      "stage": "op2"
+    },
+    {
+      "op": "muladd",
+      "dst": "val",
+      "a": "val",
+      "b": 33,
+      "c": 374761393,
+      "stage": "linear"
+    },
+    {
+      "op": "<<",
+      "dst": "tmp",
+      "a": "val",
+      "b": 9,
+      "stage": "shift"
+    },
+    {
+      "op": "+",
+      "dst": "val",
+      "a": "val",
+      "b": 3550635116,
+      "stage": "op1"
+    },
+    {
+      "op": "^",
+      "dst": "val",
+      "a": "val",
+      "b": "tmp",
+      "stage": "op2"
+    },
+    {
+      "op": "muladd",
+      "dst": "val",
+      "a": "val",
+      "b": 9,
+      "c": 4251993797,
+      "stage": "linear"
+    },
+    {
+      "op": ">>",
+      "dst": "tmp",
+      "a": "val",
+      "b": 16,
+      "stage": "shift"
+    },
+    {
+      "op": "^",
+      "dst": "val",
+      "a": "val",
+      "b": 3042594569,
+      "stage": "op1"
+    },
+    {
+      "op": "^",
+      "dst": "val",
+      "a": "val",
+      "b": "tmp",
+      "stage": "op2"
+    }
+  ],
+  "top": [
+    {
+      "cycles": 1288,
+      "choice": [
+        0,
+        0
+      ]
+    },
+    {
+      "cycles": 1295,
+      "choice": [
+        0,
+        3
+      ]
+    },
+    {
+      "cycles": 1295,
+      "choice": [
+        0,
+        4
+      ]
+    },
+    {
+      "cycles": 1295,
+      "choice": [
+        3,
+        0
+      ]
+    },
+    {
+      "cycles": 1295,
+      "choice": [
+        4,
+        0
+      ]
+    },
+    {
+      "cycles": 1309,
+      "choice": [
+        3,
+        3
+      ]
+    },
+    {
+      "cycles": 1309,
+      "choice": [
+        3,
+        4
+      ]
+    },
+    {
+      "cycles": 1309,
+      "choice": [
+        4,
+        3
+      ]
+    },
+    {
+      "cycles": 1309,
+      "choice": [
+        4,
+        4
+      ]
+    },
+    {
+      "cycles": 1312,
+      "choice": [
+        1,
+        0
+      ]
+    }
+  ]
+}

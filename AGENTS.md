@@ -15,6 +15,22 @@ Both tracks are mandatory.
 Do not treat one track as optional because the other is active.
 Pivot strategy and continue.
 
+## Current Campaign Status (Keep Updated)
+- Best verified upper bound (UB): `1288` cycles.
+- Best proven lower bound (LB): `272` cycles.
+- Current gap: `1016` cycles.
+
+Working interpretation:
+- This is a convergence problem.
+- UB work pushes the top down.
+- LB work pushes the bottom up.
+- Every iteration should explicitly state whether the gap moved.
+
+Reporting tone:
+- Use plain language.
+- Avoid hype or self-descriptions like "kernel engineering expert".
+- State assumptions and theorem scope directly.
+
 ## Hard File Freeze
 Do not modify these files:
 
@@ -315,6 +331,9 @@ When concluding an iteration, include:
 3. UB-LB gap with interpretation.
 4. Tooling changes made.
 5. Next three highest-value experiments.
+
+Also include:
+- One short sentence on convergence trend (shrinking / flat / widening).
 
 ## Enforcement Notes
 This is the only active prompt contract.

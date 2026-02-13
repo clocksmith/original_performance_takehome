@@ -83,6 +83,11 @@ class SpecBase:
     # - "tmp_op1": compute stage op1 into a temp vector, then combine with shift into val.
     #   This preserves semantics but changes WAR/WAW dependencies, which can improve scheduling.
     hash_bitwise_style: str = "inplace"
+    # Linear-stage lowering (stages with +,+,<< in HASH_STAGES):
+    # - "muladd": single VALU multiply_add (current baseline)
+    # - "shift_add": emit shift + add(const) + add(shifted), enabling
+    #   offload via existing hash_shift/hash_op1/hash_op2 categories.
+    hash_linear_style: str = "muladd"
     # Optional per-hash-stage overrides (stage index in [0..len(HASH_STAGES)-1]).
     # Only meaningful for bitwise stages (today: 1,3,5).
     hash_bitwise_style_by_stage: dict[int, str] = field(default_factory=dict)

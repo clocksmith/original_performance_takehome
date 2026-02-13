@@ -150,11 +150,14 @@ def build_layout(spec, scratch: ScratchAlloc) -> Layout:
                 imm = inst.get(key)
                 if isinstance(imm, int):
                     vec_consts.add(imm)
+    hash_linear_style = getattr(spec, "hash_linear_style", "muladd")
     for op1, val1, op2, op3, val3 in HASH_STAGES:
         if op1 == "+" and op2 == "+":
             mult = (1 + (1 << val3)) % (2**32)
             vec_consts.add(mult)
             vec_consts.add(val1)
+            if hash_linear_style == "shift_add":
+                vec_consts.add(val3)
         else:
             vec_consts.add(val1)
             vec_consts.add(val3)

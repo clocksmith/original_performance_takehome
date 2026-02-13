@@ -1,0 +1,41 @@
+Run date: 2026-02-13
+Seed spec: tmp/json/seed_1288_current.json
+
+Batch A (offload swap cardinality, early stop)
+cmd: python3 tmp/scripts/search_swap_cardinality.py --steps 2400 --seed 911 --report-every 200 --out tmp/json/ub_batchA_swap_cardinality_s911_2400.json
+result: non-improving through step 800, early-terminated, no output json emitted
+best_cycles_seen: 1288
+log: terminal stream (no file)
+correctness rerun: no (no new best)
+
+Batch B (scheduler/deps, fixed-op deterministic)
+cmd: python3 tmp/scripts/sweep_fixed_ops_sched.py --seed 1337 --samples 40 --report-every 10 --out tmp/json/ub_batchB_sched_frontier_s1337_40.json
+result: best_cycles=1288
+best_spec_json: tmp/json/ub_batchB_sched_frontier_s1337_40.json
+log: terminal stream (no file)
+correctness rerun: no (no new best)
+
+Batch C (hash/cache/index structural sweep)
+cmd: python3 tmp/scripts/sweep_hash_cache_index_micro.py --top-k 10 --report-every 48 --out tmp/json/ub_batchC_hash_cache_index_top10.json
+result: best_cycles=1288
+best_spec_json: tmp/json/ub_batchC_hash_cache_index_top10.json
+log: terminal stream (no file)
+correctness rerun: no (no new best)
+
+Batch D (process pivot, out-of-basin seed 1299, operator stage-gate)
+cmd: python3 scripts/operator_campaign.py --seed-spec tmp/json/seed_1299_oob.json --equiv-seeds 101 --sched-seeds 0,9,17 --sched-policies baseline,valu_first,bottleneck_valu --enable-pairs --pair-max 20 --out tmp/json/ub_batchD_operator_pivot_seed1299_pairs20.json
+result: promoted_count=0, baseline_median=1299
+best_spec_json: tmp/json/ub_batchD_operator_pivot_seed1299_pairs20.json
+log: terminal stream (no file)
+correctness rerun: no (no promoted candidate)
+
+Batch E (new multifamily annealing process)
+cmd: python3 tmp/scripts/search_ub_multifamily.py --steps 60 --seed 20260213 --restarts 1 --report-every 20 --out tmp/json/ub_batchE_multifamily_s20260213_r1_60.json
+result: best_cycles=1288
+best_spec_json: tmp/json/ub_batchE_multifamily_s20260213_r1_60.json
+log: terminal stream (no file)
+correctness rerun: no (no new best)
+
+Validation
+cmd: python3 tests/submission_tests.py SpeedTests.test_opus45_improved_harness
+result: PASS, CYCLES=1288

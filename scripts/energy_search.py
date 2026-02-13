@@ -1105,6 +1105,12 @@ def main() -> None:
                     help="hash lowering for bitwise stages: inplace|tmp_op1 (comma-separated domain)")
     ap.add_argument("--hash-xor-style", type=str, default="baseline,swap,tmp_xor_const",
                     help="xor-stage lowering: baseline|swap|tmp_xor_const (comma-separated domain)")
+    ap.add_argument("--hash-linear-style", type=str, default="muladd,shift_add",
+                    help="linear-stage lowering: muladd|shift_add (comma-separated domain)")
+    ap.add_argument("--fuse-stages", type=str, default="0,1",
+                    help="enable hash stage fusion where legal (0/1)")
+    ap.add_argument("--valu-select-leaf-pairs", type=str, default="0,1",
+                    help="enable leaf-only VALU selection lowering (0/1)")
 
     ap.add_argument("--sched-restarts", type=int, default=10)
     ap.add_argument("--sched-jitter", type=float, default=0.4)
@@ -1250,6 +1256,9 @@ def main() -> None:
     hash_prog_variant_list = parse_list(args.hash_prog_variant)
     hash_bitwise_style_list = parse_list(args.hash_bitwise_style)
     hash_xor_style_list = parse_list(args.hash_xor_style)
+    hash_linear_style_list = parse_list(args.hash_linear_style)
+    fuse_stages_list = parse_bool_list(args.fuse_stages)
+    valu_select_leaf_pairs_list = parse_bool_list(args.valu_select_leaf_pairs)
 
     cached_nodes_list: list[int | None] = []
     for item in parse_list(args.cached_nodes):
@@ -1334,6 +1343,9 @@ def main() -> None:
         "hash_prog_variant": hash_prog_variant_list,
         "hash_bitwise_style": hash_bitwise_style_list,
         "hash_xor_style": hash_xor_style_list,
+        "hash_linear_style": hash_linear_style_list,
+        "fuse_stages": fuse_stages_list,
+        "valu_select_leaf_pairs": valu_select_leaf_pairs_list,
         "sched_deps_variant": sched_deps_variant_domain,
         "sched_repair_passes": sched_repair_passes_domain,
         "sched_repair_try_swap": sched_repair_swap_domain,

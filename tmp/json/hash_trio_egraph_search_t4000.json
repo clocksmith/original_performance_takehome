@@ -1,0 +1,149 @@
+{
+  "base_cycles": 1288,
+  "tested": 36,
+  "equivalent": 36,
+  "best_cycles": 1288,
+  "best": null,
+  "results_top": [
+    {
+      "style_map": {
+        "1": "baseline",
+        "5": "baseline"
+      },
+      "cycles": 1288
+    },
+    {
+      "style_map": {
+        "1": "baseline",
+        "5": "tmp_op1"
+      },
+      "cycles": 1295
+    },
+    {
+      "style_map": {
+        "1": "tmp_op1",
+        "5": "baseline"
+      },
+      "cycles": 1295
+    },
+    {
+      "style_map": {
+        "1": "tmp_op1",
+        "5": "tmp_op1"
+      },
+      "cycles": 1309
+    },
+    {
+      "style_map": {
+        "1": "swap",
+        "5": "baseline"
+      },
+      "cycles": 1312
+    },
+    {
+      "style_map": {
+        "1": "tmp_xor_const",
+        "5": "baseline"
+      },
+      "cycles": 1312
+    },
+    {
+      "style_map": {
+        "1": "tmp_op1",
+        "5": "swap"
+      },
+      "cycles": 1313
+    },
+    {
+      "style_map": {
+        "1": "tmp_op1",
+        "5": "tmp_xor_const"
+      },
+      "cycles": 1313
+    },
+    {
+      "style_map": {
+        "1": "baseline",
+        "5": "swap"
+      },
+      "cycles": 1314
+    },
+    {
+      "style_map": {
+        "1": "baseline",
+        "5": "tmp_xor_const"
+      },
+      "cycles": 1314
+    },
+    {
+      "style_map": {
+        "1": "swap",
+        "5": "swap"
+      },
+      "cycles": 1330
+    },
+    {
+      "style_map": {
+        "1": "swap",
+        "5": "tmp_xor_const"
+      },
+      "cycles": 1330
+    },
+    {
+      "style_map": {
+        "1": "tmp_xor_const",
+        "5": "swap"
+      },
+      "cycles": 1330
+    },
+    {
+      "style_map": {
+        "1": "tmp_xor_const",
+        "5": "tmp_xor_const"
+      },
+      "cycles": 1330
+    },
+    {
+      "style_map": {
+        "1": "swap",
+        "5": "tmp_op1"
+      },
+      "cycles": 1332
+    },
+    {
+      "style_map": {
+        "1": "tmp_xor_const",
+        "5": "tmp_op1"
+      },
+      "cycles": 1332
+    },
+    {
+      "style_map": {
+        "1": "baseline",
+        "5": "shift_in_val"
+      },
+      "cycles": 1373
+    },
+    {
+      "style_map": {
+        "1": "baseline",
+        "5": "copy_then_tmp_xor"
+      },
+      "cycles": 1374
+    },
+    {
+      "style_map": {
+        "1": "copy_then_tmp_xor",
+        "5": "tmp_op1"
+      },
+      "cycles": 1374
+    },
+    {
+      "style_map": {
+        "1": "shift_in_val",
+        "5": "baseline"
+      },
+      "cycles": 1375
+    }
+  ]
+}
